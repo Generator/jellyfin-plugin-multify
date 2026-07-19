@@ -9,6 +9,10 @@ using Jellyfin.Plugin.Multify.Destinations.Gotify;
 using Jellyfin.Plugin.Multify.Destinations.Ntfy;
 using Jellyfin.Plugin.Multify.Destinations.Telegram;
 using Jellyfin.Plugin.Multify.Services;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Audio;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify;
@@ -142,37 +146,37 @@ public class MultifySender : IWebhookSender
             return true;
         }
 
-        if (baseOptions.EnableMovies && itemType == typeof(MediaBrowser.Controller.Entities.Movies.Movie))
+        if (baseOptions.EnableMovies && itemType == typeof(Movie))
         {
             return true;
         }
 
-        if (baseOptions.EnableEpisodes && itemType == typeof(MediaBrowser.Controller.Entities.TV.Episode))
+        if (baseOptions.EnableEpisodes && itemType == typeof(Episode))
         {
             return true;
         }
 
-        if (baseOptions.EnableSeries && itemType == typeof(MediaBrowser.Controller.Entities.TV.Series))
+        if (baseOptions.EnableSeries && itemType == typeof(Series))
         {
             return true;
         }
 
-        if (baseOptions.EnableSeasons && itemType == typeof(MediaBrowser.Controller.Entities.TV.Season))
+        if (baseOptions.EnableSeasons && itemType == typeof(Season))
         {
             return true;
         }
 
-        if (baseOptions.EnableAlbums && itemType == typeof(MediaBrowser.Controller.Entities.Audio.MusicAlbum))
+        if (baseOptions.EnableAlbums && itemType == typeof(MusicAlbum))
         {
             return true;
         }
 
-        if (baseOptions.EnableSongs && itemType == typeof(MediaBrowser.Controller.Entities.Audio.Audio))
+        if (baseOptions.EnableSongs && itemType == typeof(Audio))
         {
             return true;
         }
 
-        if (baseOptions.EnableVideos && itemType == typeof(MediaBrowser.Controller.Entities.Video.Video))
+        if (baseOptions.EnableVideos && itemType == typeof(Video))
         {
             return true;
         }
