@@ -49,12 +49,12 @@ public class MultifyPlugin : BasePlugin<Configuration.PluginConfiguration>, IHas
             new PluginPageInfo
             {
                 Name = Name,
-                EmbeddedResourcePath = "Jellyfin.Plugin.Multify.Configuration.Web.config.html"
+                EmbeddedResourcePath = "Jellyfin.Plugin.Multify.Jellyfin.Plugin.Multify.Configuration.Web.config.html"
             },
             new PluginPageInfo
             {
                 Name = $"{Name}.js",
-                EmbeddedResourcePath = "Jellyfin.Plugin.Multify.Configuration.Web.config.js"
+                EmbeddedResourcePath = "Jellyfin.Plugin.Multify.Jellyfin.Plugin.Multify.Configuration.Web.config.js"
             }
         };
     }
