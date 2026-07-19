@@ -5,58 +5,22 @@
             <div class="sectionTitleContainer">
                 <h2 class="sectionTitle">Multify</h2>
                 <a is="emby-linkbutton" class="raised raised-mini" style="margin-left: 2em;" target="_blank"
-                   href="https://github.com/jellyfin/jellyfin-plugin-multify">
+                   href="https://github.com/intro-skipper/intro-skipper">
                     <span>Help</span>
                 </a>
             </div>
         </div>
 
-        <form class="multifyConfigurationForm">
-        <div class="inputContainer">
-            <input is="emby-input" type="text" id="txtServerUrl" label="Server Url:" />
-            <span>For linking to content. Include base url.</span>
+        <div class="multifyTabLayout" style="display:grid;grid-template-columns:180px 1fr;gap:24px;min-height:60vh;">
+            <nav class="multifyTabNav" id="multifyTabNav" style="display:flex;flex-direction:column;gap:4px;padding-top:8px;"></nav>
+            <main class="multifyTabContent" id="multifyTabContent" style="padding:8px 0;"></main>
         </div>
 
-        <div class="inputContainer">
-            <input is="emby-input" type="text" id="txtMdblistApiKey" label="MDBList API Key (optional):"/>
-            <span>For fetching ratings. Get your free API key from <a href="https://mdblist.com" target="_blank">mdblist.com</a>.</span>
-        </div>
-
-            <button id="btnAddTelegram" is="emby-button" type="button" class="raised button block">
-                <span>Add Telegram Destination</span>
-            </button>
-            <button id="btnAddGotify" is="emby-button" type="button" class="raised button block">
-                <span>Add Gotify Destination</span>
-            </button>
-            <button id="btnAddNtfy" is="emby-button" type="button" class="raised button block">
-                <span>Add ntfy Destination</span>
-            </button>
-            <button id="btnAddGenericWebhook" is="emby-button" type="button" class="raised button block">
-                <span>Add Generic Webhook Destination</span>
-            </button>
-
-            <br />
-            <div id="configurationWrapper"></div>
-            <br />
-
-            <div is="emby-collapse" title="Advanced Settings">
-                <div class="collapseContent">
-                    <div class="inputContainer">
-                        <label class="checkboxContainer">
-                            <input is="emby-checkbox" type="checkbox" id="chkEnableDashboardAlerts"/>
-                            <span>Enable Dashboard Alerts</span>
-                        </label>
-                        <span>Log notification events to the Jellyfin admin dashboard activity feed.</span>
-                    </div>
-                </div>
-            </div>
-
-            <br />
-
-            <button id="saveConfig" is="emby-button" type="submit" class="raised button-submit block">
+        <div style="padding:16px 0;">
+            <button id="saveConfig" is="emby-button" type="button" class="raised button-submit block">
                 <span>Save</span>
             </button>
-        </form>
+        </div>
     </div>
 
     <template id="template-notification-type">
@@ -99,34 +63,38 @@
         </div>
         <div>
             <label>Item Type:</label>
-            <label class="checkboxContainer">
-                <input is="emby-checkbox" type="checkbox" data-name="chkEnableMovies"/>
-                <span>Movies</span>
-            </label>
-            <label class="checkboxContainer">
-                <input is="emby-checkbox" type="checkbox" data-name="chkEnableEpisodes"/>
-                <span>Episodes</span>
-            </label>
-            <label class="checkboxContainer">
-                <input is="emby-checkbox" type="checkbox" data-name="chkEnableSeasons"/>
-                <span>Season</span>
-            </label>
-            <label class="checkboxContainer">
-                <input is="emby-checkbox" type="checkbox" data-name="chkEnableSeries"/>
-                <span>Series</span>
-            </label>
-            <label class="checkboxContainer">
-                <input is="emby-checkbox" type="checkbox" data-name="chkEnableAlbums"/>
-                <span>Albums</span>
-            </label>
-            <label class="checkboxContainer">
-                <input is="emby-checkbox" type="checkbox" data-name="chkEnableSongs"/>
-                <span>Songs</span>
-            </label>
-            <label class="checkboxContainer">
-                <input is="emby-checkbox" type="checkbox" data-name="chkEnableVideos"/>
-                <span>Videos</span>
-            </label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;">
+                <label class="checkboxContainer">
+                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableMovies"/>
+                    <span>Movies</span>
+                </label>
+                <label class="checkboxContainer">
+                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableEpisodes"/>
+                    <span>Episodes</span>
+                </label>
+                <label class="checkboxContainer">
+                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableSeasons"/>
+                    <span>Season</span>
+                </label>
+                <label class="checkboxContainer">
+                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableSeries"/>
+                    <span>Series</span>
+                </label>
+                <label class="checkboxContainer">
+                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableAlbums"/>
+                    <span>Albums</span>
+                </label>
+                <label class="checkboxContainer">
+                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableSongs"/>
+                    <span>Songs</span>
+                </label>
+                <label class="checkboxContainer">
+                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableVideos"/>
+                    <span>Videos</span>
+                </label>
+            </div>
+        </div>
+        <div style="margin-top:8px;">
             <label class="checkboxContainer">
                 <input is="emby-checkbox" type="checkbox" data-name="chkSendAllProperties"/>
                 <span>Send All Properties (ignores template)</span>
@@ -140,7 +108,7 @@
                 <span>Do not send when message body is empty</span>
             </label>
         </div>
-        <div class="inputContainer">
+        <div class="inputContainer" style="margin-top:12px;">
             <label>Template:</label>
             <div>
                 <textarea data-name="txtTemplate" style="width: 100%; height: 400px"></textarea>
@@ -205,9 +173,9 @@
     </template>
 
     <template id="template-generic-header">
-        <div class="flex align-items-center gap-1 mb-1">
-            <input is="emby-input" type="text" data-name="txtHeaderKey" label="Header Name:"/>
-            <input is="emby-input" type="text" data-name="txtHeaderValue" label="Header Value:"/>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+            <input is="emby-input" type="text" data-name="txtHeaderKey" label="Header Name:" style="flex:1;"/>
+            <input is="emby-input" type="text" data-name="txtHeaderValue" label="Header Value:" style="flex:1;"/>
             <button is="emby-button" type="button" class="raised button-warning btnRemoveHeader" style="flex-shrink:0;">
                 <span>X</span>
             </button>
@@ -215,9 +183,9 @@
     </template>
 
     <template id="template-generic-field">
-        <div class="flex align-items-center gap-1 mb-1">
-            <input is="emby-input" type="text" data-name="txtFieldKey" label="Field Name:"/>
-            <input is="emby-input" type="text" data-name="txtFieldValue" label="Field Value:"/>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+            <input is="emby-input" type="text" data-name="txtFieldKey" label="Field Name:" style="flex:1;"/>
+            <input is="emby-input" type="text" data-name="txtFieldValue" label="Field Value:" style="flex:1;"/>
             <button is="emby-button" type="button" class="raised button-warning btnRemoveField" style="flex-shrink:0;">
                 <span>X</span>
             </button>
@@ -244,6 +212,49 @@
     <style>
         .checkboxContainer {
             max-width: fit-content;
+        }
+        .multify-tab-button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.95em;
+            font-family: inherit;
+        }
+        .multify-tab-button:hover {
+            background: rgba(255, 255, 255, 0.07);
+        }
+        .multify-tab-button.tab-active {
+            background: rgba(53, 126, 210, 0.15);
+            color: #357ed0;
+            font-weight: 600;
+        }
+        .multify-destination-card {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .multify-destination-card .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        @media (max-width: 768px) {
+            .multifyTabLayout {
+                grid-template-columns: 1fr !important;
+            }
+            .multifyTabNav {
+                flex-direction: row !important;
+                overflow-x: auto;
+            }
         }
     </style>
 </div>
