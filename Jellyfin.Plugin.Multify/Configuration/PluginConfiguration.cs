@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using Jellyfin.Plugin.Multify.Configuration;
 using Jellyfin.Plugin.Multify.Destinations.Generic;
+using Jellyfin.Plugin.Multify.Destinations.Gotify;
+using Jellyfin.Plugin.Multify.Destinations.Ntfy;
+using Jellyfin.Plugin.Multify.Destinations.Telegram;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Configuration;
