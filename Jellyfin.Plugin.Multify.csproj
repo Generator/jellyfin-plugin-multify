@@ -22,10 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Configuration\Web\config.html" />
-    <EmbeddedResource Include="Configuration\Web\config.html" />
-    <None Remove="Configuration\Web\config.js" />
-    <EmbeddedResource Include="Configuration\Web\config.js" />
+    <None Remove="Jellyfin.Plugin.Multify\Configuration\Web\config.html" />
+    <EmbeddedResource Include="Jellyfin.Plugin.Multify\Configuration\Web\config.html" />
+    <None Remove="Jellyfin.Plugin.Multify\Configuration\Web\config.js" />
+    <EmbeddedResource Include="Jellyfin.Plugin.Multify\Configuration\Web\config.js" />
   </ItemGroup>
 
 </Project>
