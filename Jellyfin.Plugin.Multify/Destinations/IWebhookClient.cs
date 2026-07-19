@@ -7,7 +7,8 @@ namespace Jellyfin.Plugin.Multify.Destinations;
 /// Interface for webhook clients.
 /// </summary>
 /// <typeparam name="TDestinationOption">The destination option type.</typeparam>
-public interface IWebhookClient<in TDestinationOption> where TDestinationOption : BaseOption
+public interface IWebhookClient<in TDestinationOption>
+    where TDestinationOption : BaseOption
 {
     /// <summary>
     /// Sends a notification to the destination.

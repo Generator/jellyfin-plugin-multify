@@ -139,7 +139,8 @@ public class MultifySender : IWebhookSender
         return "movie";
     }
 
-    private static bool NotifyOnItem<T>(T baseOptions, Type? itemType) where T : BaseOption
+    private static bool NotifyOnItem<T>(T baseOptions, Type? itemType)
+        where T : BaseOption
     {
         if (itemType is null)
         {
@@ -184,7 +185,8 @@ public class MultifySender : IWebhookSender
         return false;
     }
 
-    private async Task SendNotification<TOption>(IWebhookClient<TOption> client, TOption option, Dictionary<string, object> itemData, Type? itemType) where TOption : BaseOption
+    private async Task SendNotification<TOption>(IWebhookClient<TOption> client, TOption option, Dictionary<string, object> itemData, Type? itemType)
+        where TOption : BaseOption
     {
         if (!NotifyOnItem(option, itemType))
         {

@@ -92,7 +92,7 @@ public class BaseOption
         foreach (var kvp in data)
         {
             var placeholder = "{{" + kvp.Key + "}}";
-            result = result.Replace(placeholder, kvp.Value?.ToString() ?? string.Empty);
+            result = result.Replace(placeholder, kvp.Value?.ToString() ?? string.Empty, StringComparison.Ordinal);
         }
 
         return result;

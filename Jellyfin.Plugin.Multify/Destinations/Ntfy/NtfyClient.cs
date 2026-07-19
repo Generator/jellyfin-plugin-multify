@@ -77,7 +77,7 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
             };
 
             request.Headers.Add("Title", "Jellyfin Notification");
-            request.Headers.Add("Priority", option.Priority.ToString());
+            request.Headers.Add("Priority", option.Priority.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
             if (option.EnableMarkdown)
             {

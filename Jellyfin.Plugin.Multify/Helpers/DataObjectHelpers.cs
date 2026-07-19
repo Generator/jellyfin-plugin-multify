@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.Multify.Destinations;
 using MediaBrowser.Controller.Entities;
@@ -53,14 +54,14 @@ public static class DataObjectHelpers
 
         if (item is MediaBrowser.Controller.Entities.Movies.Movie movie)
         {
-            data["Year"] = movie.ProductionYear?.ToString() ?? "Unknown";
+            data["Year"] = movie.ProductionYear?.ToString(CultureInfo.InvariantCulture) ?? "Unknown";
             data["Overview"] = movie.Overview ?? string.Empty;
         }
 
         if (item is MediaBrowser.Controller.Entities.TV.Episode episode)
         {
-            data["SeasonNumber"] = episode.ParentIndexNumber?.ToString() ?? "0";
-            data["EpisodeNumber"] = episode.IndexNumber?.ToString() ?? "0";
+            data["SeasonNumber"] = episode.ParentIndexNumber?.ToString(CultureInfo.InvariantCulture) ?? "0";
+            data["EpisodeNumber"] = episode.IndexNumber?.ToString(CultureInfo.InvariantCulture) ?? "0";
             data["SeriesName"] = episode.SeriesName ?? "Unknown";
         }
 
