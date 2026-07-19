@@ -4,15 +4,34 @@ on:
   push:
     branches:
       - master
-    paths-ignore:
-      - '**/*.md'
+      - dev
   pull_request:
     branches:
       - master
-    paths-ignore:
-      - '**/*.md'
+      - dev
   workflow_dispatch:
 
 jobs:
-  call:
-    uses: jellyfin/jellyfin-meta-plugins/.github/workflows/test.yaml@master
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dotnet-version: ['9.0.x', '10.0.x']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ matrix.dotnet-version }}
+
+      - name: Build Plugin
+        run: dotnet build -c Release Jellyfin.Plugin.Multify.csproj
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-build-net${{ matrix.dotnet-version }}
+          path: |
+            Jellyfin.Plugin.Multify/bin/Release/net*/Jellyfin.Plugin.Multify.dll
+            Jellyfin.Plugin.Multify/bin/Release/net*/Jellyfin.Plugin.Multify.pdb
+          retention-days: 14

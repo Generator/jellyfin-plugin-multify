@@ -8,7 +8,13 @@ using Jellyfin.Plugin.Multify.Notifiers;
 using Jellyfin.Plugin.Multify.Services;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
+using MediaBrowser.Controller.Events;
+using MediaBrowser.Controller.Events.Authentication;
+using MediaBrowser.Controller.Events.Session;
+using MediaBrowser.Controller.Events.Updates;
 using MediaBrowser.Controller.Plugins;
+using Jellyfin.Data.Events.Users;
+using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jellyfin.Plugin.Multify;
@@ -19,7 +25,7 @@ namespace Jellyfin.Plugin.Multify;
 public class PluginServiceRegistrator : IPluginServiceRegistrator
 {
     /// <inheritdoc />
-    public void RegisterServices(IServiceCollection serviceCollection, MediaBrowser.Common.System.IServerApplicationHost applicationHost)
+    public void RegisterServices(IServiceCollection serviceCollection, MediaBrowser.Controller.IServerApplicationHost applicationHost)
     {
         var configuration = new PluginConfiguration();
         serviceCollection.AddSingleton(configuration);
@@ -46,27 +52,26 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<TelegramMessageStore>();
 
         // Register event consumers
-        serviceCollection.AddScoped<IEventConsumer<MediaBrowser.Controller.Session.PlaybackStartEventArgs>, PlaybackStartNotifier>();
-        serviceCollection.AddScoped<IEventConsumer<MediaBrowser.Controller.Session.PlaybackStopEventArgs>, PlaybackStopNotifier>();
-        serviceCollection.AddScoped<IEventConsumer<MediaBrowser.Controller.Authentication.AuthenticationResultEventArgs>, AuthenticationSuccessNotifier>();
-        serviceCollection.AddScoped<IEventConsumer<MediaBrowser.Controller.Authentication.AuthenticationResultEventArgs>, AuthenticationFailureNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<PlaybackStartEventArgs>, PlaybackStartNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<PlaybackStopEventArgs>, PlaybackStopNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<AuthenticationResultEventArgs>, AuthenticationSuccessNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<AuthenticationResultEventArgs>, AuthenticationFailureNotifier>();
 
-        // Library events
-        serviceCollection.AddScoped<IEventConsumer<MediaBrowser.Controller.Library.ItemChangeEventArgs>, ItemAddedNotifier>();
-        serviceCollection.AddScoped<IEventConsumer<MediaBrowser.Controller.Library.ItemChangeEventArgs>, ItemDeletedNotifier>();
+        // Library events (not IEventConsumer — ItemChangeEventArgs doesn't inherit EventArgs)
+        serviceCollection.AddScoped<ItemAddedNotifier>();
+        serviceCollection.AddScoped<ItemDeletedNotifier>();
 
         // User events
-        serviceCollection.AddScoped<IEventConsumer<Jellyfin.Data.Events.Users.UserCreatedEventArgs>, UserCreatedNotifier>();
-        serviceCollection.AddScoped<IEventConsumer<Jellyfin.Data.Events.Users.UserDeletedEventArgs>, UserDeletedNotifier>();
-        serviceCollection.AddScoped<IEventConsumer<MediaBrowser.Controller.Entities.User>, UserUpdatedNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<UserCreatedEventArgs>, UserCreatedNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<UserDeletedEventArgs>, UserDeletedNotifier>();
 
         // Task events
-        serviceCollection.AddScoped<IEventConsumer<MediaBrowser.Model.Tasks.TaskCompletionEventArgs>, TaskCompletedNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<TaskCompletionEventArgs>, TaskCompletedNotifier>();
 
         // Plugin events
-        serviceCollection.AddScoped<IEventConsumer<MediaBrowser.Controller.Events.Updates.PluginUpdatedEventArgs>, PluginUpdatedNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<PluginUpdatedEventArgs>, PluginUpdatedNotifier>();
 
         // Session events
-        serviceCollection.AddScoped<IEventConsumer<MediaBrowser.Controller.Events.Session.SessionStartedEventArgs>, SessionStartedNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<SessionStartedEventArgs>, SessionStartedNotifier>();
     }
 }

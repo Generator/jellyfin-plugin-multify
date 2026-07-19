@@ -3,8 +3,8 @@ using System.Threading.Tasks;
 using Jellyfin.Plugin.Multify.Configuration;
 using Jellyfin.Plugin.Multify.Destinations;
 using Jellyfin.Plugin.Multify.Helpers;
-using MediaBrowser.Controller.Authentication;
 using MediaBrowser.Controller.Events;
+using MediaBrowser.Controller.Events.Authentication;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Notifiers;

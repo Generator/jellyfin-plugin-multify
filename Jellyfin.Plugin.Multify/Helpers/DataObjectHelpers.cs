@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Jellyfin.Plugin.Multify.Destinations;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Plugins;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Model.Session;
 
 namespace Jellyfin.Plugin.Multify.Helpers;

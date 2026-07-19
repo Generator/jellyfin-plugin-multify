@@ -2,16 +2,17 @@ using System.Threading.Tasks;
 using Jellyfin.Plugin.Multify.Configuration;
 using Jellyfin.Plugin.Multify.Destinations;
 using Jellyfin.Plugin.Multify.Helpers;
-using MediaBrowser.Controller.Events;
-using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Notifiers;
 
 /// <summary>
 /// Notifier for item added events.
+/// TODO: ItemChangeEventArgs does not inherit from EventArgs in Jellyfin 10.11,
+/// so it cannot be used with IEventConsumer&lt;T&gt;. Implement IItemAddedManager
+/// pattern (see jellyfin-plugin-webhook) for proper library event handling.
 /// </summary>
-public class ItemAddedNotifier : IEventConsumer<ItemChangeEventArgs>
+public class ItemAddedNotifier
 {
     private readonly ILogger<ItemAddedNotifier> _logger;
     private readonly IWebhookSender _webhookSender;
@@ -30,32 +31,39 @@ public class ItemAddedNotifier : IEventConsumer<ItemChangeEventArgs>
         _dashboardAlert = dashboardAlert;
     }
 
-    /// <inheritdoc />
-    public async Task OnEvent(ItemChangeEventArgs eventArgs)
+    /// <summary>
+    /// Processes an item added event.
+    /// </summary>
+    /// <param name="item">The added item.</param>
+    /// <returns>A task representing the async operation.</returns>
+    public async Task OnItemAdded(MediaBrowser.Controller.Entities.BaseItem item)
     {
-        if (eventArgs.Item is null)
+        if (item is null)
         {
             return;
         }
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.ItemAdded);
-        data.AddItemData(eventArgs.Item);
+        data.AddItemData(item);
 
         await _webhookSender.SendNotification(
             NotificationType.ItemAdded,
             data,
-            eventArgs.Item.GetType()).ConfigureAwait(false);
+            item.GetType()).ConfigureAwait(false);
 
         await _dashboardAlert.LogAsync(
-            $"Item added: {eventArgs.Item.Name}",
+            $"Item added: {item.Name}",
             "MultifyItemAdded").ConfigureAwait(false);
     }
 }
 
 /// <summary>
 /// Notifier for item deleted events.
+/// TODO: ItemChangeEventArgs does not inherit from EventArgs in Jellyfin 10.11,
+/// so it cannot be used with IEventConsumer&lt;T&gt;. Implement IItemDeletedManager
+/// pattern (see jellyfin-plugin-webhook) for proper library event handling.
 /// </summary>
-public class ItemDeletedNotifier : IEventConsumer<ItemChangeEventArgs>
+public class ItemDeletedNotifier
 {
     private readonly ILogger<ItemDeletedNotifier> _logger;
     private readonly IWebhookSender _webhookSender;
@@ -74,24 +82,28 @@ public class ItemDeletedNotifier : IEventConsumer<ItemChangeEventArgs>
         _dashboardAlert = dashboardAlert;
     }
 
-    /// <inheritdoc />
-    public async Task OnEvent(ItemChangeEventArgs eventArgs)
+    /// <summary>
+    /// Processes an item deleted event.
+    /// </summary>
+    /// <param name="item">The deleted item.</param>
+    /// <returns>A task representing the async operation.</returns>
+    public async Task OnItemDeleted(MediaBrowser.Controller.Entities.BaseItem item)
     {
-        if (eventArgs.Item is null)
+        if (item is null)
         {
             return;
         }
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.ItemDeleted);
-        data.AddItemData(eventArgs.Item);
+        data.AddItemData(item);
 
         await _webhookSender.SendNotification(
             NotificationType.ItemDeleted,
             data,
-            eventArgs.Item.GetType()).ConfigureAwait(false);
+            item.GetType()).ConfigureAwait(false);
 
         await _dashboardAlert.LogAsync(
-            $"Item deleted: {eventArgs.Item.Name}",
+            $"Item deleted: {item.Name}",
             "MultifyItemDeleted").ConfigureAwait(false);
     }
 }

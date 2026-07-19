@@ -3,6 +3,7 @@ using Jellyfin.Data.Events.Users;
 using Jellyfin.Plugin.Multify.Configuration;
 using Jellyfin.Plugin.Multify.Destinations;
 using Jellyfin.Plugin.Multify.Helpers;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Events;
 using Microsoft.Extensions.Logging;
 
@@ -96,8 +97,11 @@ public class UserDeletedNotifier : IEventConsumer<UserDeletedEventArgs>
 
 /// <summary>
 /// Notifier for user updated events.
+/// TODO: User entity doesn't inherit from EventArgs in Jellyfin 10.11,
+/// so it cannot be used with IEventConsumer&lt;T&gt;. This notifier is
+/// registered as a regular service and called manually when needed.
 /// </summary>
-public class UserUpdatedNotifier : IEventConsumer<User>
+public class UserUpdatedNotifier
 {
     private readonly ILogger<UserUpdatedNotifier> _logger;
     private readonly IWebhookSender _webhookSender;
@@ -116,8 +120,12 @@ public class UserUpdatedNotifier : IEventConsumer<User>
         _dashboardAlert = dashboardAlert;
     }
 
-    /// <inheritdoc />
-    public async Task OnEvent(User user)
+    /// <summary>
+    /// Processes a user updated event.
+    /// </summary>
+    /// <param name="user">The updated user.</param>
+    /// <returns>A task representing the async operation.</returns>
+    public async Task OnUserUpdated(User user)
     {
         if (user is null)
         {
