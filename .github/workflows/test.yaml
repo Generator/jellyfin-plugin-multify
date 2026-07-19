@@ -34,6 +34,6 @@ jobs:
         with:
           name: plugin-build-net${{ matrix.dotnet-version }}
           path: |
-            Jellyfin.Plugin.Multify/bin/Release/net*/Jellyfin.Plugin.Multify.dll
-            Jellyfin.Plugin.Multify/bin/Release/net*/Jellyfin.Plugin.Multify.pdb
+            bin/Release/net*/Jellyfin.Plugin.Multify.dll
+            bin/Release/net*/Jellyfin.Plugin.Multify.pdb
           retention-days: 14
