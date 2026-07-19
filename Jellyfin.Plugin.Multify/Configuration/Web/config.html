@@ -1,0 +1,249 @@
+<div data-role="page" id="multifyConfigurationPage" class="page type-interior pluginConfigurationPage fullWidthContent"
+     data-controller="__plugin/Multify.js">
+    <div class="content-primary">
+        <div class="verticalSection">
+            <div class="sectionTitleContainer">
+                <h2 class="sectionTitle">Multify</h2>
+                <a is="emby-linkbutton" class="raised raised-mini" style="margin-left: 2em;" target="_blank"
+                   href="https://github.com/jellyfin/jellyfin-plugin-multify">
+                    <span>Help</span>
+                </a>
+            </div>
+        </div>
+
+        <form class="multifyConfigurationForm">
+        <div class="inputContainer">
+            <input is="emby-input" type="text" id="txtServerUrl" label="Server Url:" />
+            <span>For linking to content. Include base url.</span>
+        </div>
+
+        <div class="inputContainer">
+            <input is="emby-input" type="text" id="txtMdblistApiKey" label="MDBList API Key (optional):"/>
+            <span>For fetching ratings. Get your free API key from <a href="https://mdblist.com" target="_blank">mdblist.com</a>.</span>
+        </div>
+
+            <button id="btnAddTelegram" is="emby-button" type="button" class="raised button block">
+                <span>Add Telegram Destination</span>
+            </button>
+            <button id="btnAddGotify" is="emby-button" type="button" class="raised button block">
+                <span>Add Gotify Destination</span>
+            </button>
+            <button id="btnAddNtfy" is="emby-button" type="button" class="raised button block">
+                <span>Add ntfy Destination</span>
+            </button>
+            <button id="btnAddGenericWebhook" is="emby-button" type="button" class="raised button block">
+                <span>Add Generic Webhook Destination</span>
+            </button>
+
+            <br />
+            <div id="configurationWrapper"></div>
+            <br />
+
+            <div is="emby-collapse" title="Advanced Settings">
+                <div class="collapseContent">
+                    <div class="inputContainer">
+                        <label class="checkboxContainer">
+                            <input is="emby-checkbox" type="checkbox" id="chkEnableDashboardAlerts"/>
+                            <span>Enable Dashboard Alerts</span>
+                        </label>
+                        <span>Log notification events to the Jellyfin admin dashboard activity feed.</span>
+                    </div>
+                </div>
+            </div>
+
+            <br />
+
+            <button id="saveConfig" is="emby-button" type="submit" class="raised button-submit block">
+                <span>Save</span>
+            </button>
+        </form>
+    </div>
+
+    <template id="template-notification-type">
+        <label class="checkboxContainer">
+            <input is="emby-checkbox" type="checkbox" data-name="notificationTypeValue"/>
+            <span data-name="notificationTypeName"></span>
+        </label>
+    </template>
+
+    <template id="template-user-filter">
+        <label class="checkboxContainer">
+            <input is="emby-checkbox" type="checkbox" data-name="userFilterValue"/>
+            <span data-name="userFilterName"></span>
+        </label>
+    </template>
+
+    <template id="template-base">
+        <div class="inputContainer">
+            <input is="emby-input" type="text" data-name="txtWebhookName" label="Webhook Name:"/>
+            <span>The webhook name (for display only)</span>
+        </div>
+        <div class="inputContainer">
+            <input is="emby-input" type="text" data-name="txtWebhookUri" label="Webhook Url:"/>
+            <span>The webhook destination url</span>
+        </div>
+        <div class="inputContainer">
+            <label>Status:</label>
+            <label class="checkboxContainer">
+                <input is="emby-checkbox" type="checkbox" data-name="chkEnableWebhook"/>
+                <span>Enable</span>
+            </label>
+        </div>
+        <div>
+            <label>Notification Type:</label>
+            <div data-name="notificationTypeContainer"></div>
+        </div>
+        <div>
+            <label>User Filter:</label>
+            <div data-name="userFilterContainer"></div>
+        </div>
+        <div>
+            <label>Item Type:</label>
+            <label class="checkboxContainer">
+                <input is="emby-checkbox" type="checkbox" data-name="chkEnableMovies"/>
+                <span>Movies</span>
+            </label>
+            <label class="checkboxContainer">
+                <input is="emby-checkbox" type="checkbox" data-name="chkEnableEpisodes"/>
+                <span>Episodes</span>
+            </label>
+            <label class="checkboxContainer">
+                <input is="emby-checkbox" type="checkbox" data-name="chkEnableSeasons"/>
+                <span>Season</span>
+            </label>
+            <label class="checkboxContainer">
+                <input is="emby-checkbox" type="checkbox" data-name="chkEnableSeries"/>
+                <span>Series</span>
+            </label>
+            <label class="checkboxContainer">
+                <input is="emby-checkbox" type="checkbox" data-name="chkEnableAlbums"/>
+                <span>Albums</span>
+            </label>
+            <label class="checkboxContainer">
+                <input is="emby-checkbox" type="checkbox" data-name="chkEnableSongs"/>
+                <span>Songs</span>
+            </label>
+            <label class="checkboxContainer">
+                <input is="emby-checkbox" type="checkbox" data-name="chkEnableVideos"/>
+                <span>Videos</span>
+            </label>
+            <label class="checkboxContainer">
+                <input is="emby-checkbox" type="checkbox" data-name="chkSendAllProperties"/>
+                <span>Send All Properties (ignores template)</span>
+            </label>
+            <label class="checkboxContainer">
+                <input is="emby-checkbox" type="checkbox" data-name="chkTrimWhitespace"/>
+                <span>Trim leading and trailing whitespace from message body before sending</span>
+            </label>
+            <label class="checkboxContainer">
+                <input is="emby-checkbox" type="checkbox" data-name="chkSkipEmptyMessageBody"/>
+                <span>Do not send when message body is empty</span>
+            </label>
+        </div>
+        <div class="inputContainer">
+            <label>Template:</label>
+            <div>
+                <textarea data-name="txtTemplate" style="width: 100%; height: 400px"></textarea>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-telegram">
+        <div class="inputContainer">
+            <input is="emby-input" type="text" data-name="txtBotToken" label="Bot Token:"/>
+        </div>
+        <div class="inputContainer">
+            <input is="emby-input" type="text" data-name="txtChatId" label="Chat ID:"/>
+        </div>
+        <div class="selectContainer">
+            <select is="emby-select" data-name="ddlParseMode" label="Parse Mode:">
+                <option value="HTML">HTML</option>
+                <option value="Markdown">Markdown</option>
+                <option value="MarkdownV2">MarkdownV2</option>
+            </select>
+        </div>
+        <div class="selectContainer">
+            <select is="emby-select" data-name="ddlMessageType" label="Message Type:">
+                <option value="0">Text (sendMessage)</option>
+                <option value="1">Photo (sendPhoto)</option>
+                <option value="2">Rich Message (sendRichMessage)</option>
+            </select>
+        </div>
+    </template>
+
+    <template id="template-gotify">
+        <div class="inputContainer">
+            <input is="emby-input" type="text" data-name="txtToken" label="Token:"/>
+        </div>
+        <div class="inputContainer">
+            <input is="emby-input" type="number" data-name="txtPriority" label="Priority:"/>
+        </div>
+    </template>
+
+    <template id="template-ntfy">
+        <div class="inputContainer">
+            <input is="emby-input" type="text" data-name="txtTopic" label="Topic:"/>
+        </div>
+        <div class="selectContainer">
+            <select is="emby-select" data-name="ddlPriority" label="Priority:">
+                <option value="1">Min</option>
+                <option value="2">Low</option>
+                <option value="3" selected>Default</option>
+                <option value="4">High</option>
+                <option value="5">Max/Urgent</option>
+            </select>
+        </div>
+        <div class="inputContainer">
+            <label class="checkboxContainer">
+                <input is="emby-checkbox" type="checkbox" data-name="chkEnableMarkdown"/>
+                <span>Enable Markdown</span>
+            </label>
+        </div>
+        <div class="inputContainer">
+            <input is="emby-input" type="text" data-name="txtAccessToken" label="Access Token (optional):"/>
+        </div>
+    </template>
+
+    <template id="template-generic-header">
+        <div class="flex align-items-center gap-1 mb-1">
+            <input is="emby-input" type="text" data-name="txtHeaderKey" label="Header Name:"/>
+            <input is="emby-input" type="text" data-name="txtHeaderValue" label="Header Value:"/>
+            <button is="emby-button" type="button" class="raised button-warning btnRemoveHeader" style="flex-shrink:0;">
+                <span>X</span>
+            </button>
+        </div>
+    </template>
+
+    <template id="template-generic-field">
+        <div class="flex align-items-center gap-1 mb-1">
+            <input is="emby-input" type="text" data-name="txtFieldKey" label="Field Name:"/>
+            <input is="emby-input" type="text" data-name="txtFieldValue" label="Field Value:"/>
+            <button is="emby-button" type="button" class="raised button-warning btnRemoveField" style="flex-shrink:0;">
+                <span>X</span>
+            </button>
+        </div>
+    </template>
+
+    <template id="template-generic">
+        <div class="inputContainer">
+            <label>Custom Headers:</label>
+            <div data-name="headersContainer"></div>
+            <button is="emby-button" type="button" class="raised btnAddHeader">
+                <span>Add Header</span>
+            </button>
+        </div>
+        <div class="inputContainer">
+            <label>Custom Fields (merged into notification data):</label>
+            <div data-name="fieldsContainer"></div>
+            <button is="emby-button" type="button" class="raised btnAddField">
+                <span>Add Field</span>
+            </button>
+        </div>
+    </template>
+
+    <style>
+        .checkboxContainer {
+            max-width: fit-content;
+        }
+    </style>
+</div>
