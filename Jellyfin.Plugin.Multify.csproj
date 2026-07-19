@@ -8,7 +8,7 @@
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
     <RootNamespace>Jellyfin.Plugin.Multify</RootNamespace>
     <AssemblyName>Jellyfin.Plugin.Multify</AssemblyName>
-    <CodeAnalysisRuleSet>..\jellyfin.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet>jellyfin.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
 
   <ItemGroup>
