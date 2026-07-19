@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using MediaBrowser.Model.IO;
+using MediaBrowser.Common.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Services;
@@ -13,7 +14,6 @@ namespace Jellyfin.Plugin.Multify.Services;
 public class TelegramMessageStore
 {
     private readonly ILogger<TelegramMessageStore> _logger;
-    private readonly IFileSystem _fileSystem;
     private readonly string _storePath;
     private readonly ConcurrentDictionary<string, long> _messageStore = new();
 
@@ -21,12 +21,11 @@ public class TelegramMessageStore
     /// Initializes a new instance of the <see cref="TelegramMessageStore"/> class.
     /// </summary>
     /// <param name="logger">Instance of the <see cref="ILogger{TelegramMessageStore}"/> interface.</param>
-    /// <param name="fileSystem">Instance of the <see cref="IFileSystem"/> interface.</param>
-    public TelegramMessageStore(ILogger<TelegramMessageStore> logger, IFileSystem fileSystem)
+    /// <param name="applicationPaths">Instance of the <see cref="IApplicationPaths"/> interface.</param>
+    public TelegramMessageStore(ILogger<TelegramMessageStore> logger, IApplicationPaths applicationPaths)
     {
         _logger = logger;
-        _fileSystem = fileSystem;
-        _storePath = _fileSystem.GetInternalDataPath("multify-telegram-messages.json");
+        _storePath = Path.Combine(applicationPaths.DataPath, "multify-telegram-messages.json");
         LoadStore();
     }
 
@@ -76,9 +75,9 @@ public class TelegramMessageStore
     {
         try
         {
-            if (_fileSystem.FileExists(_storePath))
+            if (File.Exists(_storePath))
             {
-                var json = _fileSystem.ReadAllText(_storePath);
+                var json = File.ReadAllText(_storePath);
                 var data = JsonSerializer.Deserialize<ConcurrentDictionary<string, long>>(json);
                 if (data != null)
                 {
@@ -100,7 +99,7 @@ public class TelegramMessageStore
         try
         {
             var json = JsonSerializer.Serialize(_messageStore);
-            _fileSystem.WriteAllText(_storePath, json);
+            File.WriteAllText(_storePath, json);
         }
         catch (Exception ex)
         {

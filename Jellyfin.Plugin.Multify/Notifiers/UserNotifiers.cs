@@ -34,20 +34,21 @@ public class UserCreatedNotifier : IEventConsumer<UserCreatedEventArgs>
     /// <inheritdoc />
     public async Task OnEvent(UserCreatedEventArgs eventArgs)
     {
-        if (eventArgs.User is null)
+        var user = eventArgs.Argument;
+        if (user is null)
         {
             return;
         }
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.UserCreated);
-        data.AddUserData(eventArgs.User);
+        data.AddUserData(user);
 
         await _webhookSender.SendNotification(
             NotificationType.UserCreated,
             data).ConfigureAwait(false);
 
         await _dashboardAlert.LogAsync(
-            $"User created: {eventArgs.User.Username}",
+            $"User created: {user.Username}",
             "MultifyUserCreated").ConfigureAwait(false);
     }
 }
@@ -77,20 +78,21 @@ public class UserDeletedNotifier : IEventConsumer<UserDeletedEventArgs>
     /// <inheritdoc />
     public async Task OnEvent(UserDeletedEventArgs eventArgs)
     {
-        if (eventArgs.User is null)
+        var user = eventArgs.Argument;
+        if (user is null)
         {
             return;
         }
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.UserDeleted);
-        data.AddUserData(eventArgs.User);
+        data.AddUserData(user);
 
         await _webhookSender.SendNotification(
             NotificationType.UserDeleted,
             data).ConfigureAwait(false);
 
         await _dashboardAlert.LogAsync(
-            $"User deleted: {eventArgs.User.Username}",
+            $"User deleted: {user.Username}",
             "MultifyUserDeleted").ConfigureAwait(false);
     }
 }

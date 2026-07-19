@@ -41,12 +41,12 @@ public static class DataObjectHelpers
         data["ItemType"] = item.GetType().Name;
 
         // Add provider IDs for MDBList integration
-        if (!string.IsNullOrEmpty(item.GetProviderId("Imdb")))
+        if (item.ProviderIds.TryGetValue("Imdb", out var imdbId) && !string.IsNullOrEmpty(imdbId))
         {
-            data["ImdbId"] = item.GetProviderId("Imdb");
+            data["ImdbId"] = imdbId;
         }
 
-        if (item.GetProviderId("Tmdb") is string tmdbId && int.TryParse(tmdbId, out _))
+        if (item.ProviderIds.TryGetValue("Tmdb", out var tmdbId) && int.TryParse(tmdbId, out _))
         {
             data["TmdbId"] = tmdbId;
         }

@@ -85,7 +85,7 @@ public class MdblistService
 
         try
         {
-            var uri = new Uri($"{ApiBaseUrl}/tmdb/{media_type}/{tmdbId}/");
+            var uri = new Uri($"{ApiBaseUrl}/tmdb/{mediaType}/{tmdbId}/");
             var request = new HttpRequestMessage(HttpMethod.Get, uri);
             request.Headers.Add("Authorization", $"Bearer {apiKey}");
 
