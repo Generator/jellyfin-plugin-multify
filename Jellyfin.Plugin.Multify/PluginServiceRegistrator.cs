@@ -11,6 +11,7 @@ using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller.Events;
 using MediaBrowser.Controller.Events.Authentication;
+using MediaBrowser.Controller.Events.Session;
 using MediaBrowser.Controller.Events.Updates;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Plugins;

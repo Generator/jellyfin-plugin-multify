@@ -162,7 +162,7 @@ public class MultifySender : IWebhookSender
             return true;
         }
 
-        if (baseOptions.EnableAlbums && itemType == typeof(MediaBrowser.Controller.Entities.Music.MusicAlbum))
+        if (baseOptions.EnableAlbums && itemType == typeof(MediaBrowser.Controller.Entities.Audio.MusicAlbum))
         {
             return true;
         }

@@ -34,20 +34,21 @@ public class AuthenticationSuccessNotifier : IEventConsumer<AuthenticationResult
     /// <inheritdoc />
     public async Task OnEvent(AuthenticationResultEventArgs eventArgs)
     {
-        if (eventArgs.Result?.User is null)
+        if (eventArgs.User is null)
         {
             return;
         }
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.AuthenticationSuccess);
-        data.AddUserData(eventArgs.Result.User);
+        data["Username"] = eventArgs.User.Name ?? "Unknown";
+        data["UserId"] = eventArgs.User.Id.ToString();
 
         await _webhookSender.SendNotification(
             NotificationType.AuthenticationSuccess,
             data).ConfigureAwait(false);
 
         await _dashboardAlert.LogAsync(
-            $"Authentication success: {eventArgs.Result.User.Username}",
+            $"Authentication success: {eventArgs.User.Name}",
             "MultifyAuthenticationSuccess").ConfigureAwait(false);
     }
 }
@@ -77,20 +78,21 @@ public class AuthenticationFailureNotifier : IEventConsumer<AuthenticationResult
     /// <inheritdoc />
     public async Task OnEvent(AuthenticationResultEventArgs eventArgs)
     {
-        if (eventArgs.Result?.User is null)
+        if (eventArgs.User is null)
         {
             return;
         }
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.AuthenticationFailure);
-        data.AddUserData(eventArgs.Result.User);
+        data["Username"] = eventArgs.User.Name ?? "Unknown";
+        data["UserId"] = eventArgs.User.Id.ToString();
 
         await _webhookSender.SendNotification(
             NotificationType.AuthenticationFailure,
             data).ConfigureAwait(false);
 
         await _dashboardAlert.LogAsync(
-            $"Authentication failure: {eventArgs.Result.User.Username}",
+            $"Authentication failure: {eventArgs.User.Name}",
             "MultifyAuthenticationFailure",
             severity: LogLevel.Warning).ConfigureAwait(false);
     }

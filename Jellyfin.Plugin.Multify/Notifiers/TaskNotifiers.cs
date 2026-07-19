@@ -44,7 +44,10 @@ public class TaskCompletedNotifier : IEventConsumer<TaskCompletionEventArgs>
         data["Status"] = eventArgs.Result?.Status.ToString() ?? "Unknown";
         data["StartTime"] = eventArgs.Result?.StartTimeUtc.ToString("O") ?? string.Empty;
         data["EndTime"] = eventArgs.Result?.EndTimeUtc.ToString("O") ?? string.Empty;
-        data["Duration"] = eventArgs.Result?.Duration.ToString() ?? string.Empty;
+        var duration = eventArgs.Result != null
+            ? eventArgs.Result.EndTimeUtc - eventArgs.Result.StartTimeUtc
+            : TimeSpan.Zero;
+        data["Duration"] = duration.ToString();
 
         await _webhookSender.SendNotification(
             NotificationType.TaskCompleted,
