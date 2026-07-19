@@ -92,6 +92,6 @@ public class AuthenticationFailureNotifier : IEventConsumer<AuthenticationResult
         await _dashboardAlert.LogAsync(
             $"Authentication failure: {eventArgs.Result.User.Username}",
             "MultifyAuthenticationFailure",
-            severity: MediaBrowser.Model.Activity.LogSeverity.Warn).ConfigureAwait(false);
+            severity: LogLevel.Warning).ConfigureAwait(false);
     }
 }

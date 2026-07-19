@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
+using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.Multify.Destinations;
 using MediaBrowser.Controller.Entities;
-using MediaBrowser.Model.Session;
+using MediaBrowser.Controller.Session;
 
 namespace Jellyfin.Plugin.Multify.Helpers;
 
@@ -33,7 +34,7 @@ public static class DataObjectHelpers
     /// <param name="data">The data dictionary.</param>
     /// <param name="item">The base item.</param>
     /// <returns>The updated dictionary.</returns>
-    public static Dictionary<string, object> AddItemData(this Dictionary<string, object> data, MediaBrowser.Controller.Entities.BaseItem item)
+    public static Dictionary<string, object> AddItemData(this Dictionary<string, object> data, BaseItem item)
     {
         data["ItemId"] = item.Id.ToString();
         data["ItemName"] = item.Name ?? "Unknown";
@@ -72,7 +73,7 @@ public static class DataObjectHelpers
     /// <param name="data">The data dictionary.</param>
     /// <param name="user">The user.</param>
     /// <returns>The updated dictionary.</returns>
-    public static Dictionary<string, object> AddUserData(this Dictionary<string, object> data, MediaBrowser.Controller.Entities.User user)
+    public static Dictionary<string, object> AddUserData(this Dictionary<string, object> data, User user)
     {
         data["Username"] = user.Username ?? "Unknown";
         data["UserId"] = user.Id.ToString();

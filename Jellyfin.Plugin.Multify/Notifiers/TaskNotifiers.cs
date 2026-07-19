@@ -41,10 +41,10 @@ public class TaskCompletedNotifier : IEventConsumer<TaskCompletionEventArgs>
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.TaskCompleted);
         data["TaskName"] = eventArgs.Task.Name ?? "Unknown";
         data["TaskId"] = eventArgs.Task.Id.ToString();
-        data["Status"] = eventArgs.Status?.Status.ToString() ?? "Unknown";
-        data["StartTime"] = eventArgs.Status?.StartTimeUtc.ToString("O") ?? string.Empty;
-        data["EndTime"] = eventArgs.Status?.EndTimeUtc.ToString("O") ?? string.Empty;
-        data["Duration"] = eventArgs.Status?.Duration.ToString() ?? string.Empty;
+        data["Status"] = eventArgs.Result?.Status.ToString() ?? "Unknown";
+        data["StartTime"] = eventArgs.Result?.StartTimeUtc.ToString("O") ?? string.Empty;
+        data["EndTime"] = eventArgs.Result?.EndTimeUtc.ToString("O") ?? string.Empty;
+        data["Duration"] = eventArgs.Result?.Duration.ToString() ?? string.Empty;
 
         await _webhookSender.SendNotification(
             NotificationType.TaskCompleted,

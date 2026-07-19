@@ -33,25 +33,21 @@ public class SessionStartedNotifier : IEventConsumer<SessionStartedEventArgs>
     /// <inheritdoc />
     public async Task OnEvent(SessionStartedEventArgs eventArgs)
     {
-        if (eventArgs.Session is null)
+        var session = eventArgs.Argument;
+        if (session is null)
         {
             return;
         }
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.SessionStart);
-        data.AddSessionInfo(eventArgs.Session);
-
-        if (eventArgs.User is not null)
-        {
-            data.AddUserData(eventArgs.User);
-        }
+        data.AddSessionInfo(session);
 
         await _webhookSender.SendNotification(
             NotificationType.SessionStart,
             data).ConfigureAwait(false);
 
         await _dashboardAlert.LogAsync(
-            $"Session started: {eventArgs.Session.Client}",
+            $"Session started: {session.Client}",
             "MultifySessionStarted").ConfigureAwait(false);
     }
 }

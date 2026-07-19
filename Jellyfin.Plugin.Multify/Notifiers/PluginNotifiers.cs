@@ -33,23 +33,23 @@ public class PluginUpdatedNotifier : IEventConsumer<PluginUpdatedEventArgs>
     /// <inheritdoc />
     public async Task OnEvent(PluginUpdatedEventArgs eventArgs)
     {
-        if (eventArgs.Plugin is null)
+        var info = eventArgs.Argument;
+        if (info is null)
         {
             return;
         }
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.PluginUpdated);
-        data["PluginName"] = eventArgs.Plugin.Name ?? "Unknown";
-        data["PluginId"] = eventArgs.Plugin.Id.ToString();
-        data["OldVersion"] = eventArgs.OldVersion?.ToString() ?? "Unknown";
-        data["NewVersion"] = eventArgs.Plugin.Version ?? "Unknown";
+        data["PluginName"] = info.Name ?? "Unknown";
+        data["PluginId"] = info.Id.ToString();
+        data["NewVersion"] = info.Version?.ToString() ?? "Unknown";
 
         await _webhookSender.SendNotification(
             NotificationType.PluginUpdated,
             data).ConfigureAwait(false);
 
         await _dashboardAlert.LogAsync(
-            $"Plugin updated: {eventArgs.Plugin.Name}",
+            $"Plugin updated: {info.Name}",
             "MultifyPluginUpdated").ConfigureAwait(false);
     }
 }

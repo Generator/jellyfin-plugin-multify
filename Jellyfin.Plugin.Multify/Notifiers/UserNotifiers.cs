@@ -1,9 +1,9 @@
 using System.Threading.Tasks;
 using Jellyfin.Data.Events.Users;
+using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.Multify.Configuration;
 using Jellyfin.Plugin.Multify.Destinations;
 using Jellyfin.Plugin.Multify.Helpers;
-using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Events;
 using Microsoft.Extensions.Logging;
 

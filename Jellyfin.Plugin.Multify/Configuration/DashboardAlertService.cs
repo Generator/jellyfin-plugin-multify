@@ -1,7 +1,8 @@
+using System;
 using System.Threading.Tasks;
-using MediaBrowser.Controller.Activity;
-using MediaBrowser.Model.Activity;
+using Jellyfin.Database.Implementations.Entities;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Jellyfin.Plugin.Multify.Configuration;
 
@@ -10,17 +11,17 @@ namespace Jellyfin.Plugin.Multify.Configuration;
 /// </summary>
 public class DashboardAlertService
 {
-    private readonly IActivityManager _activityManager;
+    private readonly MediaBrowser.Model.Activity.IActivityManager _activityManager;
     private readonly AdvancedOption _settings;
     private readonly ILogger<DashboardAlertService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardAlertService"/> class.
     /// </summary>
-    /// <param name="activityManager">Instance of the <see cref="IActivityManager"/> interface.</param>
+    /// <param name="activityManager">Instance of the <see cref="MediaBrowser.Model.Activity.IActivityManager"/> interface.</param>
     /// <param name="settings">Instance of the <see cref="AdvancedOption"/>.</param>
     /// <param name="logger">Instance of the <see cref="ILogger{DashboardAlertService}"/> interface.</param>
-    public DashboardAlertService(IActivityManager activityManager, AdvancedOption settings, ILogger<DashboardAlertService> logger)
+    public DashboardAlertService(MediaBrowser.Model.Activity.IActivityManager activityManager, AdvancedOption settings, ILogger<DashboardAlertService> logger)
     {
         _activityManager = activityManager;
         _settings = settings;
@@ -35,7 +36,7 @@ public class DashboardAlertService
     /// <param name="overview">Optional overview text.</param>
     /// <param name="severity">The log severity. Default is Information.</param>
     /// <returns>A task representing the async operation.</returns>
-    public async Task LogAsync(string name, string type, string? overview = null, LogSeverity severity = LogSeverity.Information)
+    public async Task LogAsync(string name, string type, string? overview = null, LogLevel severity = LogLevel.Information)
     {
         if (!_settings.EnableDashboardAlerts)
         {
@@ -44,10 +45,8 @@ public class DashboardAlertService
 
         try
         {
-            var entry = new ActivityLog
+            var entry = new ActivityLog(name, type, Guid.Empty)
             {
-                Name = name,
-                Type = type,
                 Overview = overview,
                 LogSeverity = severity
             };
@@ -55,7 +54,7 @@ public class DashboardAlertService
             await _activityManager.CreateAsync(entry).ConfigureAwait(false);
             _logger.LogDebug("Dashboard alert created: {Name} ({Type})", name, type);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to create dashboard alert: {Name}", name);
         }
