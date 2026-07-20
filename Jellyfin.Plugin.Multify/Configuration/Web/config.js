@@ -469,6 +469,7 @@ export default function (view) {
         {
             id: "generic",
             label: "Generic Webhook",
+            shortLabel: "Generic",
             render(container) {
                 const title = document.createElement("h3");
                 title.textContent = "Generic Webhook Destinations";
@@ -871,7 +872,9 @@ export default function (view) {
             const btn = document.createElement("button");
             btn.className = "multify-tab-button";
             btn.dataset.tabId = tab.id;
-            btn.textContent = tab.label;
+            // Always use innerHTML with desktop/mobile label spans
+            const shortLabel = tab.shortLabel || tab.label;
+            btn.innerHTML = `<span class="multify-tab-full">${tab.label}</span><span class="multify-tab-short">${shortLabel}</span>`;
             btn.addEventListener("click", () => {
                 snapshotCurrentTab();
                 switchTab(tab.id);

@@ -526,16 +526,51 @@
             }
             .multifyTabNav {
                 flex-direction: row !important;
+                align-items: flex-start;
                 overflow-x: auto;
                 white-space: nowrap;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                padding-bottom: 4px;
+            }
+            .multifyTabNav::-webkit-scrollbar {
+                display: none;
             }
             .multify-tab-button {
                 width: auto;
+                min-width: fit-content;
+                min-height: 44px;
+                padding: 10px 14px;
+                flex-shrink: 0;
+                font-size: 0.9em;
+            }
+            .multify-tab-button.tab-active {
+                background: var(--multify-accent);
+                color: var(--multify-on-accent);
+                border-radius: 20px;
+            }
+            .multify-tab-button .multify-tab-full {
+                display: none;
+            }
+            .multify-tab-button .multify-tab-short {
+                display: inline;
             }
             .multify-side-by-side {
                 flex-direction: column;
                 gap: 0;
             }
+            .multify-destination-card {
+                padding: 12px;
+            }
+            .multify-destination-card .card-header {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+        }
+
+        /* Desktop: show full label, hide short */
+        .multify-tab-button .multify-tab-short {
+            display: none;
         }
     </style>
 </div>
