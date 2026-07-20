@@ -28,11 +28,8 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
     /// <inheritdoc />
     public void RegisterServices(IServiceCollection serviceCollection, MediaBrowser.Controller.IServerApplicationHost applicationHost)
     {
-        var configuration = new PluginConfiguration();
-        serviceCollection.AddSingleton(configuration);
-
-        // Register advanced settings (derived from configuration)
-        serviceCollection.AddSingleton(configuration.AdvancedSettings);
+        // Note: Plugin configuration is accessed via MultifyPlugin.Instance?.Configuration
+        // Do not create a new PluginConfiguration() here as it would have default values
 
         // Register dashboard alert service
         serviceCollection.AddScoped<DashboardAlertService>();

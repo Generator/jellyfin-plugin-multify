@@ -12,21 +12,20 @@ namespace Jellyfin.Plugin.Multify.Configuration;
 public class DashboardAlertService
 {
     private readonly MediaBrowser.Model.Activity.IActivityManager _activityManager;
-    private readonly AdvancedOption _settings;
     private readonly ILogger<DashboardAlertService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardAlertService"/> class.
     /// </summary>
     /// <param name="activityManager">Instance of the <see cref="MediaBrowser.Model.Activity.IActivityManager"/> interface.</param>
-    /// <param name="settings">Instance of the <see cref="AdvancedOption"/>.</param>
     /// <param name="logger">Instance of the <see cref="ILogger{DashboardAlertService}"/> interface.</param>
-    public DashboardAlertService(MediaBrowser.Model.Activity.IActivityManager activityManager, AdvancedOption settings, ILogger<DashboardAlertService> logger)
+    public DashboardAlertService(MediaBrowser.Model.Activity.IActivityManager activityManager, ILogger<DashboardAlertService> logger)
     {
         _activityManager = activityManager;
-        _settings = settings;
         _logger = logger;
     }
+
+    private AdvancedOption Settings => MultifyPlugin.Instance?.Configuration.AdvancedSettings ?? new AdvancedOption();
 
     /// <summary>
     /// Logs a notification event to the dashboard activity feed if alerts are enabled.
@@ -38,7 +37,7 @@ public class DashboardAlertService
     /// <returns>A task representing the async operation.</returns>
     public async Task LogAsync(string name, string type, string? overview = null, LogLevel severity = LogLevel.Information)
     {
-        if (!_settings.EnableDashboardAlerts)
+        if (!Settings.EnableDashboardAlerts)
         {
             return;
         }

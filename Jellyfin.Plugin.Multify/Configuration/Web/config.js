@@ -268,7 +268,7 @@ export default function (view) {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-Emby-Token": window.ApiKey()
+                    "X-Emby-Token": window.ApiClient.accessToken()
                 },
                 body: JSON.stringify({
                     destinationType: type,
@@ -809,7 +809,20 @@ export default function (view) {
 
     document.getElementById("saveConfig")?.addEventListener("click", async function (e) {
         e.preventDefault();
-        Dashboard.showLoadingMsg();
+        
+        const saveBtn = document.getElementById("saveConfig");
+        const saveStatus = document.getElementById("saveStatus");
+        
+        // Disable save button and show saving state
+        saveBtn.disabled = true;
+        saveBtn.querySelector("span").textContent = "Saving...";
+        
+        // Show saving status
+        if (saveStatus) {
+            saveStatus.textContent = "Saving...";
+            saveStatus.dataset.state = "info";
+            saveStatus.style.display = "inline";
+        }
 
         // Snapshot the currently active tab's visible fields
         snapshotCurrentTab();
@@ -851,11 +864,35 @@ export default function (view) {
         try {
             await window.ApiClient.updatePluginConfiguration(PLUGIN_ID, configToSave);
             Dashboard.processPluginConfigurationUpdateResult({ Configuration: configToSave });
+            
+            // Show success status
+            if (saveStatus) {
+                saveStatus.textContent = "Changes saved";
+                saveStatus.dataset.state = "success";
+                saveStatus.style.display = "inline";
+                
+                // Clear status after 3 seconds
+                setTimeout(() => {
+                    if (saveStatus.dataset.state === "success") {
+                        saveStatus.style.display = "none";
+                    }
+                }, 3000);
+            }
         } catch (e) {
             console.error("Multify: Failed to save config", e);
+            
+            // Show error status
+            if (saveStatus) {
+                saveStatus.textContent = "Save failed";
+                saveStatus.dataset.state = "error";
+                saveStatus.style.display = "inline";
+            }
+            
             Dashboard.alert("Failed to save configuration.");
+        } finally {
+            // Re-enable save button
+            saveBtn.disabled = false;
+            saveBtn.querySelector("span").textContent = "Save";
         }
-
-        Dashboard.hideLoadingMsg();
     });
 }

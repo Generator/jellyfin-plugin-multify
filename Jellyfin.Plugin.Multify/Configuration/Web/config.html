@@ -16,8 +16,9 @@
             <main class="multifyTabContent" id="multifyTabContent" style="padding:8px 0;"></main>
         </div>
 
-        <div style="padding:16px 0;">
-            <button id="saveConfig" is="emby-button" type="button" class="raised button-submit block">
+        <div class="multify-save-footer">
+            <span id="saveStatus" class="multify-save-status" style="display:none;"></span>
+            <button id="saveConfig" is="emby-button" type="button" class="raised button-submit">
                 <span>Save</span>
             </button>
         </div>
@@ -210,9 +211,34 @@
     </template>
 
     <style>
+        :root {
+            /* Color tokens with Jellyfin theme fallbacks */
+            --multify-bg: var(--theme-background, #1a1a2e);
+            --multify-surface: var(--theme-card-background, #16213e);
+            --multify-text: var(--theme-text-color, #e0e0e0);
+            --multify-text-muted: var(--theme-text-color-secondary, #999);
+            --multify-border: rgba(255, 255, 255, 0.1);
+            --multify-accent: var(--theme-primary-color, #00a4dc);
+            
+            /* Status colors */
+            --multify-error: #f44336;
+            --multify-warning: #ffa500;
+            --multify-success: #4caf50;
+            
+            /* Hover states */
+            --multify-hover: rgba(255, 255, 255, 0.05);
+            --multify-hover-strong: rgba(255, 255, 255, 0.08);
+            
+            /* Form control tokens */
+            --multify-input-bg: rgba(255, 255, 255, 0.05);
+            --multify-input-border: rgba(255, 255, 255, 0.15);
+            --multify-input-focus: var(--theme-primary-color, #00a4dc);
+        }
+
         .checkboxContainer {
             max-width: fit-content;
         }
+        
         .multify-tab-button {
             display: block;
             width: 100%;
@@ -220,33 +246,117 @@
             padding: 10px 16px;
             border: none;
             background: transparent;
-            color: inherit;
+            color: var(--multify-text);
             cursor: pointer;
             border-radius: 4px;
             font-size: 0.95em;
             font-family: inherit;
+            transition: background 0.15s, color 0.15s;
         }
+        
         .multify-tab-button:hover {
-            background: rgba(255, 255, 255, 0.07);
+            background: var(--multify-hover);
         }
+        
+        .multify-tab-button:focus-visible {
+            outline: 2px solid var(--multify-accent);
+            outline-offset: 2px;
+        }
+        
         .multify-tab-button.tab-active {
-            background: rgba(53, 126, 210, 0.15);
-            color: #357ed0;
+            background: color-mix(in srgb, var(--multify-accent) 15%, transparent);
+            color: var(--multify-accent);
             font-weight: 600;
         }
+        
         .multify-destination-card {
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--multify-border);
             border-radius: 8px;
             padding: 16px;
             margin-bottom: 12px;
-            background: rgba(255, 255, 255, 0.03);
+            background: var(--multify-surface);
         }
+        
         .multify-destination-card .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
         }
+        
+        /* Form field helpers */
+        .multify-field-description {
+            font-size: 0.85em;
+            color: var(--multify-text-muted);
+            margin-top: 4px;
+        }
+        
+        .multify-field-warning {
+            font-size: 0.85em;
+            color: var(--multify-warning);
+            margin-top: 4px;
+        }
+        
+        .multify-field-error {
+            font-size: 0.85em;
+            color: var(--multify-error);
+            margin-top: 4px;
+            display: none;
+        }
+        
+        .multify-field-error-active {
+            border-color: var(--multify-error);
+        }
+        
+        /* Side-by-side layout */
+        .multify-side-by-side {
+            display: flex;
+            gap: 24px;
+        }
+        
+        .multify-side-by-side > * {
+            flex: 1;
+        }
+        
+        /* Focus states for form controls */
+        input[type="number"]:focus-visible,
+        input[type="text"]:focus-visible,
+        select:focus-visible {
+            border-color: var(--multify-input-focus);
+            outline: 2px solid var(--multify-accent);
+            outline-offset: 2px;
+        }
+        
+        /* Save footer */
+        .multify-save-footer {
+            position: sticky;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-top: 1px solid var(--multify-border);
+            background: var(--multify-bg);
+            z-index: 10;
+        }
+        
+        .multify-save-status {
+            margin-right: auto;
+            font-size: 0.85em;
+            color: var(--multify-text-muted);
+        }
+        
+        .multify-save-status[data-state="success"] {
+            color: var(--multify-success);
+        }
+        
+        .multify-save-status[data-state="error"] {
+            color: var(--multify-error);
+        }
+        
         @media (max-width: 768px) {
             .multifyTabLayout {
                 grid-template-columns: 1fr !important;
@@ -254,6 +364,10 @@
             .multifyTabNav {
                 flex-direction: row !important;
                 overflow-x: auto;
+            }
+            .multify-side-by-side {
+                flex-direction: column;
+                gap: 0;
             }
         }
     </style>
