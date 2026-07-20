@@ -76,8 +76,12 @@ public class MultifySender : IWebhookSender
         var ntfyCount = _configuration.NtfyOptions.Count(o => o.NotificationTypes.Contains(notificationType));
         var genericCount = _configuration.GenericWebhookOptions.Count(o => o.NotificationTypes.Contains(notificationType));
 
-        _logger.LogDebug("Matching destinations: Telegram={Telegram}, Gotify={Gotify}, ntfy={Ntfy}, Generic={Generic}",
-            telegramCount, gotifyCount, ntfyCount, genericCount);
+        _logger.LogDebug(
+            "Matching destinations: Telegram={Telegram}, Gotify={Gotify}, ntfy={Ntfy}, Generic={Generic}",
+            telegramCount,
+            gotifyCount,
+            ntfyCount,
+            genericCount);
 
         foreach (var option in _configuration.TelegramOptions.Where(o => o.NotificationTypes.Contains(notificationType)))
         {

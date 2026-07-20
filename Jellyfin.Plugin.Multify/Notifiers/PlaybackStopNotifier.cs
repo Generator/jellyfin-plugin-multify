@@ -45,8 +45,10 @@ public class PlaybackStopNotifier : IEventConsumer<PlaybackStopEventArgs>
             return;
         }
 
-        _logger.LogDebug("Playback stop event received for {ItemName} by {UserCount} user(s)",
-            eventArgs.Item.Name, eventArgs.Users.Count);
+        _logger.LogDebug(
+            "Playback stop event received for {ItemName} by {UserCount} user(s)",
+            eventArgs.Item.Name,
+            eventArgs.Users.Count);
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.PlaybackStop);
         data.AddItemData(eventArgs.Item);
