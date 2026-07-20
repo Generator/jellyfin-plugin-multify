@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -130,7 +131,7 @@ public class MultifyTestService : IMultifyTestService
         {
             ["Title"] = "Test Notification",
             ["Body"] = "This is a test message to verify your notification configuration is working correctly.",
-            ["Timestamp"] = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC"),
+            ["Timestamp"] = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", CultureInfo.InvariantCulture),
             ["ItemType"] = "Movie",
             ["ItemName"] = "Test Movie (2024)",
             ["ServerName"] = "Jellyfin Server"
