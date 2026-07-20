@@ -49,6 +49,7 @@ public class MultifyPlugin : BasePlugin<Configuration.PluginConfiguration>, IHas
             new PluginPageInfo
             {
                 Name = Name,
+                EnableInMainMenu = Instance?.Configuration.EnableMainMenu ?? true,
                 EmbeddedResourcePath = "Jellyfin.Plugin.Multify.Jellyfin.Plugin.Multify.Configuration.Web.config.html"
             },
             new PluginPageInfo

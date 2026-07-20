@@ -534,6 +534,18 @@ export default function (view) {
                     <span>Log notification events to the Jellyfin admin dashboard activity feed.</span>`;
                 container.appendChild(alertsDiv);
 
+                // Show in main menu
+                const mainMenuDiv = document.createElement("div");
+                mainMenuDiv.className = "inputContainer";
+                mainMenuDiv.style.marginTop = "16px";
+                mainMenuDiv.innerHTML = `
+                    <label class="checkboxContainer">
+                        <input is="emby-checkbox" type="checkbox" id="chkEnableMainMenu"/>
+                        <span>Show Multify in Main Menu</span>
+                    </label>
+                    <span>Toggle the Multify entry in the server's main navigation. Save and refresh the client (or clear cache) to apply.</span>`;
+                container.appendChild(mainMenuDiv);
+
                 // Set current values
                 setTimeout(() => {
                     const logLevel = currentConfig.AdvancedSettings?.LogLevel || "Information";
@@ -541,6 +553,8 @@ export default function (view) {
                     if (ddl) ddl.value = logLevel;
                     const chk = document.getElementById("chkEnableDashboardAlerts");
                     if (chk) chk.checked = currentConfig.AdvancedSettings?.EnableDashboardAlerts ?? false;
+                    const mainMenu = document.getElementById("chkEnableMainMenu");
+                    if (mainMenu) mainMenu.checked = currentConfig.EnableMainMenu ?? true;
                 }, 0);
             }
         }
@@ -702,6 +716,68 @@ export default function (view) {
         });
     }
 
+    /*** Dirty state tracking ***/
+    let configSnapshot = null;
+    let isDirty = false;
+
+    function updateDirtyState() {
+        if (!configSnapshot) return;
+        const currentJson = JSON.stringify(gatherConfig());
+        const snapshotJson = JSON.stringify(configSnapshot);
+        isDirty = currentJson !== snapshotJson;
+        const indicator = document.getElementById("dirtyIndicator");
+        if (indicator) {
+            indicator.style.display = isDirty ? "inline" : "none";
+        }
+    }
+
+    function takeSnapshot() {
+        configSnapshot = JSON.parse(JSON.stringify(gatherConfig()));
+        isDirty = false;
+        const indicator = document.getElementById("dirtyIndicator");
+        if (indicator) indicator.style.display = "none";
+    }
+
+    function markDirty() {
+        isDirty = true;
+        const indicator = document.getElementById("dirtyIndicator");
+        if (indicator) indicator.style.display = "inline";
+    }
+
+    /*** Confirm dialog helper ***/
+    function showConfirmDialog(title, body) {
+        return new Promise((resolve) => {
+            const dialog = document.createElement("dialog");
+            dialog.className = "multify-confirm-dialog";
+            dialog.innerHTML = `
+                <h3 class="multify-confirm-title">${title}</h3>
+                <p class="multify-confirm-body">${body}</p>
+                <div class="multify-confirm-actions">
+                    <button class="multify-confirm-btn cancel" type="button">Cancel</button>
+                    <button class="multify-confirm-btn confirm" type="button">Confirm</button>
+                </div>`;
+            
+            const cancelBtn = dialog.querySelector(".cancel");
+            const confirmBtn = dialog.querySelector(".confirm");
+            
+            cancelBtn.addEventListener("click", () => {
+                dialog.close();
+                resolve(false);
+            });
+            confirmBtn.addEventListener("click", () => {
+                dialog.close();
+                resolve(true);
+            });
+            dialog.addEventListener("close", () => {
+                resolve(dialog.returnValue === "true");
+            });
+            
+            document.body.appendChild(dialog);
+            dialog.showModal();
+            dialog.addEventListener("close", () => dialog.remove(), { once: true });
+        });
+    }
+
     /*** Tab switching ***/
     let activeTabId = "general";
     let currentConfig = {};
@@ -733,7 +809,8 @@ export default function (view) {
             AdvancedSettings: {
                 LogLevel: document.getElementById("ddlLogLevel")?.value || "Information",
                 EnableDashboardAlerts: document.getElementById("chkEnableDashboardAlerts")?.checked ?? false
-            }
+            },
+            EnableMainMenu: document.getElementById("chkEnableMainMenu")?.checked ?? true
         };
         return config;
     }
@@ -764,6 +841,18 @@ export default function (view) {
             nav.appendChild(btn);
         }
 
+        // Mark dirty on input changes
+        document.addEventListener("input", (e) => {
+            if (e.target.matches("input, select, textarea")) {
+                markDirty();
+            }
+        });
+        document.addEventListener("change", (e) => {
+            if (e.target.matches("input, select, textarea")) {
+                markDirty();
+            }
+        });
+
         // Load config
         Dashboard.showLoadingMsg();
         try {
@@ -778,6 +867,9 @@ export default function (view) {
         // Populate general fields after tab renders
         setTimeout(() => populateGeneral(currentConfig), 10);
 
+        // Take initial snapshot for dirty tracking
+        takeSnapshot();
+
         Dashboard.hideLoadingMsg();
     }
 
@@ -791,6 +883,7 @@ export default function (view) {
                 LogLevel: document.getElementById("ddlLogLevel")?.value || "Information",
                 EnableDashboardAlerts: document.getElementById("chkEnableDashboardAlerts")?.checked ?? false
             };
+            currentConfig.EnableMainMenu = document.getElementById("chkEnableMainMenu")?.checked ?? true;
         } else if (activeTabId === "telegram") {
             currentConfig.TelegramOptions = readDestinations("telegram");
         } else if (activeTabId === "gotify") {
@@ -805,6 +898,14 @@ export default function (view) {
     /*** Save button ***/
     view.addEventListener("viewshow", async function () {
         await init();
+    });
+
+    // Warn before leaving with unsaved changes
+    window.addEventListener("beforeunload", (e) => {
+        if (isDirty) {
+            e.preventDefault();
+            e.returnValue = "";
+        }
     });
 
     document.getElementById("saveConfig")?.addEventListener("click", async function (e) {
@@ -878,6 +979,9 @@ export default function (view) {
                     }
                 }, 3000);
             }
+
+            // Reset dirty state
+            takeSnapshot();
         } catch (e) {
             console.error("Multify: Failed to save config", e);
             

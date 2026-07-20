@@ -11,14 +11,17 @@
             </div>
         </div>
 
+        <a href="#multifyTabContent" class="multify-skip-link">Skip to content</a>
+
         <div class="multifyTabLayout" style="display:grid;grid-template-columns:180px 1fr;gap:24px;min-height:60vh;">
-            <nav class="multifyTabNav" id="multifyTabNav" style="display:flex;flex-direction:column;gap:4px;padding-top:8px;"></nav>
-            <main class="multifyTabContent" id="multifyTabContent" style="padding:8px 0;"></main>
+            <nav class="multifyTabNav" id="multifyTabNav" aria-label="Settings Sections" style="display:flex;flex-direction:column;gap:4px;padding-top:8px;"></nav>
+            <main class="multifyTabContent" id="multifyTabContent" tabindex="-1" style="padding:8px 0;"></main>
         </div>
 
-        <div class="multify-save-footer">
-            <span id="saveStatus" class="multify-save-status" style="display:none;"></span>
-            <button id="saveConfig" is="emby-button" type="button" class="raised button-submit">
+        <div class="multify-save-footer" aria-label="Save controls">
+            <span id="dirtyIndicator" class="multify-dirty-indicator" aria-live="polite" style="display:none;">&#x25cf; Unsaved changes</span>
+            <span id="saveStatus" class="multify-save-status" aria-live="polite" aria-atomic="true" style="display:none;"></span>
+            <button id="saveConfig" is="emby-button" type="button" class="raised button-submit" aria-label="Save configuration">
                 <span>Save</span>
             </button>
         </div>
@@ -212,6 +215,8 @@
 
     <style>
         :root {
+            color-scheme: dark;
+
             /* Color tokens with Jellyfin theme fallbacks */
             --multify-bg: var(--theme-background, #1a1a2e);
             --multify-surface: var(--theme-card-background, #16213e);
@@ -225,14 +230,41 @@
             --multify-warning: #ffa500;
             --multify-success: #4caf50;
             
+            /* Contrast text for use on accent / colored backgrounds */
+            --multify-on-accent: #fff;
+            
             /* Hover states */
             --multify-hover: rgba(255, 255, 255, 0.05);
             --multify-hover-strong: rgba(255, 255, 255, 0.08);
+            
+            /* Border variants */
+            --multify-border-strong: rgba(255, 255, 255, 0.2);
+            --multify-border-muted: rgba(155, 155, 155, 0.5);
             
             /* Form control tokens */
             --multify-input-bg: rgba(255, 255, 255, 0.05);
             --multify-input-border: rgba(255, 255, 255, 0.15);
             --multify-input-focus: var(--theme-primary-color, #00a4dc);
+        }
+
+        /* Skip link for accessibility */
+        .multify-skip-link {
+            position: absolute;
+            top: 8px;
+            left: 16px;
+            z-index: 20;
+            padding: 8px 12px;
+            border-radius: 4px;
+            background: var(--multify-accent);
+            color: var(--multify-on-accent);
+            text-decoration: none;
+            transform: translateY(-160%);
+        }
+
+        .multify-skip-link:focus-visible {
+            transform: translateY(0);
+            outline: 2px solid var(--multify-on-accent);
+            outline-offset: 2px;
         }
 
         .checkboxContainer {
@@ -251,6 +283,7 @@
             border-radius: 4px;
             font-size: 0.95em;
             font-family: inherit;
+            touch-action: manipulation;
             transition: background 0.15s, color 0.15s;
         }
         
@@ -327,6 +360,123 @@
             outline-offset: 2px;
         }
         
+        /* Action buttons */
+        .multify-action-button {
+            background: var(--multify-accent);
+            color: var(--multify-on-accent);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 8px;
+            touch-action: manipulation;
+        }
+
+        .multify-action-button:hover {
+            opacity: 0.9;
+        }
+
+        .multify-action-button:focus-visible {
+            outline: 2px solid var(--multify-accent);
+            outline-offset: 2px;
+        }
+
+        .multify-action-button:disabled {
+            opacity: 0.6;
+        }
+
+        /* Tab warning banner */
+        .multify-tab-warning {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 10px 12px;
+            margin-bottom: 16px;
+            background: rgba(232, 168, 54, 0.08);
+            border: 1px solid rgba(232, 168, 54, 0.25);
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: var(--multify-warning);
+            line-height: 1.4;
+        }
+
+        /* Confirm dialog modal */
+        .multify-confirm-dialog {
+            background: var(--multify-surface);
+            color: var(--multify-text);
+            border: 1px solid var(--multify-border);
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 420px;
+            width: calc(100% - 32px);
+            box-sizing: border-box;
+        }
+
+        .multify-confirm-dialog::backdrop {
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        .multify-confirm-title {
+            margin: 0 0 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .multify-confirm-body {
+            margin: 0 0 16px;
+            font-size: 0.9em;
+            color: var(--multify-text-muted);
+            line-height: 1.5;
+        }
+
+        .multify-confirm-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .multify-confirm-btn {
+            padding: 7px 16px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+            touch-action: manipulation;
+        }
+
+        .multify-confirm-btn:focus-visible {
+            outline: 2px solid var(--multify-accent);
+            outline-offset: 2px;
+        }
+
+        .multify-confirm-btn.cancel {
+            background: var(--multify-input-bg);
+            border: 1px solid var(--multify-input-border);
+            color: var(--multify-text);
+        }
+
+        .multify-confirm-btn.cancel:hover {
+            background: var(--multify-hover-strong);
+        }
+
+        .multify-confirm-btn.confirm {
+            background: rgba(244, 67, 54, 0.2);
+            color: var(--multify-error);
+        }
+
+        .multify-confirm-btn.confirm:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        /* Dirty indicator */
+        .multify-dirty-indicator {
+            margin-right: auto;
+            font-size: 0.85em;
+            color: var(--multify-warning);
+            white-space: nowrap;
+        }
+        
         /* Save footer */
         .multify-save-footer {
             position: sticky;
@@ -356,6 +506,13 @@
         .multify-save-status[data-state="error"] {
             color: var(--multify-error);
         }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            .multify-tab-button {
+                transition: none;
+            }
+        }
         
         @media (max-width: 768px) {
             .multifyTabLayout {
@@ -364,6 +521,10 @@
             .multifyTabNav {
                 flex-direction: row !important;
                 overflow-x: auto;
+                white-space: nowrap;
+            }
+            .multify-tab-button {
+                width: auto;
             }
             .multify-side-by-side {
                 flex-direction: column;
