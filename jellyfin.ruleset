@@ -51,6 +51,7 @@
         <Rule Id="CA2253" Action="Info" />
         <Rule Id="CA5394" Action="Info" />
 
+        <Rule Id="CA1027" Action="None" />
         <Rule Id="CA1054" Action="None" />
         <Rule Id="CA1055" Action="None" />
         <Rule Id="CA1056" Action="None" />
