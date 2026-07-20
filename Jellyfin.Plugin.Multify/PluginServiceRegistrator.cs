@@ -52,6 +52,9 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // Register Telegram message store
         serviceCollection.AddSingleton<TelegramMessageStore>();
 
+        // Register test notification service
+        serviceCollection.AddScoped<IMultifyTestService, MultifyTestService>();
+
         // Register event consumers
         serviceCollection.AddScoped<IEventConsumer<PlaybackStartEventArgs>, PlaybackStartNotifier>();
         serviceCollection.AddScoped<IEventConsumer<PlaybackStopEventArgs>, PlaybackStopNotifier>();

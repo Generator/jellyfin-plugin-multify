@@ -203,6 +203,22 @@ export default function (view) {
         const title = document.createElement("strong");
         title.textContent = config.WebhookName || type;
         header.appendChild(title);
+
+        // Button container
+        const btnContainer = document.createElement("div");
+        btnContainer.style.cssText = "display:flex;gap:8px;";
+
+        // Test button
+        const testBtn = document.createElement("button");
+        testBtn.setAttribute("is", "emby-button");
+        testBtn.className = "raised";
+        testBtn.innerHTML = "<span>Test</span>";
+        testBtn.addEventListener("click", async () => {
+            await handleTestNotification(card, type, testBtn);
+        });
+        btnContainer.appendChild(testBtn);
+
+        // Remove button
         const removeBtn = document.createElement("button");
         removeBtn.setAttribute("is", "emby-button");
         removeBtn.className = "raised button-warning";
@@ -210,7 +226,9 @@ export default function (view) {
         removeBtn.addEventListener("click", () => {
             card.remove();
         });
-        header.appendChild(removeBtn);
+        btnContainer.appendChild(removeBtn);
+
+        header.appendChild(btnContainer);
         card.appendChild(header);
 
         // Base config
@@ -222,6 +240,107 @@ export default function (view) {
         card.appendChild(svcDiv);
 
         return card;
+    }
+
+    /*** Handle test notification ***/
+    async function handleTestNotification(card, type, testBtn) {
+        // Collect config from card
+        const config = readDestinationConfig(card, type);
+        if (!config) {
+            Dashboard.alert("Please fill in the required fields before testing.");
+            return;
+        }
+
+        // Validate required fields
+        const validationError = validateDestinationConfig(type, config);
+        if (validationError) {
+            Dashboard.alert(validationError);
+            return;
+        }
+
+        // Show loading state
+        const originalText = testBtn.innerHTML;
+        testBtn.innerHTML = "<span>Testing...</span>";
+        testBtn.disabled = true;
+
+        try {
+            const response = await fetch("/Multify/TestNotification", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Emby-Token": window.ApiKey()
+                },
+                body: JSON.stringify({
+                    destinationType: type,
+                    config: config
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                Dashboard.alert("Test notification sent successfully!");
+            } else {
+                Dashboard.alert("Test notification failed: " + (result.errorMessage || "Unknown error"));
+            }
+        } catch (e) {
+            console.error("Multify: Test notification error", e);
+            Dashboard.alert("Test notification failed: " + e.message);
+        } finally {
+            testBtn.innerHTML = originalText;
+            testBtn.disabled = false;
+        }
+    }
+
+    /*** Read destination config from card ***/
+    function readDestinationConfig(card, type) {
+        const base = readBaseSection(card);
+        const specific = {};
+
+        if (type === "telegram") {
+            specific.BotToken = $("[data-name=txtBotToken]", card)?.value || "";
+            specific.ChatId = $("[data-name=txtChatId]", card)?.value || "";
+            specific.ParseMode = $("[data-name=ddlParseMode]", card)?.value || "HTML";
+            specific.MessageType = parseInt($("[data-name=ddlMessageType]", card)?.value || "0", 10);
+        } else if (type === "gotify") {
+            specific.Token = $("[data-name=txtToken]", card)?.value || "";
+            specific.Priority = parseInt($("[data-name=txtPriority]", card)?.value || "0", 10);
+        } else if (type === "ntfy") {
+            specific.Topic = $("[data-name=txtTopic]", card)?.value || "";
+            specific.Priority = parseInt($("[data-name=ddlPriority]", card)?.value || "3", 10);
+            specific.EnableMarkdown = $("[data-name=chkEnableMarkdown]", card)?.checked;
+            specific.AccessToken = $("[data-name=txtAccessToken]", card)?.value || "";
+        } else if (type === "generic") {
+            specific.Headers = [];
+            $$("[data-name=txtHeaderKey]", card).forEach((k, i) => {
+                const v = $$("[data-name=txtHeaderValue]", card)[i];
+                if (k.value) specific.Headers.push({ Key: k.value, Value: v?.value || "" });
+            });
+            specific.Fields = [];
+            $$("[data-name=txtFieldKey]", card).forEach((k, i) => {
+                const v = $$("[data-name=txtFieldValue]", card)[i];
+                if (k.value) specific.Fields.push({ Key: k.value, Value: v?.value || "" });
+            });
+        }
+
+        return { ...base, ...specific };
+    }
+
+    /*** Validate destination config ***/
+    function validateDestinationConfig(type, config) {
+        if (type === "telegram") {
+            if (!config.BotToken) return "Bot Token is required for Telegram.";
+            if (!config.ChatId) return "Chat ID is required for Telegram.";
+        } else if (type === "gotify") {
+            if (!config.WebhookUri) return "Server URL is required for Gotify.";
+            if (!config.Token) return "Application Token is required for Gotify.";
+        } else if (type === "ntfy") {
+            if (!config.WebhookUri) return "Server URL is required for ntfy.";
+            if (!config.Topic) return "Topic is required for ntfy.";
+        } else if (type === "generic") {
+            if (!config.WebhookUri) return "Webhook URL is required.";
+        }
+        return null;
     }
 
     /*** Tab Definitions ***/

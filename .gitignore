@@ -64,6 +64,7 @@ Desktop.ini
 # Jellyfin plugin build artifacts
 docker/
 templates/
+tmp/
 AGENTS.md
 PLAN.md
 
