@@ -302,6 +302,8 @@ export default function (view) {
             specific.ChatId = $("[data-name=txtChatId]", card)?.value || "";
             specific.ParseMode = $("[data-name=ddlParseMode]", card)?.value || "HTML";
             specific.MessageType = parseInt($("[data-name=ddlMessageType]", card)?.value || "0", 10);
+            const topicIdVal = $("[data-name=txtTopicId]", card)?.value;
+            specific.MessageThreadId = topicIdVal ? parseInt(topicIdVal, 10) : null;
         } else if (type === "gotify") {
             specific.Token = $("[data-name=txtToken]", card)?.value || "";
             specific.Priority = parseInt($("[data-name=txtPriority]", card)?.value || "0", 10);
@@ -579,14 +581,16 @@ export default function (view) {
                     <option value="1">Photo (sendPhoto)</option>
                     <option value="2">Rich Message (sendRichMessage)</option>
                 </select>
-            </div>`, null);
+            </div>
+            <div class="inputContainer"><input is="emby-input" type="number" data-name="txtTopicId" label="Forum Topic ID (optional):"/><span>For Telegram Forum Topics. Leave empty to send to the general topic.</span></div>`, null);
 
         setTimeout(() => {
-            const setVal = (n, v) => { const el = $("[data-name=" + n + "]", card); if (el) el.value = v || ""; };
+            const setVal = (n, v) => { const el = $("[data-name=" + n + "]", card); if (el) el.value = v != null ? String(v) : ""; };
             setVal("txtBotToken", config.BotToken);
             setVal("txtChatId", config.ChatId);
             setVal("ddlParseMode", config.ParseMode || "HTML");
             setVal("ddlMessageType", config.MessageType ?? 0);
+            setVal("txtTopicId", config.MessageThreadId);
         }, 0);
 
         return card;
@@ -692,6 +696,8 @@ export default function (view) {
                 specific.ChatId = $("[data-name=txtChatId]", card)?.value || "";
                 specific.ParseMode = $("[data-name=ddlParseMode]", card)?.value || "HTML";
                 specific.MessageType = parseInt($("[data-name=ddlMessageType]", card)?.value || "0", 10);
+                const topicIdVal = $("[data-name=txtTopicId]", card)?.value;
+                specific.MessageThreadId = topicIdVal ? parseInt(topicIdVal, 10) : null;
             } else if (type === "gotify") {
                 specific.Token = $("[data-name=txtToken]", card)?.value || "";
                 specific.Priority = $("[data-name=txtPriority]", card)?.value || 0;
@@ -730,6 +736,10 @@ export default function (view) {
         if (indicator) {
             indicator.style.display = isDirty ? "inline" : "none";
         }
+        const banner = document.getElementById("tabWarningBanner");
+        if (banner) {
+            banner.style.display = isDirty ? "flex" : "none";
+        }
     }
 
     function takeSnapshot() {
@@ -737,12 +747,16 @@ export default function (view) {
         isDirty = false;
         const indicator = document.getElementById("dirtyIndicator");
         if (indicator) indicator.style.display = "none";
+        const banner = document.getElementById("tabWarningBanner");
+        if (banner) banner.style.display = "none";
     }
 
     function markDirty() {
         isDirty = true;
         const indicator = document.getElementById("dirtyIndicator");
         if (indicator) indicator.style.display = "inline";
+        const banner = document.getElementById("tabWarningBanner");
+        if (banner) banner.style.display = "flex";
     }
 
     /*** Debounced input (180ms) — avoids excessive state updates while typing ***/
@@ -780,14 +794,20 @@ export default function (view) {
         }
     }
 
-    /*** Confirm dialog helper ***/
+    /*** Confirm dialog helper (improved with intro-skipper accessibility patterns) ***/
     function showConfirmDialog(title, body) {
         return new Promise((resolve) => {
+            const uid = Date.now();
+            const titleId = "multify-confirm-title-" + uid;
+            const bodyId = "multify-confirm-body-" + uid;
+
             const dialog = document.createElement("dialog");
             dialog.className = "multify-confirm-dialog";
+            dialog.setAttribute("aria-labelledby", titleId);
+            dialog.setAttribute("aria-describedby", bodyId);
             dialog.innerHTML = `
-                <h3 class="multify-confirm-title">${title}</h3>
-                <p class="multify-confirm-body">${body}</p>
+                <h3 id="${titleId}" class="multify-confirm-title">${title}</h3>
+                <p id="${bodyId}" class="multify-confirm-body">${body}</p>
                 <div class="multify-confirm-actions">
                     <button class="multify-confirm-btn cancel" type="button">Cancel</button>
                     <button class="multify-confirm-btn confirm" type="button">Confirm</button>
@@ -796,21 +816,30 @@ export default function (view) {
             const cancelBtn = dialog.querySelector(".cancel");
             const confirmBtn = dialog.querySelector(".confirm");
             
-            cancelBtn.addEventListener("click", () => {
+            function cleanup(result) {
                 dialog.close();
-                resolve(false);
+                dialog.remove();
+                resolve(result);
+            }
+
+            cancelBtn.addEventListener("click", () => cleanup(false));
+            confirmBtn.addEventListener("click", () => cleanup(true));
+
+            // Esc key triggers the cancel event on <dialog>
+            dialog.addEventListener("cancel", (e) => {
+                e.preventDefault();
+                cleanup(false);
             });
-            confirmBtn.addEventListener("click", () => {
-                dialog.close();
-                resolve(true);
+
+            // Close when clicking the backdrop
+            dialog.addEventListener("click", (e) => {
+                if (e.target === dialog) cleanup(false);
             });
-            dialog.addEventListener("close", () => {
-                resolve(dialog.returnValue === "true");
-            });
-            
+
             document.body.appendChild(dialog);
             dialog.showModal();
-            dialog.addEventListener("close", () => dialog.remove(), { once: true });
+            // Focus cancel by default so destructive action requires deliberate intent
+            cancelBtn.focus();
         });
     }
 
@@ -838,20 +867,33 @@ export default function (view) {
 
     /*** Save / Load ***/
     function gatherConfig() {
-        const config = {
-            ServerUrl: document.getElementById("txtServerUrl")?.value || "",
-            MdblistApiKey: document.getElementById("txtMdblistApiKey")?.value || "",
-            TelegramOptions: readDestinations("telegram"),
-            GotifyOptions: readDestinations("gotify"),
-            NtfyOptions: readDestinations("ntfy"),
-            GenericWebhookOptions: readDestinations("generic"),
-            AdvancedSettings: {
-                LogLevel: document.getElementById("ddlLogLevel")?.value || "Information",
-                EnableDashboardAlerts: document.getElementById("chkEnableDashboardAlerts")?.checked ?? false
-            },
-            EnableMainMenu: document.getElementById("chkEnableMainMenu")?.checked ?? true
+        // For the active tab, read from DOM (cards/fields are rendered).
+        // For inactive tabs, fall back to currentConfig (kept in sync by snapshotCurrentTab).
+        return {
+            ServerUrl: document.getElementById("txtServerUrl")?.value || currentConfig.ServerUrl || "",
+            MdblistApiKey: document.getElementById("txtMdblistApiKey")?.value || currentConfig.MdblistApiKey || "",
+            TelegramOptions: activeTabId === "telegram"
+                ? readDestinations("telegram")
+                : (currentConfig.TelegramOptions || []),
+            GotifyOptions: activeTabId === "gotify"
+                ? readDestinations("gotify")
+                : (currentConfig.GotifyOptions || []),
+            NtfyOptions: activeTabId === "ntfy"
+                ? readDestinations("ntfy")
+                : (currentConfig.NtfyOptions || []),
+            GenericWebhookOptions: activeTabId === "generic"
+                ? readDestinations("generic")
+                : (currentConfig.GenericWebhookOptions || []),
+            AdvancedSettings: activeTabId === "advanced"
+                ? {
+                    LogLevel: document.getElementById("ddlLogLevel")?.value || "Information",
+                    EnableDashboardAlerts: document.getElementById("chkEnableDashboardAlerts")?.checked ?? false
+                }
+                : (currentConfig.AdvancedSettings || { LogLevel: "Information", EnableDashboardAlerts: false }),
+            EnableMainMenu: activeTabId === "advanced"
+                ? (document.getElementById("chkEnableMainMenu")?.checked ?? true)
+                : (currentConfig.EnableMainMenu ?? true)
         };
-        return config;
     }
 
     function populateGeneral(config) {
@@ -877,7 +919,15 @@ export default function (view) {
             btn.dataset.tabId = tab.id;
             // Use short label on mobile if available
             btn.textContent = (isMobile && tab.shortLabel) ? tab.shortLabel : tab.label;
-            btn.addEventListener("click", () => {
+            btn.addEventListener("click", async () => {
+                if (activeTabId === tab.id) return; // already active
+                if (isDirty) {
+                    const confirmed = await showConfirmDialog(
+                        "Unsaved Changes",
+                        "You have unsaved changes. Do you want to switch tabs without saving?"
+                    );
+                    if (!confirmed) return;
+                }
                 snapshotCurrentTab();
                 switchTab(tab.id);
             });
@@ -888,17 +938,17 @@ export default function (view) {
         document.addEventListener("input", (e) => {
             if (e.target.matches("input[type='text'], input[type='number'], textarea")) {
                 debounceInput(e.target.id || e.target.name, () => {
-                    markDirty();
+                    updateDirtyState();
                     evaluateVisibility();
                 });
             } else if (e.target.matches("select")) {
-                markDirty();
+                updateDirtyState();
                 evaluateVisibility();
             }
         });
         document.addEventListener("change", (e) => {
             if (e.target.matches("input, select, textarea")) {
-                markDirty();
+                updateDirtyState();
                 evaluateVisibility();
             }
         });
@@ -914,11 +964,13 @@ export default function (view) {
 
         // Show general tab first
         switchTab("general");
-        // Populate general fields after tab renders
-        setTimeout(() => populateGeneral(currentConfig), 10);
-
-        // Take initial snapshot for dirty tracking
-        takeSnapshot();
+        // Populate general fields after tab renders, THEN take initial snapshot
+        // so the snapshot captures the correct initial state (not empty fields)
+        setTimeout(() => {
+            populateGeneral(currentConfig);
+            // Take initial snapshot for dirty tracking
+            takeSnapshot();
+        }, 10);
 
         // Register reactive visibility rules
         // Hide Template when "Send All Properties" is checked (it's ignored in that mode)

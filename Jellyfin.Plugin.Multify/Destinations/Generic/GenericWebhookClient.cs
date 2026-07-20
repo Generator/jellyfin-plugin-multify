@@ -55,7 +55,7 @@ public class GenericWebhookClient : BaseClient, IWebhookClient<GenericWebhookOpt
             }
 
             var body = option.GetMessageBody(data);
-            if (!SendMessageBody(_logger, option, body))
+            if (!SendMessageBody(_logger, option, ref body))
             {
                 return;
             }

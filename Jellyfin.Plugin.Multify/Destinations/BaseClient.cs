@@ -46,9 +46,9 @@ public abstract class BaseClient
     /// </summary>
     /// <param name="logger">The logger.</param>
     /// <param name="option">The base option.</param>
-    /// <param name="body">The message body.</param>
+    /// <param name="body">The message body (may be trimmed in-place).</param>
     /// <returns>True if the message should be sent; false otherwise.</returns>
-    protected bool SendMessageBody(ILogger logger, BaseOption option, string body)
+    protected bool SendMessageBody(ILogger logger, BaseOption option, ref string body)
     {
         if (option.TrimWhitespace)
         {

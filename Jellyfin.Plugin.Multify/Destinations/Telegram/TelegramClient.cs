@@ -43,6 +43,9 @@ public class TelegramOption : BaseOption
 
     /// <summary>Gets or sets the message type.</summary>
     public TelegramMessageType MessageType { get; set; }
+
+    /// <summary>Gets or sets the optional Telegram Forum Topic thread ID. When set, messages are sent to this specific topic.</summary>
+    public int? MessageThreadId { get; set; }
 }
 
 /// <summary>
@@ -50,6 +53,8 @@ public class TelegramOption : BaseOption
 /// </summary>
 public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
 {
+    // Telegram API uses Bot Token in the URL path (https://api.telegram.org/bot{token}/METHOD),
+    // NOT the WebhookUri from BaseOption. The WebhookUri field is ignored for Telegram destinations.
     private const string ApiBaseUrl = "https://api.telegram.org/bot";
 
     private readonly ILogger<TelegramClient> _logger;
@@ -69,6 +74,25 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
         _messageStore = messageStore;
     }
 
+    /// <summary>
+    /// Creates a base payload dictionary with chat_id and optional message_thread_id.
+    /// All Telegram API methods should use this to ensure consistent field inclusion.
+    /// </summary>
+    private Dictionary<string, object> CreatePayload(TelegramOption option)
+    {
+        var payload = new Dictionary<string, object>
+        {
+            ["chat_id"] = option.ChatId
+        };
+
+        if (option.MessageThreadId.HasValue)
+        {
+            payload["message_thread_id"] = option.MessageThreadId.Value;
+        }
+
+        return payload;
+    }
+
     /// <inheritdoc />
     public async Task SendAsync(TelegramOption option, Dictionary<string, object> data)
     {
@@ -85,7 +109,7 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
             }
 
             var body = option.GetMessageBody(data);
-            if (!SendMessageBody(_logger, option, body))
+            if (!SendMessageBody(_logger, option, ref body))
             {
                 return;
             }
@@ -168,13 +192,10 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
 
     private async Task<long?> EditTextMessageAsync(TelegramOption option, string body, long messageId)
     {
-        var payload = new
-        {
-            chat_id = option.ChatId,
-            message_id = messageId,
-            text = body,
-            parse_mode = option.ParseMode
-        };
+        var payload = CreatePayload(option);
+        payload["message_id"] = messageId;
+        payload["text"] = body;
+        payload["parse_mode"] = option.ParseMode;
 
         var json = JsonSerializer.Serialize(payload);
         var uri = new Uri($"{ApiBaseUrl}{option.BotToken}/editMessageText");
@@ -198,13 +219,10 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
             return;
         }
 
-        var payload = new
-        {
-            chat_id = option.ChatId,
-            message_id = messageId,
-            caption = body,
-            parse_mode = option.ParseMode
-        };
+        var payload = CreatePayload(option);
+        payload["message_id"] = messageId;
+        payload["caption"] = body;
+        payload["parse_mode"] = option.ParseMode;
 
         var json = JsonSerializer.Serialize(payload);
         var uri = new Uri($"{ApiBaseUrl}{option.BotToken}/editMessageCaption");
@@ -235,15 +253,12 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
             }
         };
 
-        var payload = new
-        {
-            chat_id = option.ChatId,
-            message_id = messageId,
-            rich_message = richMessage
-        };
+        var payload = CreatePayload(option);
+        payload["message_id"] = messageId;
+        payload["rich_message"] = richMessage;
 
         var json = JsonSerializer.Serialize(payload);
-        var uri = new Uri($"{ApiBaseUrl}{option.BotToken}/editRichMessage");
+        var uri = new Uri($"{ApiBaseUrl}{option.BotToken}/editMessageText");
 
         using var content = new StringContent(json, Encoding.UTF8, MediaTypeNames.Application.Json);
         using var response = await _httpClientFactory
@@ -256,12 +271,9 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
 
     private async Task<long?> SendTextAsync(TelegramOption option, string body)
     {
-        var payload = new
-        {
-            chat_id = option.ChatId,
-            text = body,
-            parse_mode = option.ParseMode
-        };
+        var payload = CreatePayload(option);
+        payload["text"] = body;
+        payload["parse_mode"] = option.ParseMode;
 
         var json = JsonSerializer.Serialize(payload);
         var uri = new Uri($"{ApiBaseUrl}{option.BotToken}/sendMessage");
@@ -294,13 +306,10 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
 
         var photoUrl = photoUrlObj.ToString()!;
 
-        var payload = new
-        {
-            chat_id = option.ChatId,
-            photo = photoUrl,
-            caption = body,
-            parse_mode = option.ParseMode
-        };
+        var payload = CreatePayload(option);
+        payload["photo"] = photoUrl;
+        payload["caption"] = body;
+        payload["parse_mode"] = option.ParseMode;
 
         var json = JsonSerializer.Serialize(payload);
         var uri = new Uri($"{ApiBaseUrl}{option.BotToken}/sendPhoto");
@@ -340,11 +349,8 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
             }
         };
 
-        var payload = new
-        {
-            chat_id = option.ChatId,
-            rich_message = richMessage
-        };
+        var payload = CreatePayload(option);
+        payload["rich_message"] = richMessage;
 
         var json = JsonSerializer.Serialize(payload);
         var uri = new Uri($"{ApiBaseUrl}{option.BotToken}/sendRichMessage");

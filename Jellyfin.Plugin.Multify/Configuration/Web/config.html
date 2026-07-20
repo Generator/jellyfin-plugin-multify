@@ -18,6 +18,11 @@
             <main class="multifyTabContent" id="multifyTabContent" tabindex="-1" style="padding:8px 0;"></main>
         </div>
 
+        <div id="tabWarningBanner" class="multify-tab-warning" role="status" style="display:none;">
+            <span style="flex-shrink:0;">&#x26A0;</span>
+            <span>You have unsaved changes. Remember to save before leaving.</span>
+        </div>
+
         <div class="multify-save-footer" aria-label="Save controls">
             <span id="dirtyIndicator" class="multify-dirty-indicator" aria-live="polite" style="display:none;">&#x25cf; Unsaved changes</span>
             <span id="saveStatus" class="multify-save-status" aria-live="polite" aria-atomic="true" style="display:none;"></span>
@@ -511,6 +516,16 @@
         
         .multify-save-status[data-state="error"] {
             color: var(--multify-error);
+        }
+
+        /* Save button polish (intro-skipper patterns) */
+        #saveConfig {
+            touch-action: manipulation;
+        }
+
+        #saveConfig:disabled {
+            opacity: 0.7;
+            cursor: progress;
         }
 
         /* Reduced motion */

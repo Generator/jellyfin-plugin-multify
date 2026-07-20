@@ -62,6 +62,7 @@ ehthumbs.db
 Desktop.ini
 
 # Jellyfin plugin build artifacts
+.tmp/
 docker/
 templates/
 tools/

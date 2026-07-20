@@ -59,7 +59,7 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
             data["Priority"] = option.Priority;
 
             var body = option.GetMessageBody(data);
-            if (!SendMessageBody(_logger, option, body))
+            if (!SendMessageBody(_logger, option, ref body))
             {
                 return;
             }

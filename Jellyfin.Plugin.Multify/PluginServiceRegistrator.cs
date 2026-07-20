@@ -56,8 +56,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // Register event consumers
         serviceCollection.AddScoped<IEventConsumer<PlaybackStartEventArgs>, PlaybackStartNotifier>();
         serviceCollection.AddScoped<IEventConsumer<PlaybackStopEventArgs>, PlaybackStopNotifier>();
-        serviceCollection.AddScoped<IEventConsumer<AuthenticationResultEventArgs>, AuthenticationSuccessNotifier>();
-        serviceCollection.AddScoped<IEventConsumer<AuthenticationResultEventArgs>, AuthenticationFailureNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<AuthenticationResultEventArgs>, AuthenticationNotifier>();
 
         // Library events (not IEventConsumer — ItemChangeEventArgs doesn't inherit EventArgs)
         serviceCollection.AddScoped<ItemAddedNotifier>();

@@ -71,7 +71,8 @@ public class BaseOption
 
         if (string.IsNullOrEmpty(Template))
         {
-            return string.Empty;
+            // Fallback: serialize data as JSON when no template is configured
+            return System.Text.Json.JsonSerializer.Serialize(data);
         }
 
         try
@@ -82,7 +83,7 @@ public class BaseOption
         }
         catch (FormatException)
         {
-            return string.Empty;
+            return System.Text.Json.JsonSerializer.Serialize(data);
         }
     }
 

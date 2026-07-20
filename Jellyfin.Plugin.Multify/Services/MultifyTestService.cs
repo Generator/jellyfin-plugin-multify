@@ -104,8 +104,9 @@ public class MultifyTestService : IMultifyTestService
                 };
             }
 
-            // Ensure webhook is enabled for test
+            // Ensure webhook is enabled for test and send all properties (no template needed)
             option.EnableWebhook = true;
+            option.SendAllProperties = true;
 
             await SendAsync(request.DestinationType, option, data).ConfigureAwait(false);
 
@@ -134,7 +135,8 @@ public class MultifyTestService : IMultifyTestService
             ["Timestamp"] = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", CultureInfo.InvariantCulture),
             ["ItemType"] = "Movie",
             ["ItemName"] = "Test Movie (2024)",
-            ["ServerName"] = "Jellyfin Server"
+            ["ServerName"] = "Jellyfin Server",
+            ["UserId"] = Guid.Empty.ToString()
         };
     }
 
