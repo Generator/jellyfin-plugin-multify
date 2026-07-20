@@ -61,6 +61,8 @@ public class MultifySender : IWebhookSender
     /// <inheritdoc />
     public async Task SendNotification(NotificationType notificationType, Dictionary<string, object> itemData, Type? itemType = null)
     {
+        _logger.LogDebug("SendNotification called for {NotificationType}, ItemType={ItemType}", notificationType, itemType?.Name ?? "null");
+
         // Enrich data with MDBList ratings if configured
         if (_mdblistService != null && !string.IsNullOrEmpty(_configuration.MdblistApiKey))
         {
@@ -68,6 +70,14 @@ public class MultifySender : IWebhookSender
         }
 
         var tasks = new List<Task>();
+
+        var telegramCount = _configuration.TelegramOptions.Count(o => o.NotificationTypes.Contains(notificationType));
+        var gotifyCount = _configuration.GotifyOptions.Count(o => o.NotificationTypes.Contains(notificationType));
+        var ntfyCount = _configuration.NtfyOptions.Count(o => o.NotificationTypes.Contains(notificationType));
+        var genericCount = _configuration.GenericWebhookOptions.Count(o => o.NotificationTypes.Contains(notificationType));
+
+        _logger.LogDebug("Matching destinations: Telegram={Telegram}, Gotify={Gotify}, ntfy={Ntfy}, Generic={Generic}",
+            telegramCount, gotifyCount, ntfyCount, genericCount);
 
         foreach (var option in _configuration.TelegramOptions.Where(o => o.NotificationTypes.Contains(notificationType)))
         {
@@ -89,7 +99,17 @@ public class MultifySender : IWebhookSender
             tasks.Add(SendNotification(_genericClient, option, itemData, itemType));
         }
 
+        if (tasks.Count == 0)
+        {
+            _logger.LogDebug("No matching destinations for {NotificationType}", notificationType);
+            return;
+        }
+
+        _logger.LogDebug("Sending to {DestinationCount} destination(s) for {NotificationType}", tasks.Count, notificationType);
+
         await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        _logger.LogInformation("Completed sending {NotificationType} to {DestinationCount} destination(s)", notificationType, tasks.Count);
     }
 
     private async Task EnrichWithMdblistRatings(Dictionary<string, object> data)
@@ -190,13 +210,16 @@ public class MultifySender : IWebhookSender
     {
         if (!NotifyOnItem(option, itemType))
         {
+            _logger.LogDebug("Skipping {WebhookName} — item type {ItemType} not enabled", option.WebhookName, itemType?.Name ?? "null");
             return;
         }
 
         var data = new Dictionary<string, object>(itemData);
         try
         {
+            _logger.LogDebug("Sending to {WebhookName} ({ClientType})", option.WebhookName, typeof(TOption).Name);
             await client.SendAsync(option, data).ConfigureAwait(false);
+            _logger.LogDebug("Successfully sent to {WebhookName}", option.WebhookName);
         }
         catch (Exception ex)
         {

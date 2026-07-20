@@ -39,6 +39,8 @@ public class AuthenticationSuccessNotifier : IEventConsumer<AuthenticationResult
             return;
         }
 
+        _logger.LogDebug("Authentication success event received for user {Username}", eventArgs.User.Name);
+
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.AuthenticationSuccess);
         data["Username"] = eventArgs.User.Name ?? "Unknown";
         data["UserId"] = eventArgs.User.Id.ToString();
@@ -46,6 +48,8 @@ public class AuthenticationSuccessNotifier : IEventConsumer<AuthenticationResult
         await _webhookSender.SendNotification(
             NotificationType.AuthenticationSuccess,
             data).ConfigureAwait(false);
+
+        _logger.LogInformation("Authentication success notification sent for {Username}", eventArgs.User.Name);
 
         await _dashboardAlert.LogAsync(
             $"Authentication success: {eventArgs.User.Name}",
@@ -83,6 +87,8 @@ public class AuthenticationFailureNotifier : IEventConsumer<AuthenticationResult
             return;
         }
 
+        _logger.LogDebug("Authentication failure event received for user {Username}", eventArgs.User.Name);
+
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.AuthenticationFailure);
         data["Username"] = eventArgs.User.Name ?? "Unknown";
         data["UserId"] = eventArgs.User.Id.ToString();
@@ -90,6 +96,8 @@ public class AuthenticationFailureNotifier : IEventConsumer<AuthenticationResult
         await _webhookSender.SendNotification(
             NotificationType.AuthenticationFailure,
             data).ConfigureAwait(false);
+
+        _logger.LogWarning("Authentication failure notification sent for {Username}", eventArgs.User.Name);
 
         await _dashboardAlert.LogAsync(
             $"Authentication failure: {eventArgs.User.Name}",

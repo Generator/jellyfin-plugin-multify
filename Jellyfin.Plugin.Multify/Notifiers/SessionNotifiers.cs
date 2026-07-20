@@ -39,12 +39,16 @@ public class SessionStartedNotifier : IEventConsumer<SessionStartedEventArgs>
             return;
         }
 
+        _logger.LogDebug("Session started event received: {Client} from {RemoteEndpoint}", session.Client, session.RemoteEndpoint);
+
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.SessionStart);
         data.AddSessionInfo(session);
 
         await _webhookSender.SendNotification(
             NotificationType.SessionStart,
             data).ConfigureAwait(false);
+
+        _logger.LogInformation("Session started notification sent for {Client}", session.Client);
 
         await _dashboardAlert.LogAsync(
             $"Session started: {session.Client}",

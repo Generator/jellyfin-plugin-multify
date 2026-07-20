@@ -43,6 +43,8 @@ public class ItemAddedNotifier
             return;
         }
 
+        _logger.LogDebug("Item added event received: {ItemName} ({ItemType})", item.Name, item.GetType().Name);
+
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.ItemAdded);
         data.AddItemData(item);
 
@@ -50,6 +52,8 @@ public class ItemAddedNotifier
             NotificationType.ItemAdded,
             data,
             item.GetType()).ConfigureAwait(false);
+
+        _logger.LogInformation("Item added notification sent for {ItemName}", item.Name);
 
         await _dashboardAlert.LogAsync(
             $"Item added: {item.Name}",
@@ -94,6 +98,8 @@ public class ItemDeletedNotifier
             return;
         }
 
+        _logger.LogDebug("Item deleted event received: {ItemName} ({ItemType})", item.Name, item.GetType().Name);
+
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.ItemDeleted);
         data.AddItemData(item);
 
@@ -101,6 +107,8 @@ public class ItemDeletedNotifier
             NotificationType.ItemDeleted,
             data,
             item.GetType()).ConfigureAwait(false);
+
+        _logger.LogInformation("Item deleted notification sent for {ItemName}", item.Name);
 
         await _dashboardAlert.LogAsync(
             $"Item deleted: {item.Name}",

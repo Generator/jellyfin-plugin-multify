@@ -39,6 +39,8 @@ public class TaskCompletedNotifier : IEventConsumer<TaskCompletionEventArgs>
             return;
         }
 
+        _logger.LogDebug("Task completed event received: {TaskName} ({Status})", eventArgs.Task.Name, eventArgs.Result?.Status);
+
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.TaskCompleted);
         data["TaskName"] = eventArgs.Task.Name ?? "Unknown";
         data["TaskId"] = eventArgs.Task.Id.ToString();
@@ -53,6 +55,8 @@ public class TaskCompletedNotifier : IEventConsumer<TaskCompletionEventArgs>
         await _webhookSender.SendNotification(
             NotificationType.TaskCompleted,
             data).ConfigureAwait(false);
+
+        _logger.LogInformation("Task completed notification sent for {TaskName}", eventArgs.Task.Name);
 
         await _dashboardAlert.LogAsync(
             $"Task completed: {eventArgs.Task.Name}",

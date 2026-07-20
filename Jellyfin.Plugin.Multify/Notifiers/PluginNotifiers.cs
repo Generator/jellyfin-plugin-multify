@@ -39,6 +39,8 @@ public class PluginUpdatedNotifier : IEventConsumer<PluginUpdatedEventArgs>
             return;
         }
 
+        _logger.LogDebug("Plugin updated event received: {PluginName} ({PluginId})", info.Name, info.Id);
+
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.PluginUpdated);
         data["PluginName"] = info.Name ?? "Unknown";
         data["PluginId"] = info.Id.ToString();
@@ -47,6 +49,8 @@ public class PluginUpdatedNotifier : IEventConsumer<PluginUpdatedEventArgs>
         await _webhookSender.SendNotification(
             NotificationType.PluginUpdated,
             data).ConfigureAwait(false);
+
+        _logger.LogInformation("Plugin updated notification sent for {PluginName}", info.Name);
 
         await _dashboardAlert.LogAsync(
             $"Plugin updated: {info.Name}",

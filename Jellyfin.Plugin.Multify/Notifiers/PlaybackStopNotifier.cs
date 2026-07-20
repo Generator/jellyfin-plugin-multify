@@ -45,6 +45,9 @@ public class PlaybackStopNotifier : IEventConsumer<PlaybackStopEventArgs>
             return;
         }
 
+        _logger.LogDebug("Playback stop event received for {ItemName} by {UserCount} user(s)",
+            eventArgs.Item.Name, eventArgs.Users.Count);
+
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.PlaybackStop);
         data.AddItemData(eventArgs.Item);
 
@@ -66,6 +69,8 @@ public class PlaybackStopNotifier : IEventConsumer<PlaybackStopEventArgs>
                 userData,
                 eventArgs.Item.GetType()).ConfigureAwait(false);
         }
+
+        _logger.LogInformation("Playback stop notification sent for {ItemName}", eventArgs.Item.Name);
 
         await _dashboardAlert.LogAsync(
             $"Playback stopped: {eventArgs.Item.Name}",

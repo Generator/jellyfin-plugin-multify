@@ -40,12 +40,16 @@ public class UserCreatedNotifier : IEventConsumer<UserCreatedEventArgs>
             return;
         }
 
+        _logger.LogDebug("User created event received: {Username}", user.Username);
+
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.UserCreated);
         data.AddUserData(user);
 
         await _webhookSender.SendNotification(
             NotificationType.UserCreated,
             data).ConfigureAwait(false);
+
+        _logger.LogInformation("User created notification sent for {Username}", user.Username);
 
         await _dashboardAlert.LogAsync(
             $"User created: {user.Username}",
@@ -84,12 +88,16 @@ public class UserDeletedNotifier : IEventConsumer<UserDeletedEventArgs>
             return;
         }
 
+        _logger.LogDebug("User deleted event received: {Username}", user.Username);
+
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.UserDeleted);
         data.AddUserData(user);
 
         await _webhookSender.SendNotification(
             NotificationType.UserDeleted,
             data).ConfigureAwait(false);
+
+        _logger.LogInformation("User deleted notification sent for {Username}", user.Username);
 
         await _dashboardAlert.LogAsync(
             $"User deleted: {user.Username}",
@@ -134,12 +142,16 @@ public class UserUpdatedNotifier
             return;
         }
 
+        _logger.LogDebug("User updated event received: {Username}", user.Username);
+
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.UserUpdated);
         data.AddUserData(user);
 
         await _webhookSender.SendNotification(
             NotificationType.UserUpdated,
             data).ConfigureAwait(false);
+
+        _logger.LogInformation("User updated notification sent for {Username}", user.Username);
 
         await _dashboardAlert.LogAsync(
             $"User updated: {user.Username}",

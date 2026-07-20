@@ -45,6 +45,9 @@ public class PlaybackStartNotifier : IEventConsumer<PlaybackStartEventArgs>
             return;
         }
 
+        _logger.LogDebug("Playback start event received for {ItemName} by {UserCount} user(s)",
+            eventArgs.Item.Name, eventArgs.Users.Count);
+
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.PlaybackStart);
         data.AddItemData(eventArgs.Item);
 
@@ -66,6 +69,8 @@ public class PlaybackStartNotifier : IEventConsumer<PlaybackStartEventArgs>
                 userData,
                 eventArgs.Item.GetType()).ConfigureAwait(false);
         }
+
+        _logger.LogInformation("Playback start notification sent for {ItemName}", eventArgs.Item.Name);
 
         await _dashboardAlert.LogAsync(
             $"Playback started: {eventArgs.Item.Name}",
