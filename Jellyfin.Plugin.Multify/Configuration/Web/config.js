@@ -707,9 +707,6 @@ export default function (view) {
     let currentConfig = {};
 
     function switchTab(tabId) {
-        // Snapshot current tab's visible fields before switching
-        snapshotCurrentTab();
-
         activeTabId = tabId;
         const content = document.getElementById("multifyTabContent");
         const nav = document.getElementById("multifyTabNav");
@@ -760,7 +757,10 @@ export default function (view) {
             btn.className = "multify-tab-button";
             btn.dataset.tabId = tab.id;
             btn.textContent = tab.label;
-            btn.addEventListener("click", () => switchTab(tab.id));
+            btn.addEventListener("click", () => {
+                snapshotCurrentTab();
+                switchTab(tab.id);
+            });
             nav.appendChild(btn);
         }
 
@@ -834,9 +834,23 @@ export default function (view) {
             setTimeout(() => populateGeneral(currentConfig), 10);
         }
 
+        // Build final config from currentConfig (which has all snapshotted data)
+        const configToSave = {
+            ServerUrl: currentConfig.ServerUrl || "",
+            MdblistApiKey: currentConfig.MdblistApiKey || "",
+            TelegramOptions: currentConfig.TelegramOptions || [],
+            GotifyOptions: currentConfig.GotifyOptions || [],
+            NtfyOptions: currentConfig.NtfyOptions || [],
+            GenericWebhookOptions: currentConfig.GenericWebhookOptions || [],
+            AdvancedSettings: currentConfig.AdvancedSettings || {
+                LogLevel: "Information",
+                EnableDashboardAlerts: false
+            }
+        };
+
         try {
-            await window.ApiClient.updatePluginConfiguration(PLUGIN_ID, currentConfig);
-            Dashboard.processPluginConfigurationUpdateResult({ Configuration: currentConfig });
+            await window.ApiClient.updatePluginConfiguration(PLUGIN_ID, configToSave);
+            Dashboard.processPluginConfigurationUpdateResult({ Configuration: configToSave });
         } catch (e) {
             console.error("Multify: Failed to save config", e);
             Dashboard.alert("Failed to save configuration.");
