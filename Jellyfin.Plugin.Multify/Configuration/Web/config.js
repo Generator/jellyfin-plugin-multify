@@ -865,6 +865,9 @@ export default function (view) {
     async function init() {
         await loadUsers();
 
+        // Detect mobile viewport
+        const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
         // Build tab nav
         const nav = document.getElementById("multifyTabNav");
         nav.innerHTML = "";
@@ -872,9 +875,8 @@ export default function (view) {
             const btn = document.createElement("button");
             btn.className = "multify-tab-button";
             btn.dataset.tabId = tab.id;
-            // Always use innerHTML with desktop/mobile label spans
-            const shortLabel = tab.shortLabel || tab.label;
-            btn.innerHTML = `<span class="multify-tab-full">${tab.label}</span><span class="multify-tab-short">${shortLabel}</span>`;
+            // Use short label on mobile if available
+            btn.textContent = (isMobile && tab.shortLabel) ? tab.shortLabel : tab.label;
             btn.addEventListener("click", () => {
                 snapshotCurrentTab();
                 switchTab(tab.id);
