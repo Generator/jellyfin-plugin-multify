@@ -1,11 +1,8 @@
-using System;
-
 namespace Jellyfin.Plugin.Multify.Destinations;
 
 /// <summary>
 /// Notification type enum.
 /// </summary>
-[Flags]
 public enum NotificationType
 {
     /// <summary>No notification.</summary>
