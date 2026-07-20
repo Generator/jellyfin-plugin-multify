@@ -161,7 +161,7 @@ export default function (view) {
 
         // Template
         const tplDiv = document.createElement("div");
-        tplDiv.className = "inputContainer";
+        tplDiv.className = "inputContainer multify-template-section";
         tplDiv.style.marginTop = "12px";
         tplDiv.innerHTML = `<label>Template:</label><div><textarea data-name="txtTemplate" style="width: 100%; height: 400px"></textarea></div>`;
         $("textarea", tplDiv).value = atou(config.Template || "");
@@ -744,6 +744,41 @@ export default function (view) {
         if (indicator) indicator.style.display = "inline";
     }
 
+    /*** Debounced input (180ms) — avoids excessive state updates while typing ***/
+    const DEBOUNCE_MS = 180;
+    const debounceTimers = new Map();
+
+    function debounceInput(key, callback, ms = DEBOUNCE_MS) {
+        if (debounceTimers.has(key)) {
+            clearTimeout(debounceTimers.get(key));
+        }
+        debounceTimers.set(key, setTimeout(() => {
+            debounceTimers.delete(key);
+            callback();
+        }, ms));
+    }
+
+    /*** Reactive visibility — show/hide elements based on config state ***/
+    const visibilityRules = [];
+
+    /**
+     * Register a visibility rule.
+     * @param {string} elementSelector - CSS selector for the element to show/hide
+     * @param {function} condition - Returns true if element should be visible
+     */
+    function addVisibilityRule(elementSelector, condition) {
+        visibilityRules.push({ selector: elementSelector, condition });
+    }
+
+    function evaluateVisibility() {
+        for (const rule of visibilityRules) {
+            const el = document.querySelector(rule.selector);
+            if (el) {
+                el.style.display = rule.condition() ? "" : "none";
+            }
+        }
+    }
+
     /*** Confirm dialog helper ***/
     function showConfirmDialog(title, body) {
         return new Promise((resolve) => {
@@ -795,6 +830,9 @@ export default function (view) {
 
         const tab = tabs.find(t => t.id === tabId);
         if (tab) tab.render(content);
+
+        // Evaluate visibility rules after tab renders
+        evaluateVisibility();
     }
 
     /*** Save / Load ***/
@@ -841,15 +879,22 @@ export default function (view) {
             nav.appendChild(btn);
         }
 
-        // Mark dirty on input changes
+        // Mark dirty on input changes (debounced for text/number inputs)
         document.addEventListener("input", (e) => {
-            if (e.target.matches("input, select, textarea")) {
+            if (e.target.matches("input[type='text'], input[type='number'], textarea")) {
+                debounceInput(e.target.id || e.target.name, () => {
+                    markDirty();
+                    evaluateVisibility();
+                });
+            } else if (e.target.matches("select")) {
                 markDirty();
+                evaluateVisibility();
             }
         });
         document.addEventListener("change", (e) => {
             if (e.target.matches("input, select, textarea")) {
                 markDirty();
+                evaluateVisibility();
             }
         });
 
@@ -869,6 +914,16 @@ export default function (view) {
 
         // Take initial snapshot for dirty tracking
         takeSnapshot();
+
+        // Register reactive visibility rules
+        // Hide Template when "Send All Properties" is checked (it's ignored in that mode)
+        addVisibilityRule(
+            ".multify-template-section",
+            () => {
+                const chk = document.querySelector("[data-name=chkSendAllProperties]");
+                return chk ? !chk.checked : true;
+            }
+        );
 
         Dashboard.hideLoadingMsg();
     }
