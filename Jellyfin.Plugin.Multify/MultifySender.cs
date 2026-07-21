@@ -69,6 +69,12 @@ public class MultifySender : IWebhookSender
             await EnrichWithMdblistRatings(itemData).ConfigureAwait(false);
         }
 
+        // Enrich data with item URL if ServerUrl is configured
+        if (!string.IsNullOrEmpty(_configuration.ServerUrl))
+        {
+            EnrichWithItemUrl(itemData);
+        }
+
         var tasks = new List<Task>();
 
         var telegramCount = _configuration.TelegramOptions.Count(o => o.NotificationTypes.Contains(notificationType));
@@ -151,6 +157,22 @@ public class MultifySender : IWebhookSender
         {
             _logger.LogWarning(ex, "Error enriching data with MDBList ratings");
         }
+    }
+
+    private void EnrichWithItemUrl(Dictionary<string, object> data)
+    {
+        if (!data.TryGetValue("ItemId", out var itemIdObj) || itemIdObj is not string itemId || string.IsNullOrEmpty(itemId))
+        {
+            return;
+        }
+
+        var serverUrl = _configuration.ServerUrl.TrimEnd('/');
+        var itemUrl = $"{serverUrl}/web/#/details?id={itemId}";
+        data["ItemUrl"] = itemUrl;
+
+        // Generate short ID (first 10 chars of GUID without dashes)
+        var shortId = itemId.Replace("-", string.Empty)[..10];
+        data["ItemShortId"] = shortId;
     }
 
     private static string GetMediaType(Dictionary<string, object> data)

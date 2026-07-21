@@ -52,6 +52,7 @@ public class PlaybackStartNotifier : IEventConsumer<PlaybackStartEventArgs>
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.PlaybackStart);
         data.AddItemData(eventArgs.Item);
+        data.AddPlaybackData(eventArgs);
 
         if (eventArgs.Session is not null)
         {

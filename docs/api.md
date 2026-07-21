@@ -182,6 +182,37 @@ Requires admin privileges (`RequiresElevation` policy). Include the Jellyfin acc
 
 ---
 
+## Template Variables
+
+Test notifications support the same template variables as production notifications. Use `{{variable}}` syntax in templates.
+
+### Available Variables in Test Notifications
+
+| Variable | Description |
+|----------|-------------|
+| `{{ServerName}}` | Server name (always "Jellyfin" for tests) |
+| `{{NotificationType}}` | Always "Test" for test notifications |
+| `{{Timestamp}}` | Current UTC timestamp |
+| `{{ItemName}}` | Test item name |
+| `{{ItemType}}` | Test item type |
+| `{{ItemId}}` | Test item ID |
+| `{{Username}}` | Test username |
+| `{{UserId}}` | Test user ID |
+| `{{Client}}` | Test client name |
+| `{{DeviceName}}` | Test device name |
+
+### Example Template
+
+```json
+{
+  "Template": "Test notification for {{ItemName}} ({{ItemType}}) from {{Client}}"
+}
+```
+
+For complete template variable reference, see [Template Variables](template-variables.md).
+
+---
+
 ## cURL Examples
 
 ### Telegram

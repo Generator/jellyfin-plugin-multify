@@ -18,26 +18,7 @@ A unified notification plugin for [Jellyfin](https://jellyfin.org/) that sends n
 
 ## Supported Notification Events
 
-| Event | Description |
-|-------|-------------|
-| `PlaybackStart` | Media playback started |
-| `PlaybackProgress` | Playback progress update |
-| `PlaybackStop` | Media playback stopped |
-| `AuthenticationSuccess` | User login succeeded |
-| `AuthenticationFailure` | User login failed |
-| `ItemAdded` | New item added to library |
-| `ItemDeleted` | Item removed from library |
-| `UserCreated` | New user account created |
-| `UserDeleted` | User account deleted |
-| `UserUpdated` | User profile updated |
-| `UserPasswordChanged` | User password changed |
-| `UserLockedOut` | User account locked |
-| `TaskCompleted` | Scheduled task finished |
-| `PluginInstalled` | Plugin installed |
-| `PluginUpdated` | Plugin updated |
-| `PluginUninstalled` | Plugin uninstalled |
-| `SessionStart` | User session started |
-| `PendingRestart` | Server restart pending |
+See [Supported Notification Events](docs/supported-events.md) for the complete list of all notification events and when they trigger.
 
 ## Destinations
 
@@ -107,26 +88,7 @@ Each destination supports the following shared options:
 
 ### Available Template Variables
 
-| Variable | Description |
-|----------|-------------|
-| `{{ServerName}}` | Jellyfin server name |
-| `{{NotificationType}}` | Event type name |
-| `{{Timestamp}}` | ISO 8601 timestamp |
-| `{{ItemId}}` | Library item ID |
-| `{{ItemName}}` | Name of the item |
-| `{{ItemType}}` | Type (Movie, Episode, etc.) |
-| `{{Year}}` | Production year |
-| `{{Overview}}` | Item synopsis |
-| `{{SeriesName}}` | Parent series name (episodes) |
-| `{{SeasonNumber}}` | Season number (episodes) |
-| `{{EpisodeNumber}}` | Episode number |
-| `{{Username}}` | Affected username |
-| `{{UserId}}` | Affected user ID |
-| `{{Client}}` | Client application name |
-| `{{DeviceName}}` | Device name |
-| `{{RemoteEndPoint}}` | Client IP address |
-| `{{SessionId}}` | Session ID |
-| `{{Priority}}` | Message priority (Gotify/ntfy) |
+See [Template Variables](docs/template-variables.md) for the complete reference of all available template variables with examples.
 
 ## Installation
 
@@ -146,6 +108,12 @@ dotnet build Jellyfin.Plugin.Multify.csproj -c Release
 The compiled DLL will be in `bin/Release/net9.0/`.
 
 > **Note:** This project uses GitHub Actions for CI/CD. Pushes to `master` trigger build and test workflows. See `.github/workflows/` for details.
+
+## Documentation
+
+- **[Supported Notification Events](docs/supported-events.md)** — Complete list of all notification events and when they trigger
+- **[Template Variables](docs/template-variables.md)** — Full reference of all available template variables with examples
+- **[API Documentation](docs/api.md)** — Test notification endpoint and destination configuration schemas
 
 ## License
 

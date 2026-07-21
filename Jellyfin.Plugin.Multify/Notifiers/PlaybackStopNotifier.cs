@@ -52,6 +52,7 @@ public class PlaybackStopNotifier : IEventConsumer<PlaybackStopEventArgs>
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.PlaybackStop);
         data.AddItemData(eventArgs.Item);
+        data.AddPlaybackStopData(eventArgs);
 
         if (eventArgs.Session is not null)
         {

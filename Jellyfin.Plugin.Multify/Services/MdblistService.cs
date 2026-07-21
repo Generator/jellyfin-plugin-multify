@@ -145,6 +145,11 @@ public class MdblistService
                             "rt" or "rottentomatoes" => "RottenTomatoesRating",
                             "mc" or "metacritic" => "MetacriticRating",
                             "lb" or "letterboxd" => "LetterboxdRating",
+                            "popcorn" or "popcorntime" => "PopcornRating",
+                            "anilist" => "AnilistRating",
+                            "rogerebert" or "rogerebertcom" => "RogerEbertRating",
+                            "trakt" => "TraktRating",
+                            "mal" or "myanimelist" => "MyAnimeListRating",
                             _ => $"{source}Rating"
                         };
 
