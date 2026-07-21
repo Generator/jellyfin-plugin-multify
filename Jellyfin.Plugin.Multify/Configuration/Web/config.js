@@ -861,6 +861,11 @@ export default function (view) {
         const tab = tabs.find(t => t.id === tabId);
         if (tab) tab.render(content);
 
+        // Repopulate General tab fields after render
+        if (tabId === "general") {
+            populateGeneral(currentConfig);
+        }
+
         // Evaluate visibility rules after tab renders
         evaluateVisibility();
     }
