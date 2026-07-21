@@ -89,6 +89,13 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
                 request.Headers.Add("Authorization", $"Bearer {option.AccessToken}");
             }
 
+            // Add attachment header if image URL is available
+            if (data.TryGetValue("PrimaryImageUrl", out var imageObj) && imageObj is string imageUrl && !string.IsNullOrEmpty(imageUrl))
+            {
+                request.Headers.Add("Attach", imageUrl);
+                request.Headers.Add("Filename", "poster.jpg");
+            }
+
             using var response = await _httpClientFactory
                 .CreateClient(NamedClient.Default)
                 .SendAsync(request)

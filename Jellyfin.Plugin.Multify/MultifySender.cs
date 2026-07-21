@@ -173,6 +173,79 @@ public class MultifySender : IWebhookSender
         // Generate short ID (first 10 chars of GUID without dashes)
         var shortId = itemId.Replace("-", string.Empty, StringComparison.Ordinal)[..10];
         data["ItemShortId"] = shortId;
+
+        // Enrich image URLs with full server paths
+        EnrichImageUrls(data, serverUrl, itemId);
+    }
+
+    private static void EnrichImageUrls(Dictionary<string, object> data, string serverUrl, string itemId)
+    {
+        // Primary image URL
+        if (data.TryGetValue("PrimaryImageUrl", out var primaryObj) && primaryObj is string primaryUrl && !string.IsNullOrEmpty(primaryUrl))
+        {
+            // If it's already a full URL, use as-is; otherwise construct from server URL
+            if (!primaryUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                data["PrimaryImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Primary";
+            }
+        }
+        else
+        {
+            // Construct default primary image URL
+            data["PrimaryImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Primary";
+        }
+
+        // Backdrop image URL
+        if (data.TryGetValue("BackdropImageUrl", out var backdropObj) && backdropObj is string backdropUrl && !string.IsNullOrEmpty(backdropUrl))
+        {
+            if (!backdropUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                data["BackdropImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Backdrop";
+            }
+        }
+        else
+        {
+            data["BackdropImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Backdrop";
+        }
+
+        // Thumbnail image URL
+        if (data.TryGetValue("ThumbImageUrl", out var thumbObj) && thumbObj is string thumbUrl && !string.IsNullOrEmpty(thumbUrl))
+        {
+            if (!thumbUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                data["ThumbImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Thumbnail";
+            }
+        }
+        else
+        {
+            data["ThumbImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Thumbnail";
+        }
+
+        // Logo image URL
+        if (data.TryGetValue("LogoImageUrl", out var logoObj) && logoObj is string logoUrl && !string.IsNullOrEmpty(logoUrl))
+        {
+            if (!logoUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                data["LogoImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Logo";
+            }
+        }
+        else
+        {
+            data["LogoImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Logo";
+        }
+
+        // Banner image URL
+        if (data.TryGetValue("BannerImageUrl", out var bannerObj) && bannerObj is string bannerUrl && !string.IsNullOrEmpty(bannerUrl))
+        {
+            if (!bannerUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                data["BannerImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Banner";
+            }
+        }
+        else
+        {
+            data["BannerImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Banner";
+        }
     }
 
     private static string GetMediaType(Dictionary<string, object> data)

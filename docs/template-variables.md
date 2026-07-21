@@ -130,6 +130,25 @@ Available when MDBList API key is configured:
 | `{{AnilistRating}}` | AniList rating | `8.7` |
 | `{{RogerEbertRating}}` | Roger Ebert rating | `4.0` |
 
+## Image Variables
+
+URLs to item images from Jellyfin server:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{PrimaryImageUrl}}` | Primary poster image URL | `https://jellyfin.example.com/Items/abc123/Images/Primary` |
+| `{{BackdropImageUrl}}` | Backdrop/banner image URL | `https://jellyfin.example.com/Items/abc123/Images/Backdrop` |
+| `{{ThumbImageUrl}}` | Thumbnail image URL | `https://jellyfin.example.com/Items/abc123/Images/Thumbnail` |
+| `{{LogoImageUrl}}` | Logo image URL | `https://jellyfin.example.com/Items/abc123/Images/Logo` |
+| `{{BannerImageUrl}}` | Banner image URL | `https://jellyfin.example.com/Items/abc123/Images/Banner` |
+
+### Image Usage by Destination
+
+- **Telegram**: Use `{{PrimaryImageUrl}}` with `MessageType = SendPhoto` to send photo with caption
+- **Gotify**: Image URL is automatically added to `extras.client::notification.bigImageUrl` for display
+- **ntfy**: Image URL is automatically added as attachment via `Attach` header
+- **Generic Webhook**: Include image URLs in JSON payload for custom processing
+
 ## Task Variables
 
 Available for task completion events:

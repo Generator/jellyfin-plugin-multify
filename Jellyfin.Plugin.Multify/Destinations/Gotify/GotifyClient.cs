@@ -64,8 +64,29 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
                 return;
             }
 
+            // Build JSON payload with extras
+            var extras = new Dictionary<string, object>
+            {
+                ["client::display"] = new { contentType = "text/markdown" }
+            };
+
+            // Add image URL to extras if available (correct format: bigImageUrl)
+            if (data.TryGetValue("PrimaryImageUrl", out var imageObj) && imageObj is string imageUrl && !string.IsNullOrEmpty(imageUrl))
+            {
+                extras["client::notification"] = new { bigImageUrl = imageUrl };
+            }
+
+            var payload = new Dictionary<string, object>
+            {
+                ["message"] = body,
+                ["title"] = option.WebhookName,
+                ["priority"] = option.Priority,
+                ["extras"] = extras
+            };
+
+            var json = JsonSerializer.Serialize(payload);
             var uri = new Uri(option.WebhookUri.TrimEnd() + $"/message?token={option.Token}");
-            using var content = new StringContent(body, Encoding.UTF8, MediaTypeNames.Application.Json);
+            using var content = new StringContent(json, Encoding.UTF8, MediaTypeNames.Application.Json);
             using var response = await _httpClientFactory
                 .CreateClient(NamedClient.Default)
                 .PostAsync(uri, content)

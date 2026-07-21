@@ -298,13 +298,23 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
 
     private async Task<long?> SendPhotoAsync(TelegramOption option, Dictionary<string, object> data, string body)
     {
-        if (!data.TryGetValue("PhotoUrl", out var photoUrlObj) || string.IsNullOrEmpty(photoUrlObj?.ToString()))
+        // Try to get photo URL from data - check PrimaryImageUrl first, then PhotoUrl
+        string? photoUrl = null;
+
+        if (data.TryGetValue("PrimaryImageUrl", out var primaryObj) && primaryObj is string primaryUrl && !string.IsNullOrEmpty(primaryUrl))
         {
-            _logger.LogWarning("Photo message type selected but no PhotoUrl in data, falling back to text");
-            return await SendTextAsync(option, body).ConfigureAwait(false);
+            photoUrl = primaryUrl;
+        }
+        else if (data.TryGetValue("PhotoUrl", out var photoUrlObj) && photoUrlObj is string photoUrlStr && !string.IsNullOrEmpty(photoUrlStr))
+        {
+            photoUrl = photoUrlStr;
         }
 
-        var photoUrl = photoUrlObj.ToString()!;
+        if (string.IsNullOrEmpty(photoUrl))
+        {
+            _logger.LogWarning("Photo message type selected but no photo URL in data, falling back to text");
+            return await SendTextAsync(option, body).ConfigureAwait(false);
+        }
 
         var payload = CreatePayload(option);
         payload["photo"] = photoUrl;
