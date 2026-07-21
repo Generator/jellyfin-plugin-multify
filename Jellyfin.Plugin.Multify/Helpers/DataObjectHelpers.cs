@@ -164,12 +164,12 @@ public static class DataObjectHelpers
         // Add home page URL
         data["HomePageUrl"] = item.HomePageUrl ?? string.Empty;
 
-        // Add image URLs
-        data["PrimaryImageUrl"] = item.GetPrimaryImageUrl() ?? string.Empty;
-        data["BackdropImageUrl"] = item.GetBackdropImageUrl() ?? string.Empty;
-        data["ThumbImageUrl"] = item.GetThumbnailImageUrl() ?? string.Empty;
-        data["LogoImageUrl"] = item.GetLogoImageUrl() ?? string.Empty;
-        data["BannerImageUrl"] = item.GetBannerImageUrl() ?? string.Empty;
+        // Add image URLs (will be enriched with server URL in MultifySender)
+        data["PrimaryImageUrl"] = string.Empty;
+        data["BackdropImageUrl"] = string.Empty;
+        data["ThumbImageUrl"] = string.Empty;
+        data["LogoImageUrl"] = string.Empty;
+        data["BannerImageUrl"] = string.Empty;
 
         // Add series-specific data
         if (item is MediaBrowser.Controller.Entities.TV.Series series)

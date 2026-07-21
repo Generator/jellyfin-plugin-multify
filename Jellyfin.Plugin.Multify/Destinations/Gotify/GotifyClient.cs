@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Mime;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Multify.Destinations;
 using MediaBrowser.Common.Net;
@@ -86,7 +87,7 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
 
             var json = JsonSerializer.Serialize(payload);
             var uri = new Uri(option.WebhookUri.TrimEnd() + $"/message?token={option.Token}");
-            using var content = new StringContent(json, Encoding.UTF8, MediaTypeNames.Application.Json);
+            using var content = new StringContent(json, Encoding.UTF8, new System.Net.Http.Headers.MediaTypeHeaderValue("application/json"));
             using var response = await _httpClientFactory
                 .CreateClient(NamedClient.Default)
                 .PostAsync(uri, content)
