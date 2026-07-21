@@ -44,8 +44,10 @@ public class AuthenticationNotifier : IEventConsumer<AuthenticationResultEventAr
             ? NotificationType.AuthenticationSuccess
             : NotificationType.AuthenticationFailure;
 
-        _logger.LogDebug("Authentication event received for user {Username} (Successful={Successful})",
-            eventArgs.User.Name, isSuccessful);
+        _logger.LogDebug(
+            "Authentication event received for user {Username} (Successful={Successful})",
+            eventArgs.User.Name,
+            isSuccessful);
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", notificationType);
         data["Username"] = eventArgs.User.Name ?? "Unknown";
