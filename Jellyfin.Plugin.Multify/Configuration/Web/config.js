@@ -1037,28 +1037,15 @@ export default function (view) {
             saveStatus.style.display = "inline";
         }
 
-        // Snapshot the currently active tab's visible fields
+        // Snapshot the currently active tab's visible fields into currentConfig
         snapshotCurrentTab();
 
-        // For destination tabs that aren't active, render them briefly to read their data
-        const content = document.getElementById("multifyTabContent");
-
-        for (const type of ["telegram", "gotify", "ntfy", "generic"]) {
-            if (activeTabId !== type) {
-                content.innerHTML = "";
-                tabs.find(t => t.id === type)?.render(content);
-                currentConfig[type === "telegram" ? "TelegramOptions" :
-                    type === "gotify" ? "GotifyOptions" :
-                    type === "ntfy" ? "NtfyOptions" :
-                    "GenericWebhookOptions"] = readDestinations(type);
-            }
-        }
-
-        // Restore active tab
-        switchTab(activeTabId);
-        if (activeTabId === "general") {
-            setTimeout(() => populateGeneral(currentConfig), 10);
-        }
+        // NOTE: We do NOT re-render inactive destination tabs here.
+        // Destination card values are set asynchronously (setTimeout 0) in
+        // addTelegramDestination/addGotifyDestination/etc., so readDestinations()
+        // would read empty values synchronously, wiping out the saved config.
+        // currentConfig already holds the correct data for all inactive tabs
+        // from either the initial load or previous snapshotCurrentTab() calls.
 
         // Build final config from currentConfig (which has all snapshotted data)
         const configToSave = {
@@ -1071,7 +1058,8 @@ export default function (view) {
             AdvancedSettings: currentConfig.AdvancedSettings || {
                 LogLevel: "Information",
                 EnableDashboardAlerts: false
-            }
+            },
+            EnableMainMenu: currentConfig.EnableMainMenu ?? true
         };
 
         try {
