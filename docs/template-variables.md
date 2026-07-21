@@ -142,6 +142,13 @@ URLs to item images from Jellyfin server:
 | `{{LogoImageUrl}}` | Logo image URL | `https://jellyfin.example.com/Items/abc123/Images/Logo` |
 | `{{BannerImageUrl}}` | Banner image URL | `https://jellyfin.example.com/Items/abc123/Images/Banner` |
 
+### Image Usage by Destination
+
+- **Telegram**: Use `{{PrimaryImageUrl}}` with `MessageType = SendPhoto` to send photo with caption
+- **Gotify**: Image URL is automatically added to `extras.client::notification.bigImageUrl` for display
+- **ntfy**: Image URL is automatically added as attachment via `Attach` header
+- **Generic Webhook**: Include image URLs in JSON payload for custom processing
+
 ## Trailer Variables
 
 Available when item has trailers:
@@ -182,13 +189,6 @@ URLs to TVDB images (requires TVDB ID):
 | `{{TvdbFanartUrl}}` | TVDB fanart image | `https://artworks.thetvdb.com/banners/fanart/12345-1.jpg` |
 | `{{TvdbSmallUrl}}` | TVDB small image | `https://artworks.thetvdb.com/banners/_cache/posters/12345-1.jpg` |
 | `{{TvdbSeasonUrl}}` | TVDB season image | `https://artworks.thetvdb.com/banners/seasons/12345-1-1.jpg` |
-
-### Image Usage by Destination
-
-- **Telegram**: Use `{{PrimaryImageUrl}}` with `MessageType = SendPhoto` to send photo with caption
-- **Gotify**: Image URL is automatically added to `extras.client::notification.bigImageUrl` for display
-- **ntfy**: Image URL is automatically added as attachment via `Attach` header
-- **Generic Webhook**: Include image URLs in JSON payload for custom processing
 
 ## Task Variables
 
