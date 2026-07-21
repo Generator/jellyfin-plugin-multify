@@ -171,7 +171,7 @@ public class MultifySender : IWebhookSender
         data["ItemUrl"] = itemUrl;
 
         // Generate short ID (first 10 chars of GUID without dashes)
-        var shortId = itemId.Replace("-", string.Empty)[..10];
+        var shortId = itemId.Replace("-", string.Empty, StringComparison.Ordinal)[..10];
         data["ItemShortId"] = shortId;
     }
 

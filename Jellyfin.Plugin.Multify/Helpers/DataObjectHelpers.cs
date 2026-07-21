@@ -122,9 +122,6 @@ public static class DataObjectHelpers
         // Add original title
         data["OriginalTitle"] = item.OriginalTitle ?? string.Empty;
 
-        // Add original language
-        data["OriginalLanguage"] = item.OriginalLanguage ?? string.Empty;
-
         // Add studios as comma-separated string
         if (item.Studios is not null && item.Studios.Length > 0)
         {
@@ -256,11 +253,12 @@ public static class DataObjectHelpers
     /// <returns>The updated dictionary.</returns>
     public static Dictionary<string, object> AddPlaybackData(this Dictionary<string, object> data, PlaybackProgressEventArgs eventArgs)
     {
-        data["PlaybackPositionTicks"] = eventArgs.PlaybackPositionTicks.ToString(CultureInfo.InvariantCulture);
+        var positionTicks = eventArgs.PlaybackPositionTicks ?? 0;
+        data["PlaybackPositionTicks"] = positionTicks.ToString(CultureInfo.InvariantCulture);
 
         // Format position as HH:MM:SS
-        var positionTimeSpan = TimeSpan.FromTicks(eventArgs.PlaybackPositionTicks);
-        data["PlaybackPosition"] = positionTimeSpan.ToString(@"hh\:mm\:ss");
+        var positionTimeSpan = TimeSpan.FromTicks(positionTicks);
+        data["PlaybackPosition"] = positionTimeSpan.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture);
 
         data["IsPaused"] = eventArgs.IsPaused.ToString(CultureInfo.InvariantCulture);
         data["IsAutomated"] = eventArgs.IsAutomated.ToString(CultureInfo.InvariantCulture);
@@ -278,11 +276,12 @@ public static class DataObjectHelpers
     /// <returns>The updated dictionary.</returns>
     public static Dictionary<string, object> AddPlaybackStopData(this Dictionary<string, object> data, PlaybackStopEventArgs eventArgs)
     {
-        data["PlaybackPositionTicks"] = eventArgs.PlaybackPositionTicks.ToString(CultureInfo.InvariantCulture);
+        var positionTicks = eventArgs.PlaybackPositionTicks ?? 0;
+        data["PlaybackPositionTicks"] = positionTicks.ToString(CultureInfo.InvariantCulture);
 
         // Format position as HH:MM:SS
-        var positionTimeSpan = TimeSpan.FromTicks(eventArgs.PlaybackPositionTicks);
-        data["PlaybackPosition"] = positionTimeSpan.ToString(@"hh\:mm\:ss");
+        var positionTimeSpan = TimeSpan.FromTicks(positionTicks);
+        data["PlaybackPosition"] = positionTimeSpan.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture);
 
         data["PlayedToCompletion"] = eventArgs.PlayedToCompletion.ToString(CultureInfo.InvariantCulture);
         data["MediaSourceId"] = eventArgs.MediaSourceId ?? "Unknown";
