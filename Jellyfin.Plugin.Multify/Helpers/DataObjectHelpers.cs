@@ -229,15 +229,15 @@ public static class DataObjectHelpers
         // Add play state info if available
         if (session.PlayState is not null)
         {
-            data["PlayMethod"] = session.PlayState.PlayMethod.ToString();
+            data["PlayMethod"] = session.PlayState.PlayMethod.ToString() ?? "Unknown";
             data["IsPaused"] = session.PlayState.IsPaused.ToString(CultureInfo.InvariantCulture);
             data["VolumeLevel"] = session.PlayState.VolumeLevel?.ToString(CultureInfo.InvariantCulture) ?? "Unknown";
             data["IsMuted"] = session.PlayState.IsMuted.ToString(CultureInfo.InvariantCulture);
             data["CanSeek"] = session.PlayState.CanSeek.ToString(CultureInfo.InvariantCulture);
             data["AudioStreamIndex"] = session.PlayState.AudioStreamIndex?.ToString(CultureInfo.InvariantCulture) ?? "Unknown";
             data["SubtitleStreamIndex"] = session.PlayState.SubtitleStreamIndex?.ToString(CultureInfo.InvariantCulture) ?? "Unknown";
-            data["RepeatMode"] = session.PlayState.RepeatMode.ToString();
-            data["PlaybackOrder"] = session.PlayState.PlaybackOrder.ToString();
+            data["RepeatMode"] = session.PlayState.RepeatMode.ToString() ?? "Unknown";
+            data["PlaybackOrder"] = session.PlayState.PlaybackOrder.ToString() ?? "Unknown";
             data["MediaSourceId"] = session.PlayState.MediaSourceId ?? "Unknown";
             data["LiveStreamId"] = session.PlayState.LiveStreamId ?? "Unknown";
         }
