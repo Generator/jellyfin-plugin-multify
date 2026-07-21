@@ -171,6 +171,50 @@ public static class DataObjectHelpers
         data["LogoImageUrl"] = string.Empty;
         data["BannerImageUrl"] = string.Empty;
 
+        // Add trailer data
+        if (item.RemoteTrailers is not null && item.RemoteTrailers.Count > 0)
+        {
+            var firstTrailer = item.RemoteTrailers[0];
+            data["TrailerUrl"] = firstTrailer.Url ?? string.Empty;
+
+            // Extract YouTube video ID from URL (format: https://www.youtube.com/watch?v=VIDEO_ID)
+            if (!string.IsNullOrEmpty(firstTrailer.Url) && firstTrailer.Url.Contains("youtube.com/watch", StringComparison.OrdinalIgnoreCase))
+            {
+                var url = firstTrailer.Url;
+                var queryStart = url.IndexOf("v=", StringComparison.Ordinal);
+                if (queryStart >= 0)
+                {
+                    var videoId = url[(queryStart + 2)..];
+                    var ampIndex = videoId.IndexOf('&', StringComparison.Ordinal);
+                    if (ampIndex >= 0)
+                    {
+                        videoId = videoId[..ampIndex];
+                    }
+
+                    data["TrailerYtId"] = videoId;
+                }
+            }
+        }
+        else
+        {
+            data["TrailerUrl"] = string.Empty;
+            data["TrailerYtId"] = string.Empty;
+        }
+
+        // Add TMDb image URL variables (will be enriched with API calls if TMDb ID available)
+        data["TmdbPosterUrl"] = string.Empty;
+        data["TmdbBackdropUrl"] = string.Empty;
+        data["TmdbProfileUrl"] = string.Empty;
+        data["TmdbStillUrl"] = string.Empty;
+        data["TmdbLogoUrl"] = string.Empty;
+
+        // Add TVDB image URL variables (will be enriched with API calls if TVDB ID available)
+        data["TvdbPosterUrl"] = string.Empty;
+        data["TvdbBannerUrl"] = string.Empty;
+        data["TvdbFanartUrl"] = string.Empty;
+        data["TvdbSmallUrl"] = string.Empty;
+        data["TvdbSeasonUrl"] = string.Empty;
+
         // Add series-specific data
         if (item is MediaBrowser.Controller.Entities.TV.Series series)
         {

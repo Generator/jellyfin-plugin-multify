@@ -142,6 +142,47 @@ URLs to item images from Jellyfin server:
 | `{{LogoImageUrl}}` | Logo image URL | `https://jellyfin.example.com/Items/abc123/Images/Logo` |
 | `{{BannerImageUrl}}` | Banner image URL | `https://jellyfin.example.com/Items/abc123/Images/Banner` |
 
+## Trailer Variables
+
+Available when item has trailers:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{TrailerUrl}}` | First trailer URL | `https://www.youtube.com/watch?v=dQw4w9WgXcQ` |
+| `{{TrailerYtId}}` | YouTube video ID | `dQw4w9WgXcQ` |
+
+### Trailer Usage Examples
+
+```
+🎬 {{ItemName}}
+🎥 Trailer: {{TrailerUrl}}
+📺 YouTube: https://youtu.be/{{TrailerYtId}}
+```
+
+## TMDb Image Variables
+
+URLs to TMDb images (requires TMDb ID):
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{TmdbPosterUrl}}` | TMDb poster image | `https://image.tmdb.org/t/p/w500/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
+| `{{TmdbBackdropUrl}}` | TMDb backdrop image | `https://image.tmdb.org/t/p/w1280/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg` |
+| `{{TmdbProfileUrl}}` | TMDb profile image | `https://image.tmdb.org/t/p/w185/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
+| `{{TmdbStillUrl}}` | TMDb still image | `https://image.tmdb.org/t/p/w300/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
+| `{{TmdbLogoUrl}}` | TMDb logo image | `https://image.tmdb.org/t/p/w154/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
+
+## TVDB Image Variables
+
+URLs to TVDB images (requires TVDB ID):
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{TvdbPosterUrl}}` | TVDB poster image | `https://artworks.thetvdb.com/banners/posters/12345-1.jpg` |
+| `{{TvdbBannerUrl}}` | TVDB banner image | `https://artworks.thetvdb.com/banners/graphical/12345-g.jpg` |
+| `{{TvdbFanartUrl}}` | TVDB fanart image | `https://artworks.thetvdb.com/banners/fanart/12345-1.jpg` |
+| `{{TvdbSmallUrl}}` | TVDB small image | `https://artworks.thetvdb.com/banners/_cache/posters/12345-1.jpg` |
+| `{{TvdbSeasonUrl}}` | TVDB season image | `https://artworks.thetvdb.com/banners/seasons/12345-1-1.jpg` |
+
 ### Image Usage by Destination
 
 - **Telegram**: Use `{{PrimaryImageUrl}}` with `MessageType = SendPhoto` to send photo with caption

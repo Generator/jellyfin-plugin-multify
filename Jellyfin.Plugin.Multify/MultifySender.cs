@@ -75,6 +75,9 @@ public class MultifySender : IWebhookSender
             EnrichWithItemUrl(itemData);
         }
 
+        // Enrich data with trailer URLs
+        EnrichTrailerUrls(itemData);
+
         var tasks = new List<Task>();
 
         var telegramCount = _configuration.TelegramOptions.Count(o => o.NotificationTypes.Contains(notificationType));
@@ -246,6 +249,14 @@ public class MultifySender : IWebhookSender
         {
             data["BannerImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Banner";
         }
+    }
+
+    private static void EnrichTrailerUrls(Dictionary<string, object> data)
+    {
+        // Note: RemoteTrailers are not directly available in the data dictionary
+        // They need to be extracted from the BaseItem when creating the data object
+        // This method is a placeholder for future enrichment if needed
+        // The actual extraction happens in DataObjectHelpers.AddItemData()
     }
 
     private static string GetMediaType(Dictionary<string, object> data)
