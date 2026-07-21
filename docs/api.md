@@ -184,32 +184,31 @@ Requires admin privileges (`RequiresElevation` policy). Include the Jellyfin acc
 
 ## Template Variables
 
-Test notifications support the same template variables as production notifications. Use `{{variable}}` syntax in templates.
+Test notifications use a simplified set of variables for testing purposes. For complete template variable reference, see [Template Variables](template-variables.md).
 
 ### Available Variables in Test Notifications
 
-| Variable | Description |
-|----------|-------------|
-| `{{ServerName}}` | Server name (always "Jellyfin" for tests) |
-| `{{NotificationType}}` | Always "Test" for test notifications |
-| `{{Timestamp}}` | Current UTC timestamp |
-| `{{ItemName}}` | Test item name |
-| `{{ItemType}}` | Test item type |
-| `{{ItemId}}` | Test item ID |
-| `{{Username}}` | Test username |
-| `{{UserId}}` | Test user ID |
-| `{{Client}}` | Test client name |
-| `{{DeviceName}}` | Test device name |
+| Variable | Description | Example Value |
+|----------|-------------|---------------|
+| `{{Title}}` | Notification title | `Test Notification` |
+| `{{Body}}` | Notification body | `This is a test message...` |
+| `{{ServerName}}` | Server name | `Jellyfin Server` |
+| `{{ItemType}}` | Item type | `Movie` |
+| `{{ItemName}}` | Item name | `Test Movie (2024)` |
+| `{{UserId}}` | User ID | `00000000-0000-0000-0000-000000000000` |
+| `{{Timestamp}}` | Current UTC timestamp | `2024-01-15 10:30:00 UTC` |
 
 ### Example Template
 
 ```json
 {
-  "Template": "Test notification for {{ItemName}} ({{ItemType}}) from {{Client}}"
+  "Template": "{{Title}}: {{ItemName}} ({{ItemType}})"
 }
 ```
 
-For complete template variable reference, see [Template Variables](template-variables.md).
+### Note
+
+Test notifications do not include all production variables (such as `{{TrailerUrl}}`, `{{PrimaryImageUrl}}`, ratings, etc.). They use a minimal dataset to verify destination connectivity and configuration.
 
 ---
 
