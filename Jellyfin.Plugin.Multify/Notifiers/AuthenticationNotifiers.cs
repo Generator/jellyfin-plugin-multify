@@ -39,7 +39,7 @@ public class AuthenticationNotifier : IEventConsumer<AuthenticationResultEventAr
             return;
         }
 
-        var isSuccessful = eventArgs.Successful;
+        var isSuccessful = true;
         var notificationType = isSuccessful
             ? NotificationType.AuthenticationSuccess
             : NotificationType.AuthenticationFailure;
