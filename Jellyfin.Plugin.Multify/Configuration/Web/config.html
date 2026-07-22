@@ -1,5 +1,26 @@
 <div data-role="page" id="multifyConfigurationPage" class="page type-interior pluginConfigurationPage fullWidthContent"
      data-controller="__plugin/Multify.js">
+    <style>
+        @font-face {
+            font-family: 'Material Icons';
+            font-style: normal;
+            font-weight: 400;
+            src: url(/fonts/material-icons.woff2) format('woff2');
+        }
+        .material-icons {
+            font-family: 'Material Icons';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 20px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+        }
+    </style>
     <div class="content-primary">
         <div class="verticalSection">
             <div class="sectionTitleContainer">
@@ -311,8 +332,12 @@
             border: 1px solid var(--multify-border);
             border-radius: 8px;
             margin-bottom: 12px;
-            background: var(--multify-surface);
+            background: rgba(28, 28, 30, 0.92);
             overflow: hidden;
+        }
+        
+        .multify-destination-card.collapsed {
+            border-bottom: none;
         }
         
         .multify-destination-card .card-header {
@@ -331,7 +356,7 @@
         .multify-collapse-toggle {
             background: none;
             border: none;
-            color: var(--multify-text);
+            color: white;
             cursor: pointer;
             padding: 4px;
             display: flex;
@@ -346,14 +371,9 @@
             opacity: 1;
         }
         
-        .multify-collapse-icon {
-            font-size: 12px;
-            display: inline-block;
+        .multify-collapse-toggle .material-icons {
+            font-size: 20px;
             transition: transform 0.3s ease;
-        }
-        
-        .multify-destination-card.collapsed .multify-collapse-icon {
-            transform: rotate(-90deg);
         }
         
         .multify-destination-title {
@@ -384,7 +404,7 @@
         .multify-edit-icon, .multify-trash-icon {
             background: none;
             border: none;
-            color: var(--multify-text-muted);
+            color: white;
             cursor: pointer;
             padding: 6px;
             border-radius: 4px;
@@ -396,7 +416,7 @@
         
         .multify-edit-icon:hover, .multify-trash-icon:hover {
             background: rgba(255, 255, 255, 0.08);
-            color: var(--multify-text);
+            color: white;
         }
         
         .multify-edit-icon:focus-visible, .multify-trash-icon:focus-visible {

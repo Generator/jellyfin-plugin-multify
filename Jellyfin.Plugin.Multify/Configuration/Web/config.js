@@ -194,7 +194,7 @@ export default function (view) {
     /*** Destination card wrapper ***/
     function wrapDestinationCard(config, type, serviceConfigHtml, onRemove) {
         const card = document.createElement("div");
-        card.className = "multify-destination-card";
+        card.className = "multify-destination-card collapsed";
         card.dataset.type = type;
 
         // Header
@@ -204,21 +204,22 @@ export default function (view) {
         // Collapse toggle button
         const toggleBtn = document.createElement("button");
         toggleBtn.className = "multify-collapse-toggle";
-        toggleBtn.setAttribute("aria-expanded", "true");
+        toggleBtn.setAttribute("aria-expanded", "false");
         toggleBtn.setAttribute("aria-controls", "destination-content");
-        toggleBtn.innerHTML = '<span class="multify-collapse-icon">▼</span>';
+        toggleBtn.innerHTML = '<span class="material-icons">expand_more</span>';
         toggleBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             card.classList.toggle("collapsed");
             const isExpanded = !card.classList.contains("collapsed");
             toggleBtn.setAttribute("aria-expanded", isExpanded);
+            toggleBtn.innerHTML = isExpanded ? '<span class="material-icons">expand_less</span>' : '<span class="material-icons">expand_more</span>';
         });
         header.appendChild(toggleBtn);
 
         // Title
         const title = document.createElement("strong");
         title.className = "multify-destination-title";
-        title.textContent = config.WebhookName || type;
+        title.textContent = config.WebhookName || "Webhook Name";
         header.appendChild(title);
 
         // Action buttons container
@@ -229,9 +230,11 @@ export default function (view) {
         const testBtn = document.createElement("button");
         testBtn.className = "multify-edit-icon";
         testBtn.setAttribute("aria-label", "Test notification");
-        testBtn.innerHTML = "✏️";
+        testBtn.innerHTML = '<span class="material-icons">edit</span>';
         testBtn.addEventListener("click", async (e) => {
             e.stopPropagation();
+            card.classList.remove("collapsed");
+            toggleBtn.setAttribute("aria-expanded", "true");
             await handleTestNotification(card, type, testBtn);
         });
         actionsContainer.appendChild(testBtn);
@@ -240,7 +243,7 @@ export default function (view) {
         const removeBtn = document.createElement("button");
         removeBtn.className = "multify-trash-icon";
         removeBtn.setAttribute("aria-label", "Delete destination");
-        removeBtn.innerHTML = "🗑️";
+        removeBtn.innerHTML = '<span class="material-icons">delete</span>';
         removeBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             card.remove();
