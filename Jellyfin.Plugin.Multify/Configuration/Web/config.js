@@ -200,44 +200,69 @@ export default function (view) {
         // Header
         const header = document.createElement("div");
         header.className = "card-header";
+        
+        // Collapse toggle button
+        const toggleBtn = document.createElement("button");
+        toggleBtn.className = "multify-collapse-toggle";
+        toggleBtn.setAttribute("aria-expanded", "true");
+        toggleBtn.setAttribute("aria-controls", "destination-content");
+        toggleBtn.innerHTML = '<span class="multify-collapse-icon">▼</span>';
+        toggleBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            card.classList.toggle("collapsed");
+            const isExpanded = !card.classList.contains("collapsed");
+            toggleBtn.setAttribute("aria-expanded", isExpanded);
+        });
+        header.appendChild(toggleBtn);
+
+        // Title
         const title = document.createElement("strong");
+        title.className = "multify-destination-title";
         title.textContent = config.WebhookName || type;
         header.appendChild(title);
 
-        // Button container
-        const btnContainer = document.createElement("div");
-        btnContainer.style.cssText = "display:flex;gap:8px;";
+        // Action buttons container
+        const actionsContainer = document.createElement("div");
+        actionsContainer.className = "multify-destination-actions";
 
-        // Test button
+        // Test button (edit icon)
         const testBtn = document.createElement("button");
-        testBtn.setAttribute("is", "emby-button");
-        testBtn.className = "raised";
-        testBtn.innerHTML = "<span>Test</span>";
-        testBtn.addEventListener("click", async () => {
+        testBtn.className = "multify-edit-icon";
+        testBtn.setAttribute("aria-label", "Test notification");
+        testBtn.innerHTML = "✏️";
+        testBtn.addEventListener("click", async (e) => {
+            e.stopPropagation();
             await handleTestNotification(card, type, testBtn);
         });
-        btnContainer.appendChild(testBtn);
+        actionsContainer.appendChild(testBtn);
 
-        // Remove button
+        // Remove button (trash icon)
         const removeBtn = document.createElement("button");
-        removeBtn.setAttribute("is", "emby-button");
-        removeBtn.className = "raised button-warning";
-        removeBtn.innerHTML = "<span>Remove</span>";
-        removeBtn.addEventListener("click", () => {
+        removeBtn.className = "multify-trash-icon";
+        removeBtn.setAttribute("aria-label", "Delete destination");
+        removeBtn.innerHTML = "🗑️";
+        removeBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
             card.remove();
         });
-        btnContainer.appendChild(removeBtn);
+        actionsContainer.appendChild(removeBtn);
 
-        header.appendChild(btnContainer);
+        header.appendChild(actionsContainer);
         card.appendChild(header);
 
+        // Content container (collapsible)
+        const contentContainer = document.createElement("div");
+        contentContainer.className = "multify-destination-content";
+
         // Base config
-        card.appendChild(buildBaseSection(config));
+        contentContainer.appendChild(buildBaseSection(config));
 
         // Service-specific
         const svcDiv = document.createElement("div");
         svcDiv.innerHTML = serviceConfigHtml;
-        card.appendChild(svcDiv);
+        contentContainer.appendChild(svcDiv);
+
+        card.appendChild(contentContainer);
 
         return card;
     }

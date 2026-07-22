@@ -310,16 +310,98 @@
         .multify-destination-card {
             border: 1px solid var(--multify-border);
             border-radius: 8px;
-            padding: 16px;
             margin-bottom: 12px;
             background: var(--multify-surface);
+            overflow: hidden;
         }
         
         .multify-destination-card .card-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            gap: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .multify-destination-card .card-header:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        .multify-collapse-toggle {
+            background: none;
+            border: none;
+            color: var(--multify-text);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            opacity: 0.7;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        
+        .multify-collapse-toggle:hover {
+            opacity: 1;
+        }
+        
+        .multify-collapse-icon {
+            font-size: 12px;
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+        
+        .multify-destination-card.collapsed .multify-collapse-icon {
+            transform: rotate(-90deg);
+        }
+        
+        .multify-destination-title {
+            font-size: 1em;
+            font-weight: 600;
+            color: var(--multify-text);
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .multify-destination-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        
+        .multify-destination-content {
+            padding: 0 16px 16px;
+            border-top: 1px solid var(--multify-border-muted);
+        }
+        
+        .multify-destination-card.collapsed .multify-destination-content {
+            display: none;
+        }
+        
+        .multify-edit-icon, .multify-trash-icon {
+            background: none;
+            border: none;
+            color: var(--multify-text-muted);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, color 0.2s;
+        }
+        
+        .multify-edit-icon:hover, .multify-trash-icon:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--multify-text);
+        }
+        
+        .multify-edit-icon:focus-visible, .multify-trash-icon:focus-visible {
+            outline: 2px solid var(--multify-accent);
+            outline-offset: 1px;
         }
         
         /* Form field helpers */
@@ -500,7 +582,7 @@
             gap: 12px;
             padding: 12px 0;
             border-top: 1px solid var(--multify-border);
-            background: var(--multify-bg);
+            background: rgba(28, 28, 30, 0.92);
             z-index: 10;
         }
         
