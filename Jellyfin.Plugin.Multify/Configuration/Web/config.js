@@ -230,7 +230,7 @@ function multifyController(view) {
         }
     }
 
-    async function buildLibraryFilter(config = {}) {
+    function buildLibraryFilter(config = {}) {
         const container = document.createElement("div");
         container.className = "multify-builder-block";
         container.dataset.field = "LibraryFilter";
@@ -294,25 +294,25 @@ function multifyController(view) {
         const checkList = document.createElement("div");
         checkList.className = "paperList checkboxList checkboxList-paperList multify-check-list";
 
-        // Load libraries
-        const libraries = await loadLibraries();
-        for (const lib of libraries) {
-            const item = document.createElement("label");
-            item.className = "multify-check-list-item";
-            
-            const cb = document.createElement("input");
-            cb.setAttribute("is", "emby-checkbox");
-            cb.type = "checkbox";
-            cb.dataset.value = lib.id;
-            cb.checked = (config.LibraryFilter || []).includes(lib.id);
-            
-            const span = document.createElement("span");
-            span.textContent = lib.name;
-            
-            item.appendChild(cb);
-            item.appendChild(span);
-            checkList.appendChild(item);
-        }
+        // Load libraries asynchronously, then populate the list
+        loadLibraries().then(libraries => {
+            for (const lib of libraries) {
+                const item = document.createElement("label");
+                item.className = "multify-check-list-item";
+                
+                const cb = document.createElement("input");
+                cb.type = "checkbox";
+                cb.dataset.value = lib.id;
+                cb.checked = (config.LibraryFilter || []).includes(lib.id);
+                
+                const span = document.createElement("span");
+                span.textContent = lib.name;
+                
+                item.appendChild(cb);
+                item.appendChild(span);
+                checkList.appendChild(item);
+            }
+        });
         
         libraryList.appendChild(checkList);
         controls.appendChild(libraryList);
