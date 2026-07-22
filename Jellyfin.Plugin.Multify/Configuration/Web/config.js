@@ -639,7 +639,7 @@ function multifyController(view) {
             label: "Telegram",
             render(container) {
                 const title = document.createElement("h3");
-                title.textContent = "Telegram Destinations";
+                title.textContent = "Telegram Notifications";
                 title.style.marginBottom = "8px";
                 container.appendChild(title);
 
@@ -653,8 +653,9 @@ function multifyController(view) {
                 container.appendChild(wrapper);
 
                 const btn = document.createElement("button");
-                btn.className = "raised block";
-                btn.innerHTML = "<span>Add Telegram Destination</span>";
+                btn.type = "button";
+                btn.className = "raised block multify-action-button";
+                btn.innerHTML = "<span>Add Telegram Notification</span>";
                 btn.addEventListener("click", () => {
                     wrapper.appendChild(addTelegramDestination({}));
                 });
@@ -671,7 +672,7 @@ function multifyController(view) {
             label: "Gotify",
             render(container) {
                 const title = document.createElement("h3");
-                title.textContent = "Gotify Destinations";
+                title.textContent = "Gotify Notifications";
                 title.style.marginBottom = "8px";
                 container.appendChild(title);
 
@@ -685,8 +686,9 @@ function multifyController(view) {
                 container.appendChild(wrapper);
 
                 const btn = document.createElement("button");
-                btn.className = "raised block";
-                btn.innerHTML = "<span>Add Gotify Destination</span>";
+                btn.type = "button";
+                btn.className = "raised block multify-action-button";
+                btn.innerHTML = "<span>Add Gotify Notification</span>";
                 btn.addEventListener("click", () => {
                     wrapper.appendChild(addGotifyDestination({}));
                 });
@@ -702,7 +704,7 @@ function multifyController(view) {
             label: "ntfy",
             render(container) {
                 const title = document.createElement("h3");
-                title.textContent = "ntfy Destinations";
+                title.textContent = "ntfy Notifications";
                 title.style.marginBottom = "8px";
                 container.appendChild(title);
 
@@ -716,8 +718,9 @@ function multifyController(view) {
                 container.appendChild(wrapper);
 
                 const btn = document.createElement("button");
-                btn.className = "raised block";
-                btn.innerHTML = "<span>Add ntfy Destination</span>";
+                btn.type = "button";
+                btn.className = "raised block multify-action-button";
+                btn.innerHTML = "<span>Add ntfy Notification</span>";
                 btn.addEventListener("click", () => {
                     wrapper.appendChild(addNtfyDestination({}));
                 });
@@ -734,7 +737,7 @@ function multifyController(view) {
             shortLabel: "Generic",
             render(container) {
                 const title = document.createElement("h3");
-                title.textContent = "Generic Webhook Destinations";
+                title.textContent = "Generic Webhook Notifications";
                 title.style.marginBottom = "8px";
                 container.appendChild(title);
 
@@ -748,8 +751,9 @@ function multifyController(view) {
                 container.appendChild(wrapper);
 
                 const btn = document.createElement("button");
-                btn.className = "raised block";
-                btn.innerHTML = "<span>Add Generic Webhook Destination</span>";
+                btn.type = "button";
+                btn.className = "raised block multify-action-button";
+                btn.innerHTML = "<span>Add Generic Webhook Notification</span>";
                 btn.addEventListener("click", () => {
                     wrapper.appendChild(addGenericDestination({}));
                 });
@@ -796,17 +800,21 @@ function multifyController(view) {
                     <span>Log notification events to the Jellyfin admin dashboard activity feed.</span>`;
                 container.appendChild(alertsDiv);
 
-                // Show in main menu
-                const mainMenuDiv = document.createElement("div");
-                mainMenuDiv.className = "inputContainer";
-                mainMenuDiv.style.marginTop = "16px";
-                mainMenuDiv.innerHTML = `
-                    <label class="checkboxContainer">
-                        <input is="emby-checkbox" type="checkbox" id="chkEnableMainMenu"/>
-                        <span>Show Multify in Main Menu</span>
-                    </label>
-                    <span>Toggle the Multify entry in the server's main navigation. Save and refresh the client (or clear cache) to apply.</span>`;
-                container.appendChild(mainMenuDiv);
+                // Import/Export Settings
+                const importExportDiv = document.createElement("div");
+                importExportDiv.className = "inputContainer";
+                importExportDiv.style.marginTop = "24px";
+                importExportDiv.style.paddingTop = "16px";
+                importExportDiv.style.borderTop = "1px solid var(--multify-border-muted)";
+                importExportDiv.innerHTML = `
+                    <h4 style="margin: 0 0 12px 0; font-size: 1em;">Import/Export Settings</h4>
+                    <p style="margin: 0 0 12px 0; font-size: 0.85em; opacity: 0.7;">Export your current configuration to a JSON file, or import settings from a file.</p>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <button type="button" id="btnExportSettings" class="raised multify-action-button">Export Settings</button>
+                        <button type="button" id="btnImportSettings" class="raised multify-action-button">Import Settings</button>
+                        <input type="file" id="importFileInput" accept=".json" style="display: none;" />
+                    </div>`;
+                container.appendChild(importExportDiv);
 
                 // Set current values
                 setTimeout(() => {
@@ -815,8 +823,104 @@ function multifyController(view) {
                     if (ddl) ddl.value = logLevel;
                     const chk = document.getElementById("chkEnableDashboardAlerts");
                     if (chk) chk.checked = currentConfig.AdvancedSettings?.EnableDashboardAlerts ?? false;
-                    const mainMenu = document.getElementById("chkEnableMainMenu");
-                    if (mainMenu) mainMenu.checked = currentConfig.EnableMainMenu ?? true;
+
+                    // Export Settings handler
+                    const exportBtn = document.getElementById("btnExportSettings");
+                    if (exportBtn) {
+                        exportBtn.addEventListener("click", () => {
+                            try {
+                                // Snapshot current tab first to ensure all data is captured
+                                snapshotCurrentTab();
+                                
+                                const configToExport = {
+                                    ServerUrl: currentConfig.ServerUrl || "",
+                                    MdblistApiKey: currentConfig.MdblistApiKey || "",
+                                    TelegramOptions: currentConfig.TelegramOptions || [],
+                                    GotifyOptions: currentConfig.GotifyOptions || [],
+                                    NtfyOptions: currentConfig.NtfyOptions || [],
+                                    GenericWebhookOptions: currentConfig.GenericWebhookOptions || [],
+                                    AdvancedSettings: currentConfig.AdvancedSettings || {
+                                        LogLevel: "Information",
+                                        EnableDashboardAlerts: false
+                                    }
+                                };
+                                
+                                const jsonStr = JSON.stringify(configToExport, null, 2);
+                                const blob = new Blob([jsonStr], { type: "application/json" });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = "multify-settings-" + new Date().toISOString().slice(0, 10) + ".json";
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                                
+                                Dashboard.alert("Settings exported successfully!");
+                            } catch (e) {
+                                console.error("Multify: Export failed", e);
+                                Dashboard.alert("Export failed: " + e.message);
+                            }
+                        });
+                    }
+
+                    // Import Settings handler
+                    const importBtn = document.getElementById("btnImportSettings");
+                    const fileInput = document.getElementById("importFileInput");
+                    if (importBtn && fileInput) {
+                        importBtn.addEventListener("click", () => {
+                            fileInput.click();
+                        });
+                        
+                        fileInput.addEventListener("change", async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            
+                            try {
+                                const text = await file.text();
+                                const importedConfig = JSON.parse(text);
+                                
+                                // Validate required fields
+                                if (typeof importedConfig !== "object" || importedConfig === null) {
+                                    throw new Error("Invalid configuration file format");
+                                }
+                                
+                                // Confirm before overwriting
+                                const confirmed = await showConfirmDialog(
+                                    "Import Settings",
+                                    "This will overwrite your current settings. Do you want to continue?"
+                                );
+                                
+                                if (!confirmed) {
+                                    fileInput.value = "";
+                                    return;
+                                }
+                                
+                                // Apply imported settings
+                                currentConfig.ServerUrl = importedConfig.ServerUrl || "";
+                                currentConfig.MdblistApiKey = importedConfig.MdblistApiKey || "";
+                                currentConfig.TelegramOptions = importedConfig.TelegramOptions || [];
+                                currentConfig.GotifyOptions = importedConfig.GotifyOptions || [];
+                                currentConfig.NtfyOptions = importedConfig.NtfyOptions || [];
+                                currentConfig.GenericWebhookOptions = importedConfig.GenericWebhookOptions || [];
+                                currentConfig.AdvancedSettings = importedConfig.AdvancedSettings || {
+                                    LogLevel: "Information",
+                                    EnableDashboardAlerts: false
+                                };
+                                
+                                // Re-render current tab to reflect imported settings
+                                switchTab(activeTabId);
+                                takeSnapshot();
+                                
+                                Dashboard.alert("Settings imported successfully! Click Save to apply changes.");
+                            } catch (err) {
+                                console.error("Multify: Import failed", err);
+                                Dashboard.alert("Import failed: " + err.message);
+                            } finally {
+                                fileInput.value = "";
+                            }
+                        });
+                    }
                 }, 0);
             }
         }
@@ -1164,10 +1268,7 @@ function multifyController(view) {
                     LogLevel: document.getElementById("ddlLogLevel")?.value || "Information",
                     EnableDashboardAlerts: document.getElementById("chkEnableDashboardAlerts")?.checked ?? false
                 }
-                : (currentConfig.AdvancedSettings || { LogLevel: "Information", EnableDashboardAlerts: false }),
-            EnableMainMenu: activeTabId === "advanced"
-                ? (document.getElementById("chkEnableMainMenu")?.checked ?? true)
-                : (currentConfig.EnableMainMenu ?? true)
+                : (currentConfig.AdvancedSettings || { LogLevel: "Information", EnableDashboardAlerts: false })
         };
     }
 
@@ -1263,7 +1364,6 @@ function multifyController(view) {
                 LogLevel: document.getElementById("ddlLogLevel")?.value || "Information",
                 EnableDashboardAlerts: document.getElementById("chkEnableDashboardAlerts")?.checked ?? false
             };
-            currentConfig.EnableMainMenu = document.getElementById("chkEnableMainMenu")?.checked ?? true;
         } else if (activeTabId === "telegram") {
             currentConfig.TelegramOptions = readDestinations("telegram");
         } else if (activeTabId === "gotify") {
@@ -1326,8 +1426,7 @@ function multifyController(view) {
             AdvancedSettings: currentConfig.AdvancedSettings || {
                 LogLevel: "Information",
                 EnableDashboardAlerts: false
-            },
-            EnableMainMenu: currentConfig.EnableMainMenu ?? true
+            }
         };
 
         try {

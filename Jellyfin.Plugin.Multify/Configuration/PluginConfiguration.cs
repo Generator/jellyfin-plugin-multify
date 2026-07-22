@@ -36,7 +36,4 @@ public class PluginConfiguration : BasePluginConfiguration
 
     /// <summary>Gets or sets the MDBList API key.</summary>
     public string MdblistApiKey { get; set; } = string.Empty;
-
-    /// <summary>Gets or sets a value indicating whether to show the plugin in the main menu sidebar.</summary>
-    public bool EnableMainMenu { get; set; } = true;
 }
