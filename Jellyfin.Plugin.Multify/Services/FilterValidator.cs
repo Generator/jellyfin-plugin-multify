@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Jellyfin.Plugin.Multify.Destinations;
 using Microsoft.Extensions.Logging;
 
@@ -25,13 +25,13 @@ public class FilterValidator
     /// Validates the filter configuration for a base option.
     /// </summary>
     /// <param name="option">The base option to validate.</param>
-    /// <returns>A list of validation errors (empty if valid).</returns>
-    public List<string> Validate(BaseOption option)
+    /// <returns>A collection of validation errors (empty if valid).</returns>
+    public Collection<string> Validate(BaseOption option)
     {
-        var errors = new List<string>();
+        var errors = new Collection<string>();
 
         // Validate UserFilterMode
-        if (!Enum.IsDefined(typeof(FilterMode), option.UserFilterMode))
+        if (!Enum.IsDefined(option.UserFilterMode))
         {
             var error = $"Invalid UserFilterMode: {option.UserFilterMode}";
             errors.Add(error);
@@ -39,7 +39,7 @@ public class FilterValidator
         }
 
         // Validate LibraryFilterMode
-        if (!Enum.IsDefined(typeof(FilterMode), option.LibraryFilterMode))
+        if (!Enum.IsDefined(option.LibraryFilterMode))
         {
             var error = $"Invalid LibraryFilterMode: {option.LibraryFilterMode}";
             errors.Add(error);

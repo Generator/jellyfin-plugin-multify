@@ -120,7 +120,7 @@ public class LibraryCache
     /// <summary>
     /// Cache entry with expiry.
     /// </summary>
-    private class CacheEntry
+    private sealed class CacheEntry
     {
         public string Name { get; set; } = string.Empty;
 

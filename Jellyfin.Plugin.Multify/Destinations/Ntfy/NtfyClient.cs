@@ -111,11 +111,11 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
             {
                 // Append resize parameters only to local Jellyfin image URLs
                 var attachUrl = imageUrl;
-                if (attachUrl.Contains("/Items/") && !attachUrl.Contains("?"))
+                if (attachUrl.Contains("/Items/", StringComparison.Ordinal) && !attachUrl.Contains('?', StringComparison.Ordinal))
                 {
                     attachUrl += "?maxWidth=800&maxHeight=800";
                 }
-                else if (attachUrl.Contains("/Items/") && attachUrl.Contains("?"))
+                else if (attachUrl.Contains("/Items/", StringComparison.Ordinal) && attachUrl.Contains('?', StringComparison.Ordinal))
                 {
                     attachUrl += "&maxWidth=800&maxHeight=800";
                 }
