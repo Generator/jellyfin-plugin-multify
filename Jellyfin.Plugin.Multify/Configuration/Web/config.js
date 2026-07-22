@@ -70,6 +70,7 @@ function multifyController(view) {
             cb.setAttribute("is", "emby-checkbox");
             cb.type = "checkbox";
             cb.dataset.value = key;
+            cb.dataset.name = "notificationTypeValue";
             cb.checked = selected.includes(key);
             cb.classList.add("multify-notification-type-cb");
             
@@ -147,6 +148,7 @@ function multifyController(view) {
             cb.setAttribute("is", "emby-checkbox");
             cb.type = "checkbox";
             cb.dataset.value = user.id;
+            cb.dataset.name = "userFilterValue";
             cb.checked = selected.includes(user.id);
             
             const span = document.createElement("span");
@@ -303,6 +305,7 @@ function multifyController(view) {
                 const cb = document.createElement("input");
                 cb.type = "checkbox";
                 cb.dataset.value = lib.id;
+                cb.dataset.name = "libraryFilterValue";
                 cb.checked = (config.LibraryFilter || []).includes(lib.id);
                 
                 const span = document.createElement("span");
