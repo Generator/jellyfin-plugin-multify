@@ -821,9 +821,14 @@
                 gap: 6px;
                 white-space: normal;
                 overflow: visible;
+                padding-left: 28px !important;
+                position: relative;
             }
             .multify-check-list-item input[type="checkbox"] {
-                flex-shrink: 0;
+                position: absolute;
+                left: 8px;
+                top: 50%;
+                transform: translateY(-50%);
             }
         }
     </style>
