@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Multify.Destinations;
+using Jellyfin.Plugin.Multify.Services;
 using MediaBrowser.Common.Net;
 using Microsoft.Extensions.Logging;
 
@@ -27,6 +28,12 @@ public class NtfyOption : BaseOption
 
     /// <summary>Gets or sets the access token.</summary>
     public string? AccessToken { get; set; }
+
+    /// <summary>Gets or sets the notification title.</summary>
+    public string? Title { get; set; }
+
+    /// <summary>Gets or sets comma-separated tags (first tag used as emoji icon).</summary>
+    public string? Tags { get; set; }
 }
 
 /// <summary>
@@ -42,7 +49,9 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
     /// </summary>
     /// <param name="logger">Instance of the <see cref="ILogger{NtfyClient}"/> interface.</param>
     /// <param name="httpClientFactory">Instance of the <see cref="IHttpClientFactory"/>.</param>
-    public NtfyClient(ILogger<NtfyClient> logger, IHttpClientFactory httpClientFactory)
+    /// <param name="filterService">Instance of the <see cref="FilterService"/>.</param>
+    public NtfyClient(ILogger<NtfyClient> logger, IHttpClientFactory httpClientFactory, FilterService filterService)
+        : base(filterService)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
@@ -76,8 +85,16 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
                 Content = new StringContent(body, Encoding.UTF8, MediaTypeNames.Text.Plain)
             };
 
-            request.Headers.Add("Title", "Jellyfin Notification");
+            // Use custom title if provided, otherwise default
+            var title = !string.IsNullOrEmpty(option.Title) ? option.Title : "Jellyfin Notification";
+            request.Headers.Add("Title", title);
             request.Headers.Add("Priority", option.Priority.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+            // Add tags if provided (comma-separated, first tag used as emoji icon)
+            if (!string.IsNullOrEmpty(option.Tags))
+            {
+                request.Headers.Add("Tags", option.Tags);
+            }
 
             if (option.EnableMarkdown)
             {
@@ -92,7 +109,18 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
             // Add attachment header if image URL is available
             if (data.TryGetValue("PrimaryImageUrl", out var imageObj) && imageObj is string imageUrl && !string.IsNullOrEmpty(imageUrl))
             {
-                request.Headers.Add("Attach", imageUrl);
+                // Append resize parameters only to local Jellyfin image URLs
+                var attachUrl = imageUrl;
+                if (attachUrl.Contains("/Items/") && !attachUrl.Contains("?"))
+                {
+                    attachUrl += "?maxWidth=800&maxHeight=800";
+                }
+                else if (attachUrl.Contains("/Items/") && attachUrl.Contains("?"))
+                {
+                    attachUrl += "&maxWidth=800&maxHeight=800";
+                }
+
+                request.Headers.Add("Attach", attachUrl);
                 request.Headers.Add("Filename", "poster.jpg");
             }
 

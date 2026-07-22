@@ -57,6 +57,15 @@ public class BaseOption
     /// <summary>Gets or sets the user filter.</summary>
     public Guid[] UserFilter { get; set; } = Array.Empty<Guid>();
 
+    /// <summary>Gets or sets the user filter mode (OnlySelected or AllExcept).</summary>
+    public FilterMode UserFilterMode { get; set; } = FilterMode.OnlySelected;
+
+    /// <summary>Gets or sets the library filter.</summary>
+    public Guid[] LibraryFilter { get; set; } = Array.Empty<Guid>();
+
+    /// <summary>Gets or sets the library filter mode (OnlySelected or AllExcept).</summary>
+    public FilterMode LibraryFilterMode { get; set; } = FilterMode.OnlySelected;
+
     /// <summary>
     /// Compiles the template with the given data.
     /// </summary>

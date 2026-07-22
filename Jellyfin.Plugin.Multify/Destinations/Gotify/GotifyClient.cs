@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Multify.Destinations;
+using Jellyfin.Plugin.Multify.Services;
 using MediaBrowser.Common.Net;
 using Microsoft.Extensions.Logging;
 
@@ -21,6 +22,9 @@ public class GotifyOption : BaseOption
 
     /// <summary>Gets or sets the message priority.</summary>
     public int Priority { get; set; }
+
+    /// <summary>Gets or sets the notification title.</summary>
+    public string? Title { get; set; }
 }
 
 /// <summary>
@@ -36,7 +40,9 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
     /// </summary>
     /// <param name="logger">Instance of the <see cref="ILogger{GotifyClient}"/> interface.</param>
     /// <param name="httpClientFactory">Instance of the <see cref="IHttpClientFactory"/>.</param>
-    public GotifyClient(ILogger<GotifyClient> logger, IHttpClientFactory httpClientFactory)
+    /// <param name="filterService">Instance of the <see cref="FilterService"/>.</param>
+    public GotifyClient(ILogger<GotifyClient> logger, IHttpClientFactory httpClientFactory, FilterService filterService)
+        : base(filterService)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;

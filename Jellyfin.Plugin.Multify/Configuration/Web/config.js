@@ -39,20 +39,70 @@ export default function (view) {
     }
 
     function buildNotificationTypeCheckboxes(selected = []) {
-        const frag = document.createDocumentFragment();
+        const container = document.createElement("div");
+        container.className = "multify-list-block";
+
+        // Search input
+        const searchInput = document.createElement("input");
+        searchInput.type = "text";
+        searchInput.className = "multify-search-input";
+        searchInput.placeholder = "Search notification types...";
+        searchInput.addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+            const items = $$(".multify-check-list-item", container);
+            items.forEach(item => {
+                const label = item.querySelector("span")?.textContent?.toLowerCase() || "";
+                item.classList.toggle("hidden", !label.includes(query));
+            });
+        });
+        container.appendChild(searchInput);
+
+        // Check list container
+        const checkList = document.createElement("div");
+        checkList.className = "paperList checkboxList checkboxList-paperList multify-check-list";
+
         const keys = Object.keys(notificationTypes).sort();
         for (const key of keys) {
-            const el = cloneTemplate("template-notification-type");
-            const span = $("[data-name=notificationTypeName]", el);
-            const cb = $("[data-name=notificationTypeValue]", el);
-            if (span) span.textContent = notificationTypes[key];
-            if (cb) {
-                cb.dataset.value = key;
-                cb.checked = selected.includes(key);
-            }
-            frag.appendChild(el);
+            const item = document.createElement("label");
+            item.className = "multify-check-list-item";
+            
+            const cb = document.createElement("input");
+            cb.setAttribute("is", "emby-checkbox");
+            cb.type = "checkbox";
+            cb.dataset.value = key;
+            cb.checked = selected.includes(key);
+            cb.classList.add("multify-notification-type-cb");
+            
+            const span = document.createElement("span");
+            span.textContent = notificationTypes[key];
+            
+            cb.addEventListener("change", (e) => {
+                if (e.target.checked) {
+                    // Disable all other checkboxes
+                    const allCbs = $$(".multify-notification-type-cb", container);
+                    allCbs.forEach(otherCb => {
+                        if (otherCb !== e.target) {
+                            otherCb.disabled = true;
+                            otherCb.closest(".checkboxContainer")?.classList.add("multify-disabled-block");
+                        }
+                    });
+                } else {
+                    // Re-enable all checkboxes when unchecked
+                    const allCbs = $$(".multify-notification-type-cb", container);
+                    allCbs.forEach(otherCb => {
+                        otherCb.disabled = false;
+                        otherCb.closest(".checkboxContainer")?.classList.remove("multify-disabled-block");
+                    });
+                }
+            });
+            
+            item.appendChild(cb);
+            item.appendChild(span);
+            checkList.appendChild(item);
         }
-        return frag;
+        
+        container.appendChild(checkList);
+        return container;
     }
 
     let usersCache = [];
@@ -67,42 +117,229 @@ export default function (view) {
     }
 
     function buildUserFilterCheckboxes(selected = []) {
-        const frag = document.createDocumentFragment();
+        const container = document.createElement("div");
+        container.className = "multify-list-block";
+
+        // Search input
+        const searchInput = document.createElement("input");
+        searchInput.type = "text";
+        searchInput.className = "multify-search-input";
+        searchInput.placeholder = "Search users...";
+        searchInput.addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+            const items = $$(".multify-check-list-item", container);
+            items.forEach(item => {
+                const label = item.querySelector("span")?.textContent?.toLowerCase() || "";
+                item.classList.toggle("hidden", !label.includes(query));
+            });
+        });
+        container.appendChild(searchInput);
+
+        // Check list container
+        const checkList = document.createElement("div");
+        checkList.className = "paperList checkboxList checkboxList-paperList multify-check-list";
+
         for (const user of usersCache) {
-            const el = cloneTemplate("template-user-filter");
-            const span = $("[data-name=userFilterName]", el);
-            const cb = $("[data-name=userFilterValue]", el);
-            if (span) span.textContent = user.name;
-            if (cb) {
-                cb.dataset.value = user.id;
-                cb.checked = selected.includes(user.id);
-            }
-            frag.appendChild(el);
+            const item = document.createElement("label");
+            item.className = "multify-check-list-item";
+            
+            const cb = document.createElement("input");
+            cb.setAttribute("is", "emby-checkbox");
+            cb.type = "checkbox";
+            cb.dataset.value = user.id;
+            cb.checked = selected.includes(user.id);
+            
+            const span = document.createElement("span");
+            span.textContent = user.name;
+            
+            item.appendChild(cb);
+            item.appendChild(span);
+            checkList.appendChild(item);
         }
-        return frag;
+        
+        container.appendChild(checkList);
+        return container;
     }
 
     function getCheckedValues(container, selector) {
         return $$(selector, container).filter(cb => cb.checked).map(cb => cb.dataset.value);
     }
 
+    function buildItemTypeCheckboxes(config = {}) {
+        const container = document.createElement("div");
+        container.className = "multify-list-block";
+
+        // Search input
+        const searchInput = document.createElement("input");
+        searchInput.type = "text";
+        searchInput.className = "multify-search-input";
+        searchInput.placeholder = "Search item types...";
+        searchInput.addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+            const items = $$(".multify-check-list-item", container);
+            items.forEach(item => {
+                const label = item.querySelector("span")?.textContent?.toLowerCase() || "";
+                item.classList.toggle("hidden", !label.includes(query));
+            });
+        });
+        container.appendChild(searchInput);
+
+        // Check list container
+        const checkList = document.createElement("div");
+        checkList.className = "paperList checkboxList checkboxList-paperList multify-check-list";
+
+        const itemTypes = [
+            { key: "EnableMovies", label: "Movies" },
+            { key: "EnableEpisodes", label: "Episodes" },
+            { key: "EnableSeasons", label: "Season" },
+            { key: "EnableSeries", label: "Series" },
+            { key: "EnableAlbums", label: "Albums" },
+            { key: "EnableSongs", label: "Songs" },
+            { key: "EnableVideos", label: "Videos" }
+        ];
+
+        for (const itemType of itemTypes) {
+            const item = document.createElement("label");
+            item.className = "multify-check-list-item";
+            
+            const cb = document.createElement("input");
+            cb.setAttribute("is", "emby-checkbox");
+            cb.type = "checkbox";
+            cb.dataset.name = itemType.key;
+            cb.checked = config[itemType.key] ?? true;
+            
+            const span = document.createElement("span");
+            span.textContent = itemType.label;
+            
+            item.appendChild(cb);
+            item.appendChild(span);
+            checkList.appendChild(item);
+        }
+        
+        container.appendChild(checkList);
+        return container;
+    }
+
+    async function loadLibraries() {
+        try {
+            const libs = await window.ApiClient.getVirtualFolders();
+            return libs.map(l => ({ id: l.ItemId, name: l.Name }));
+        } catch (e) {
+            console.warn("Multify: Failed to load libraries", e);
+            return [];
+        }
+    }
+
+    function buildLibraryFilter(config = {}) {
+        const container = document.createElement("div");
+        container.className = "multify-builder-block";
+        container.dataset.field = "LibraryFilter";
+
+        // Header
+        const header = document.createElement("div");
+        header.className = "multify-builder-block-header";
+        header.innerHTML = "<h3>Library Filter</h3><p>Filter notifications by library. Leave empty to notify for all libraries.</p>";
+        container.appendChild(header);
+
+        // Controls
+        const controls = document.createElement("div");
+        controls.className = "multify-builder-controls";
+
+        // Mode toggle
+        const modeToggle = document.createElement("div");
+        modeToggle.className = "multify-mode-toggle";
+        
+        const onlyBtn = document.createElement("button");
+        onlyBtn.type = "button";
+        onlyBtn.textContent = "Only Selected";
+        onlyBtn.className = config.LibraryFilterMode === "OnlySelected" ? "active" : "";
+        onlyBtn.addEventListener("click", () => {
+            onlyBtn.classList.add("active");
+            exceptBtn.classList.remove("active");
+            container.dataset.mode = "OnlySelected";
+        });
+        
+        const exceptBtn = document.createElement("button");
+        exceptBtn.type = "button";
+        exceptBtn.textContent = "All Except";
+        exceptBtn.className = config.LibraryFilterMode === "AllExcept" ? "active" : "";
+        exceptBtn.addEventListener("click", () => {
+            exceptBtn.classList.add("active");
+            onlyBtn.classList.remove("active");
+            container.dataset.mode = "AllExcept";
+        });
+        
+        modeToggle.appendChild(onlyBtn);
+        modeToggle.appendChild(exceptBtn);
+        controls.appendChild(modeToggle);
+
+        // Library list
+        const libraryList = document.createElement("div");
+        libraryList.className = "multify-list-block";
+        
+        const searchInput = document.createElement("input");
+        searchInput.type = "text";
+        searchInput.className = "multify-search-input";
+        searchInput.placeholder = "Search libraries...";
+        searchInput.addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+            const items = $$(".multify-check-list-item", libraryList);
+            items.forEach(item => {
+                const label = item.querySelector("span")?.textContent?.toLowerCase() || "";
+                item.classList.toggle("hidden", !label.includes(query));
+            });
+        });
+        libraryList.appendChild(searchInput);
+
+        const checkList = document.createElement("div");
+        checkList.className = "paperList checkboxList checkboxList-paperList multify-check-list";
+
+        // Load libraries
+        const libraries = await loadLibraries();
+        for (const lib of libraries) {
+            const item = document.createElement("label");
+            item.className = "multify-check-list-item";
+            
+            const cb = document.createElement("input");
+            cb.setAttribute("is", "emby-checkbox");
+            cb.type = "checkbox";
+            cb.dataset.value = lib.id;
+            cb.checked = (config.LibraryFilter || []).includes(lib.id);
+            
+            const span = document.createElement("span");
+            span.textContent = lib.name;
+            
+            item.appendChild(cb);
+            item.appendChild(span);
+            checkList.appendChild(item);
+        }
+        
+        libraryList.appendChild(checkList);
+        controls.appendChild(libraryList);
+
+        container.appendChild(controls);
+        return container;
+    }
+
     /*** Base destination config (shared by all types) ***/
-    function buildBaseSection(config) {
+    function buildBaseSection(config, showUrl = true) {
         const frag = document.createDocumentFragment();
 
         // Name
         const nameDiv = document.createElement("div");
         nameDiv.className = "inputContainer";
-        nameDiv.innerHTML = `<input is="emby-input" type="text" data-name="txtWebhookName" label="Webhook Name:"/><span>The webhook name (for display only)</span>`;
+        nameDiv.innerHTML = `<input is="emby-input" type="text" data-name="txtWebhookName" label="Name:"/><span>The webhook name (for display only)</span>`;
         $("input", nameDiv).value = config.WebhookName || "";
         frag.appendChild(nameDiv);
 
-        // URI
-        const uriDiv = document.createElement("div");
-        uriDiv.className = "inputContainer";
-        uriDiv.innerHTML = `<input is="emby-input" type="text" data-name="txtWebhookUri" label="Webhook Url:"/><span>The webhook destination url</span>`;
-        $("input", uriDiv).value = config.WebhookUri || "";
-        frag.appendChild(uriDiv);
+        // URI (only show for services that need it)
+        if (showUrl) {
+            const uriDiv = document.createElement("div");
+            uriDiv.className = "inputContainer";
+            uriDiv.innerHTML = `<input is="emby-input" type="text" data-name="txtWebhookUri" label="URL:"/><span>The webhook destination url</span>`;
+            $("input", uriDiv).value = config.WebhookUri || "";
+            frag.appendChild(uriDiv);
+        }
 
         // Enable
         const enableDiv = document.createElement("div");
@@ -125,39 +362,25 @@ export default function (view) {
 
         // Item types
         const itDiv = document.createElement("div");
-        itDiv.innerHTML = `
-            <label>Item Type:</label>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;">
-                <label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableMovies"/><span>Movies</span></label>
-                <label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableEpisodes"/><span>Episodes</span></label>
-                <label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableSeasons"/><span>Season</span></label>
-                <label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableSeries"/><span>Series</span></label>
-                <label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableAlbums"/><span>Albums</span></label>
-                <label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableSongs"/><span>Songs</span></label>
-                <label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableVideos"/><span>Videos</span></label>
-            </div>`;
-        const setChecked = (name, val) => { const el = $("[data-name=" + name + "]", itDiv); if (el) el.checked = val ?? true; };
-        setChecked("chkEnableMovies", config.EnableMovies);
-        setChecked("chkEnableEpisodes", config.EnableEpisodes);
-        setChecked("chkEnableSeasons", config.EnableSeasons);
-        setChecked("chkEnableSeries", config.EnableSeries);
-        setChecked("chkEnableAlbums", config.EnableAlbums);
-        setChecked("chkEnableSongs", config.EnableSongs);
-        setChecked("chkEnableVideos", config.EnableVideos);
+        const itLabel = document.createElement("label");
+        itLabel.textContent = "Item Type:";
+        itDiv.appendChild(itLabel);
+        itDiv.appendChild(buildItemTypeCheckboxes({
+            EnableMovies: config.EnableMovies,
+            EnableEpisodes: config.EnableEpisodes,
+            EnableSeasons: config.EnableSeasons,
+            EnableSeries: config.EnableSeries,
+            EnableAlbums: config.EnableAlbums,
+            EnableSongs: config.EnableSongs,
+            EnableVideos: config.EnableVideos
+        }));
         frag.appendChild(itDiv);
 
-        // Flags
-        const flagsDiv = document.createElement("div");
-        flagsDiv.style.marginTop = "8px";
-        flagsDiv.innerHTML = `
-            <label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkSendAllProperties"/><span>Send All Properties (ignores template)</span></label>
-            <label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkTrimWhitespace"/><span>Trim leading and trailing whitespace from message body before sending</span></label>
-            <label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkSkipEmptyMessageBody"/><span>Do not send when message body is empty</span></label>`;
-        const setFlag = (name, val) => { const el = $("[data-name=" + name + "]", flagsDiv); if (el) el.checked = val || false; };
-        setFlag("chkSendAllProperties", config.SendAllProperties);
-        setFlag("chkTrimWhitespace", config.TrimWhitespace);
-        setFlag("chkSkipEmptyMessageBody", config.SkipEmptyMessageBody);
-        frag.appendChild(flagsDiv);
+        // Library filter
+        frag.appendChild(buildLibraryFilter({
+            LibraryFilterMode: config.LibraryFilterMode || "OnlySelected",
+            LibraryFilter: config.LibraryFilter || []
+        }));
 
         // Template
         const tplDiv = document.createElement("div");
@@ -171,28 +394,32 @@ export default function (view) {
     }
 
     function readBaseSection(container) {
+        // Get library filter settings
+        const libraryFilterBlock = $("[data-field=LibraryFilter]", container);
+        const libraryFilterMode = libraryFilterBlock?.dataset?.mode || "OnlySelected";
+        const libraryFilter = getCheckedValues(container, "[data-field=LibraryFilter] [data-name=libraryFilterValue]:checked");
+
         return {
             WebhookName: $("[data-name=txtWebhookName]", container)?.value || "",
             WebhookUri: $("[data-name=txtWebhookUri]", container)?.value || "",
             EnableWebhook: $("[data-name=chkEnableWebhook]", container)?.checked ?? true,
             NotificationTypes: getCheckedValues(container, "[data-name=notificationTypeValue]:checked"),
             UserFilter: getCheckedValues(container, "[data-name=userFilterValue]:checked"),
-            EnableMovies: $("[data-name=chkEnableMovies]", container)?.checked || false,
-            EnableEpisodes: $("[data-name=chkEnableEpisodes]", container)?.checked || false,
-            EnableSeasons: $("[data-name=chkEnableSeasons]", container)?.checked || false,
-            EnableSeries: $("[data-name=chkEnableSeries]", container)?.checked || false,
-            EnableAlbums: $("[data-name=chkEnableAlbums]", container)?.checked || false,
-            EnableSongs: $("[data-name=chkEnableSongs]", container)?.checked || false,
-            EnableVideos: $("[data-name=chkEnableVideos]", container)?.checked || false,
-            SendAllProperties: $("[data-name=chkSendAllProperties]", container)?.checked || false,
-            TrimWhitespace: $("[data-name=chkTrimWhitespace]", container)?.checked || false,
-            SkipEmptyMessageBody: $("[data-name=chkSkipEmptyMessageBody]", container)?.checked || false,
+            EnableMovies: $("[data-name=EnableMovies]", container)?.checked || false,
+            EnableEpisodes: $("[data-name=EnableEpisodes]", container)?.checked || false,
+            EnableSeasons: $("[data-name=EnableSeasons]", container)?.checked || false,
+            EnableSeries: $("[data-name=EnableSeries]", container)?.checked || false,
+            EnableAlbums: $("[data-name=EnableAlbums]", container)?.checked || false,
+            EnableSongs: $("[data-name=EnableSongs]", container)?.checked || false,
+            EnableVideos: $("[data-name=EnableVideos]", container)?.checked || false,
+            LibraryFilterMode: libraryFilterMode,
+            LibraryFilter: libraryFilter,
             Template: utoa($("[data-name=txtTemplate]", container)?.value || "")
         };
     }
 
     /*** Destination card wrapper ***/
-    function wrapDestinationCard(config, type, serviceConfigHtml, onRemove) {
+    function wrapDestinationCard(config, type, serviceConfigHtml, onRemove, options = {}) {
         const card = document.createElement("div");
         card.className = "multify-destination-card collapsed";
         card.dataset.type = type;
@@ -226,19 +453,6 @@ export default function (view) {
         const actionsContainer = document.createElement("div");
         actionsContainer.className = "multify-destination-actions";
 
-        // Test button (edit icon)
-        const testBtn = document.createElement("button");
-        testBtn.className = "multify-edit-icon";
-        testBtn.setAttribute("aria-label", "Test notification");
-        testBtn.innerHTML = '<span class="material-icons">edit</span>';
-        testBtn.addEventListener("click", async (e) => {
-            e.stopPropagation();
-            card.classList.remove("collapsed");
-            toggleBtn.setAttribute("aria-expanded", "true");
-            await handleTestNotification(card, type, testBtn);
-        });
-        actionsContainer.appendChild(testBtn);
-
         // Remove button (trash icon)
         const removeBtn = document.createElement("button");
         removeBtn.className = "multify-trash-icon";
@@ -258,12 +472,29 @@ export default function (view) {
         contentContainer.className = "multify-destination-content";
 
         // Base config
-        contentContainer.appendChild(buildBaseSection(config));
+        contentContainer.appendChild(buildBaseSection(config, options.showUrl !== false));
 
         // Service-specific
         const svcDiv = document.createElement("div");
         svcDiv.innerHTML = serviceConfigHtml;
         contentContainer.appendChild(svcDiv);
+
+        // Test notification button at bottom
+        const testBtnContainer = document.createElement("div");
+        testBtnContainer.style.marginTop = "16px";
+        testBtnContainer.style.paddingTop = "12px";
+        testBtnContainer.style.borderTop = "1px solid var(--multify-border-muted)";
+        
+        const testBtn = document.createElement("button");
+        testBtn.className = "raised";
+        testBtn.style.cssText = "background: var(--multify-accent); color: var(--multify-on-accent); border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; width: 100%;";
+        testBtn.innerHTML = "Test notification 🔔";
+        testBtn.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            await handleTestNotification(card, type, testBtn);
+        });
+        testBtnContainer.appendChild(testBtn);
+        contentContainer.appendChild(testBtnContainer);
 
         card.appendChild(contentContainer);
 
@@ -332,12 +563,16 @@ export default function (view) {
             specific.MessageType = parseInt($("[data-name=ddlMessageType]", card)?.value || "0", 10);
             const topicIdVal = $("[data-name=txtTopicId]", card)?.value;
             specific.MessageThreadId = topicIdVal ? parseInt(topicIdVal, 10) : null;
+            specific.DisableNotification = $("[data-name=chkDisableNotification]", card)?.checked || false;
         } else if (type === "gotify") {
             specific.Token = $("[data-name=txtToken]", card)?.value || "";
             specific.Priority = parseInt($("[data-name=txtPriority]", card)?.value || "0", 10);
+            specific.Title = $("[data-name=txtTitle]", card)?.value || "";
         } else if (type === "ntfy") {
             specific.Topic = $("[data-name=txtTopic]", card)?.value || "";
             specific.Priority = parseInt($("[data-name=ddlPriority]", card)?.value || "3", 10);
+            specific.Title = $("[data-name=txtTitle]", card)?.value || "";
+            specific.Tags = $("[data-name=txtTags]", card)?.value || "";
             specific.EnableMarkdown = $("[data-name=chkEnableMarkdown]", card)?.checked;
             specific.AccessToken = $("[data-name=txtAccessToken]", card)?.value || "";
         } else if (type === "generic") {
@@ -610,7 +845,8 @@ export default function (view) {
                     <option value="2">Rich Message (sendRichMessage)</option>
                 </select>
             </div>
-            <div class="inputContainer"><input is="emby-input" type="number" data-name="txtTopicId" label="Forum Topic ID (optional):"/><span>For Telegram Forum Topics. Leave empty to send to the general topic.</span></div>`, null);
+            <div class="inputContainer"><input is="emby-input" type="number" data-name="txtTopicId" label="Forum Topic ID (optional):"/><span>For Telegram Forum Topics. Leave empty to send to the general topic.</span></div>
+            <div class="inputContainer"><label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkDisableNotification"/><span>Disable Notification (silent message)</span></label><span>When enabled, the message will be sent without sound or vibration.</span></div>`, null, { showUrl: false });
 
         setTimeout(() => {
             const setVal = (n, v) => { const el = $("[data-name=" + n + "]", card); if (el) el.value = v != null ? String(v) : ""; };
@@ -627,11 +863,13 @@ export default function (view) {
     function addGotifyDestination(config) {
         const card = wrapDestinationCard(config, "gotify", `
             <div class="inputContainer"><input is="emby-input" type="text" data-name="txtToken" label="Token:"/></div>
-            <div class="inputContainer"><input is="emby-input" type="number" data-name="txtPriority" label="Priority:"/></div>`, null);
+            <div class="inputContainer"><input is="emby-input" type="number" data-name="txtPriority" label="Priority:"/></div>
+            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>`, null);
 
         setTimeout(() => {
             const el = $("[data-name=txtToken]", card); if (el) el.value = config.Token || "";
             const pr = $("[data-name=txtPriority]", card); if (pr) pr.value = config.Priority || 0;
+            const ti = $("[data-name=txtTitle]", card); if (ti) ti.value = config.Title || "";
         }, 0);
 
         return card;
@@ -649,6 +887,8 @@ export default function (view) {
                     <option value="5">Max/Urgent</option>
                 </select>
             </div>
+            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>
+            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtTags" label="Tags (optional):"/><span>Comma-separated tags. First tag is used as emoji icon. Example: movie,star</span></div>
             <div class="inputContainer"><label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableMarkdown"/><span>Enable Markdown</span></label></div>
             <div class="inputContainer"><input is="emby-input" type="text" data-name="txtAccessToken" label="Access Token (optional):"/></div>`, null);
 
@@ -656,6 +896,8 @@ export default function (view) {
             const setVal = (n, v) => { const el = $("[data-name=" + n + "]", card); if (el) el.value = v || ""; };
             setVal("txtTopic", config.Topic);
             setVal("ddlPriority", config.Priority || "3");
+            setVal("txtTitle", config.Title || "");
+            setVal("txtTags", config.Tags || "");
             setVal("txtAccessToken", config.AccessToken);
             const md = $("[data-name=chkEnableMarkdown]", card); if (md) md.checked = config.EnableMarkdown ?? true;
         }, 0);
@@ -726,12 +968,16 @@ export default function (view) {
                 specific.MessageType = parseInt($("[data-name=ddlMessageType]", card)?.value || "0", 10);
                 const topicIdVal = $("[data-name=txtTopicId]", card)?.value;
                 specific.MessageThreadId = topicIdVal ? parseInt(topicIdVal, 10) : null;
+                specific.DisableNotification = $("[data-name=chkDisableNotification]", card)?.checked || false;
             } else if (type === "gotify") {
                 specific.Token = $("[data-name=txtToken]", card)?.value || "";
                 specific.Priority = $("[data-name=txtPriority]", card)?.value || 0;
+                specific.Title = $("[data-name=txtTitle]", card)?.value || "";
             } else if (type === "ntfy") {
                 specific.Topic = $("[data-name=txtTopic]", card)?.value || "";
                 specific.Priority = parseInt($("[data-name=ddlPriority]", card)?.value || "3", 10);
+                specific.Title = $("[data-name=txtTitle]", card)?.value || "";
+                specific.Tags = $("[data-name=txtTags]", card)?.value || "";
                 specific.EnableMarkdown = $("[data-name=chkEnableMarkdown]", card)?.checked;
                 specific.AccessToken = $("[data-name=txtAccessToken]", card)?.value || "";
             } else if (type === "generic") {
@@ -1006,14 +1252,7 @@ export default function (view) {
         }, 10);
 
         // Register reactive visibility rules
-        // Hide Template when "Send All Properties" is checked (it's ignored in that mode)
-        addVisibilityRule(
-            ".multify-template-section",
-            () => {
-                const chk = document.querySelector("[data-name=chkSendAllProperties]");
-                return chk ? !chk.checked : true;
-            }
-        );
+        // Template is always visible now (SendAllProperties checkbox removed from UI)
 
         Dashboard.hideLoadingMsg();
     }

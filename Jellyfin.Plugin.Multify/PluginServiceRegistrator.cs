@@ -35,6 +35,11 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // Register dashboard alert service
         serviceCollection.AddScoped<DashboardAlertService>();
 
+        // Register filter services
+        serviceCollection.AddSingleton<FilterService>();
+        serviceCollection.AddSingleton<FilterValidator>();
+        serviceCollection.AddSingleton<LibraryCache>();
+
         // Register destination clients
         serviceCollection.AddScoped<IWebhookClient<TelegramOption>, TelegramClient>();
         serviceCollection.AddScoped<IWebhookClient<GotifyOption>, GotifyClient>();

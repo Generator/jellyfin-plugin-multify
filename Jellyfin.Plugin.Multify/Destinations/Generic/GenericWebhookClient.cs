@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.Multify.Services;
 using MediaBrowser.Common.Net;
 using Microsoft.Extensions.Logging;
 
@@ -22,7 +23,9 @@ public class GenericWebhookClient : BaseClient, IWebhookClient<GenericWebhookOpt
     /// </summary>
     /// <param name="logger">Instance of the <see cref="ILogger{GenericWebhookClient}"/> interface.</param>
     /// <param name="httpClientFactory">Instance of the <see cref="IHttpClientFactory"/>.</param>
-    public GenericWebhookClient(ILogger<GenericWebhookClient> logger, IHttpClientFactory httpClientFactory)
+    /// <param name="filterService">Instance of the <see cref="FilterService"/>.</param>
+    public GenericWebhookClient(ILogger<GenericWebhookClient> logger, IHttpClientFactory httpClientFactory, FilterService filterService)
+        : base(filterService)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;

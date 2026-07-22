@@ -66,8 +66,10 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
     /// </summary>
     /// <param name="logger">Instance of the <see cref="ILogger{TelegramClient}"/> interface.</param>
     /// <param name="httpClientFactory">Instance of the <see cref="IHttpClientFactory"/>.</param>
+    /// <param name="filterService">Instance of the <see cref="FilterService"/>.</param>
     /// <param name="messageStore">Instance of the <see cref="TelegramMessageStore"/>.</param>
-    public TelegramClient(ILogger<TelegramClient> logger, IHttpClientFactory httpClientFactory, TelegramMessageStore? messageStore = null)
+    public TelegramClient(ILogger<TelegramClient> logger, IHttpClientFactory httpClientFactory, FilterService filterService, TelegramMessageStore? messageStore = null)
+        : base(filterService)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;

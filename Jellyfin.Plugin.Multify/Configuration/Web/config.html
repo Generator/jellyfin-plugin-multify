@@ -69,11 +69,11 @@
 
     <template id="template-base">
         <div class="inputContainer">
-            <input is="emby-input" type="text" data-name="txtWebhookName" label="Webhook Name:"/>
+            <input is="emby-input" type="text" data-name="txtWebhookName" label="Name:"/>
             <span>The webhook name (for display only)</span>
         </div>
         <div class="inputContainer">
-            <input is="emby-input" type="text" data-name="txtWebhookUri" label="Webhook Url:"/>
+            <input is="emby-input" type="text" data-name="txtWebhookUri" label="URL:"/>
             <span>The webhook destination url</span>
         </div>
         <div class="inputContainer">
@@ -93,50 +93,7 @@
         </div>
         <div>
             <label>Item Type:</label>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;">
-                <label class="checkboxContainer">
-                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableMovies"/>
-                    <span>Movies</span>
-                </label>
-                <label class="checkboxContainer">
-                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableEpisodes"/>
-                    <span>Episodes</span>
-                </label>
-                <label class="checkboxContainer">
-                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableSeasons"/>
-                    <span>Season</span>
-                </label>
-                <label class="checkboxContainer">
-                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableSeries"/>
-                    <span>Series</span>
-                </label>
-                <label class="checkboxContainer">
-                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableAlbums"/>
-                    <span>Albums</span>
-                </label>
-                <label class="checkboxContainer">
-                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableSongs"/>
-                    <span>Songs</span>
-                </label>
-                <label class="checkboxContainer">
-                    <input is="emby-checkbox" type="checkbox" data-name="chkEnableVideos"/>
-                    <span>Videos</span>
-                </label>
-            </div>
-        </div>
-        <div style="margin-top:8px;">
-            <label class="checkboxContainer">
-                <input is="emby-checkbox" type="checkbox" data-name="chkSendAllProperties"/>
-                <span>Send All Properties (ignores template)</span>
-            </label>
-            <label class="checkboxContainer">
-                <input is="emby-checkbox" type="checkbox" data-name="chkTrimWhitespace"/>
-                <span>Trim leading and trailing whitespace from message body before sending</span>
-            </label>
-            <label class="checkboxContainer">
-                <input is="emby-checkbox" type="checkbox" data-name="chkSkipEmptyMessageBody"/>
-                <span>Do not send when message body is empty</span>
-            </label>
+            <div data-name="itemTypeContainer"></div>
         </div>
         <div class="inputContainer" style="margin-top:12px;">
             <label>Template:</label>
@@ -401,7 +358,7 @@
             display: none;
         }
         
-        .multify-edit-icon, .multify-trash-icon {
+        .multify-trash-icon {
             background: none;
             border: none;
             color: white;
@@ -414,12 +371,12 @@
             transition: background 0.2s, color 0.2s;
         }
         
-        .multify-edit-icon:hover, .multify-trash-icon:hover {
+        .multify-trash-icon:hover {
             background: rgba(255, 255, 255, 0.08);
             color: white;
         }
         
-        .multify-edit-icon:focus-visible, .multify-trash-icon:focus-visible {
+        .multify-trash-icon:focus-visible {
             outline: 2px solid var(--multify-accent);
             outline-offset: 1px;
         }
@@ -628,6 +585,145 @@
         #saveConfig:disabled {
             opacity: 0.7;
             cursor: progress;
+        }
+
+        /* List block styles (mediaCleaner pattern) */
+        .multify-list-block {
+            margin: 0.85em 0;
+        }
+
+        .multify-list-label {
+            margin: 0 0 0.35em;
+            font-size: 0.95em;
+            font-weight: 500;
+        }
+
+        .multify-check-list {
+            max-height: 16em;
+            overflow: auto;
+            border: 1px solid rgba(128, 128, 128, 0.14);
+            background: rgba(128, 128, 128, 0.05);
+            padding: 0.35em 0;
+        }
+
+        .multify-check-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .multify-check-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .multify-check-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .multify-search-input {
+            margin-bottom: 0.5em;
+            padding: 6px 10px;
+            border: 1px solid var(--multify-input-border);
+            border-radius: 4px;
+            background: var(--multify-input-bg);
+            color: var(--multify-text);
+            font-size: 0.9em;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .multify-search-input:focus {
+            border-color: var(--multify-input-focus);
+            outline: none;
+        }
+
+        .multify-check-list-item {
+            display: block;
+            padding: 4px 8px;
+        }
+
+        .multify-check-list-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .multify-check-list-item.hidden {
+            display: none;
+        }
+
+        /* Builder block styles (mediaCleaner pattern) */
+        .multify-builder-block {
+            display: grid;
+            grid-template-columns: minmax(11em, 16em) minmax(0, 1fr) auto;
+            gap: 1em;
+            min-width: 0;
+            padding: 0.9em 0;
+            margin: 0.85em 0;
+        }
+
+        .multify-builder-block + .multify-builder-block {
+            border-top: 1px solid rgba(128, 128, 128, 0.14);
+        }
+
+        .multify-builder-block-header {
+            min-width: 0;
+        }
+
+        .multify-builder-block-header h3 {
+            margin: 0;
+            font-size: 1em;
+        }
+
+        .multify-builder-block-header p {
+            margin: 0.25em 0 0;
+            color: inherit;
+            opacity: 0.7;
+            font-size: 0.9em;
+            line-height: 1.35;
+        }
+
+        .multify-builder-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(17em, 1fr));
+            gap: 0.65em 1em;
+            align-items: start;
+            min-width: 0;
+        }
+
+        .multify-builder-controls .inputContainer,
+        .multify-builder-controls .selectContainer,
+        .multify-builder-controls .checkboxContainer {
+            margin: 0;
+        }
+
+        .multify-builder-controls .multify-list-block,
+        .multify-builder-controls .multify-check-list {
+            grid-column: 1 / -1;
+        }
+
+        .multify-mode-toggle {
+            display: flex;
+            gap: 0.5em;
+            margin-bottom: 0.5em;
+        }
+
+        .multify-mode-toggle button {
+            padding: 6px 12px;
+            border: 1px solid var(--multify-input-border);
+            border-radius: 4px;
+            background: var(--multify-input-bg);
+            color: var(--multify-text);
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .multify-mode-toggle button.active {
+            background: var(--multify-accent);
+            color: var(--multify-on-accent);
+            border-color: var(--multify-accent);
+        }
+
+        .multify-mode-toggle button:hover:not(.active) {
+            background: var(--multify-hover-strong);
         }
 
         /* Reduced motion */

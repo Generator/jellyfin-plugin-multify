@@ -43,11 +43,12 @@ public static class DataObjectHelpers
         data["ItemName"] = item.Name ?? "Unknown";
         data["ItemType"] = item.GetType().Name;
 
-        // Add library name if available
+        // Add library name and ID if available
         var topParent = item.GetTopParent();
         if (topParent is not null)
         {
             data["LibraryName"] = topParent.Name ?? "Unknown";
+            data["LibraryId"] = topParent.Id.ToString();
         }
 
         // Add provider IDs for MDBList integration
