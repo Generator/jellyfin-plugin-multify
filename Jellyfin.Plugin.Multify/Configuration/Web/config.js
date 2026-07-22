@@ -1,4 +1,5 @@
-export default function (view) {
+(function () {
+function multifyController(view) {
     const PLUGIN_ID = "A1B2C3D4-E5F6-7890-ABCD-EF1234567890";
 
     /*** Helpers ***/
@@ -230,7 +231,7 @@ export default function (view) {
         }
     }
 
-    function buildLibraryFilter(config = {}) {
+    async function buildLibraryFilter(config = {}) {
         const container = document.createElement("div");
         container.className = "multify-builder-block";
         container.dataset.field = "LibraryFilter";
@@ -1372,3 +1373,12 @@ export default function (view) {
         }
     });
 }
+
+// Support both ES module import() and script tag fallback
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports.default = multifyController;
+}
+if (typeof window !== 'undefined') {
+    window.__multifyInit = multifyController;
+}
+})();
