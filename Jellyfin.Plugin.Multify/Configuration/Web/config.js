@@ -652,7 +652,7 @@ function multifyController(view) {
                 wrapper.id = "telegramWrapper";
                 container.appendChild(wrapper);
 
-                const btn = document.createElement("button", { is: "emby-button" });
+                const btn = document.createElement("button");
                 btn.className = "raised block";
                 btn.innerHTML = "<span>Add Telegram Destination</span>";
                 btn.addEventListener("click", () => {
@@ -684,7 +684,7 @@ function multifyController(view) {
                 wrapper.id = "gotifyWrapper";
                 container.appendChild(wrapper);
 
-                const btn = document.createElement("button", { is: "emby-button" });
+                const btn = document.createElement("button");
                 btn.className = "raised block";
                 btn.innerHTML = "<span>Add Gotify Destination</span>";
                 btn.addEventListener("click", () => {
@@ -715,7 +715,7 @@ function multifyController(view) {
                 wrapper.id = "ntfyWrapper";
                 container.appendChild(wrapper);
 
-                const btn = document.createElement("button", { is: "emby-button" });
+                const btn = document.createElement("button");
                 btn.className = "raised block";
                 btn.innerHTML = "<span>Add ntfy Destination</span>";
                 btn.addEventListener("click", () => {
@@ -747,7 +747,7 @@ function multifyController(view) {
                 wrapper.id = "genericWrapper";
                 container.appendChild(wrapper);
 
-                const btn = document.createElement("button", { is: "emby-button" });
+                const btn = document.createElement("button");
                 btn.className = "raised block";
                 btn.innerHTML = "<span>Add Generic Webhook Destination</span>";
                 btn.addEventListener("click", () => {
