@@ -1,4 +1,3 @@
-(function () {
 function multifyController(view) {
     const PLUGIN_ID = "A1B2C3D4-E5F6-7890-ABCD-EF1234567890";
 
@@ -1374,11 +1373,5 @@ function multifyController(view) {
     });
 }
 
-// Support both ES module import() and script tag fallback
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports.default = multifyController;
-}
-if (typeof window !== 'undefined') {
-    window.__multifyInit = multifyController;
-}
-})();
+// ES module export for import()
+export default multifyController;
