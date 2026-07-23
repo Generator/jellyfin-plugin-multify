@@ -66,23 +66,42 @@ public class MultifySender : IWebhookSender
         // Debug: Log loaded notification types
         foreach (var opt in _configuration.NtfyOptions)
         {
-            _logger.LogDebug("Loaded ntfy option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
-                opt.WebhookName, string.Join(",", opt.NotificationTypes), opt.EnableWebhook);
+            var types = string.Join(",", opt.NotificationTypes);
+            _logger.LogDebug(
+                "Loaded ntfy option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
+                opt.WebhookName,
+                types,
+                opt.EnableWebhook);
         }
+
         foreach (var opt in _configuration.TelegramOptions)
         {
-            _logger.LogDebug("Loaded telegram option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
-                opt.WebhookName, string.Join(",", opt.NotificationTypes), opt.EnableWebhook);
+            var types = string.Join(",", opt.NotificationTypes);
+            _logger.LogDebug(
+                "Loaded telegram option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
+                opt.WebhookName,
+                types,
+                opt.EnableWebhook);
         }
+
         foreach (var opt in _configuration.GotifyOptions)
         {
-            _logger.LogDebug("Loaded gotify option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
-                opt.WebhookName, string.Join(",", opt.NotificationTypes), opt.EnableWebhook);
+            var types = string.Join(",", opt.NotificationTypes);
+            _logger.LogDebug(
+                "Loaded gotify option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
+                opt.WebhookName,
+                types,
+                opt.EnableWebhook);
         }
+
         foreach (var opt in _configuration.GenericWebhookOptions)
         {
-            _logger.LogDebug("Loaded generic option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
-                opt.WebhookName, string.Join(",", opt.NotificationTypes), opt.EnableWebhook);
+            var types = string.Join(",", opt.NotificationTypes);
+            _logger.LogDebug(
+                "Loaded generic option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
+                opt.WebhookName,
+                types,
+                opt.EnableWebhook);
         }
 
         // Enrich data with MDBList ratings if configured
