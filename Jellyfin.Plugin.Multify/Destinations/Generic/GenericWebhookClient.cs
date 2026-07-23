@@ -98,6 +98,7 @@ public class GenericWebhookClient : BaseClient, IWebhookClient<GenericWebhookOpt
         catch (HttpRequestException e)
         {
             _logger.LogError(e, "Error sending generic webhook notification");
+            throw;
         }
     }
 }

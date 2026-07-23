@@ -135,6 +135,7 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
         catch (HttpRequestException e)
         {
             _logger.LogError(e, "Error sending ntfy notification");
+            throw;
         }
     }
 }

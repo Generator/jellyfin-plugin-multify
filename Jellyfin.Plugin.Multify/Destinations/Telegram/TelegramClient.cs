@@ -151,6 +151,7 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
         catch (HttpRequestException e)
         {
             _logger.LogError(e, "Error sending Telegram notification");
+            throw;
         }
     }
 
