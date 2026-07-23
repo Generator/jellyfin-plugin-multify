@@ -67,7 +67,7 @@ public class MultifySender : IWebhookSender
         foreach (var opt in _configuration.NtfyOptions)
         {
             var types = string.Join(",", opt.NotificationTypes);
-            _logger.LogDebug(
+            _logger.LogInformation(
                 "Loaded ntfy option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
                 opt.WebhookName,
                 types,
@@ -77,7 +77,7 @@ public class MultifySender : IWebhookSender
         foreach (var opt in _configuration.TelegramOptions)
         {
             var types = string.Join(",", opt.NotificationTypes);
-            _logger.LogDebug(
+            _logger.LogInformation(
                 "Loaded telegram option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
                 opt.WebhookName,
                 types,
@@ -87,7 +87,7 @@ public class MultifySender : IWebhookSender
         foreach (var opt in _configuration.GotifyOptions)
         {
             var types = string.Join(",", opt.NotificationTypes);
-            _logger.LogDebug(
+            _logger.LogInformation(
                 "Loaded gotify option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
                 opt.WebhookName,
                 types,
@@ -97,7 +97,7 @@ public class MultifySender : IWebhookSender
         foreach (var opt in _configuration.GenericWebhookOptions)
         {
             var types = string.Join(",", opt.NotificationTypes);
-            _logger.LogDebug(
+            _logger.LogInformation(
                 "Loaded generic option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
                 opt.WebhookName,
                 types,
