@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Xml.Serialization;
 
 namespace Jellyfin.Plugin.Multify.Destinations;
 
@@ -19,6 +20,8 @@ public class BaseOption
     public bool EnableWebhook { get; set; } = true;
 
     /// <summary>Gets or sets the notification types.</summary>
+    [XmlArray("NotificationTypes")]
+    [XmlArrayItem("NotificationType")]
     public NotificationType[] NotificationTypes { get; set; } = Array.Empty<NotificationType>();
 
     /// <summary>Gets or sets the template (base64 encoded).</summary>
@@ -55,12 +58,16 @@ public class BaseOption
     public bool SkipEmptyMessageBody { get; set; }
 
     /// <summary>Gets or sets the user filter.</summary>
+    [XmlArray("UserFilter")]
+    [XmlArrayItem("Guid")]
     public Guid[] UserFilter { get; set; } = Array.Empty<Guid>();
 
     /// <summary>Gets or sets the user filter mode (OnlySelected or AllExcept).</summary>
     public FilterMode UserFilterMode { get; set; } = FilterMode.OnlySelected;
 
     /// <summary>Gets or sets the library filter.</summary>
+    [XmlArray("LibraryFilter")]
+    [XmlArrayItem("Guid")]
     public Guid[] LibraryFilter { get; set; } = Array.Empty<Guid>();
 
     /// <summary>Gets or sets the library filter mode (OnlySelected or AllExcept).</summary>
