@@ -85,15 +85,18 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
                 Content = new StringContent(body, Encoding.UTF8, MediaTypeNames.Text.Plain)
             };
 
-            // Use custom title if provided, otherwise default
-            var title = !string.IsNullOrEmpty(option.Title) ? option.Title : "Jellyfin Notification";
+            // Use custom title if provided, otherwise default - with placeholder replacement
+            var title = !string.IsNullOrEmpty(option.Title) 
+                ? ReplacePlaceholders(option.Title, data) 
+                : "Jellyfin Notification";
             request.Headers.Add("Title", title);
             request.Headers.Add("Priority", option.Priority.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
-            // Add tags if provided (comma-separated, first tag used as emoji icon)
+            // Add tags if provided (comma-separated, first tag used as emoji icon) - with placeholder replacement
             if (!string.IsNullOrEmpty(option.Tags))
             {
-                request.Headers.Add("Tags", option.Tags);
+                var tags = ReplacePlaceholders(option.Tags, data);
+                request.Headers.Add("Tags", tags);
             }
 
             if (option.EnableMarkdown)
@@ -137,5 +140,16 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
             _logger.LogError(e, "Error sending ntfy notification");
             throw;
         }
+    }
+
+    private static string ReplacePlaceholders(string template, Dictionary<string, object> data)
+    {
+        var result = template;
+        foreach (var kvp in data)
+        {
+            var placeholder = "{{" + kvp.Key + "}}";
+            result = result.Replace(placeholder, kvp.Value?.ToString() ?? string.Empty, StringComparison.Ordinal);
+        }
+        return result;
     }
 }
