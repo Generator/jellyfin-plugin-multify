@@ -83,10 +83,15 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
                 extras["client::notification"] = new { bigImageUrl = imageUrl };
             }
 
+            // Use custom title if provided (with placeholder replacement), otherwise default to WebhookName
+            var title = !string.IsNullOrEmpty(option.Title)
+                ? ReplacePlaceholders(option.Title, data)
+                : option.WebhookName;
+
             var payload = new Dictionary<string, object>
             {
                 ["message"] = body,
-                ["title"] = option.WebhookName,
+                ["title"] = title,
                 ["priority"] = option.Priority,
                 ["extras"] = extras
             };
@@ -107,5 +112,16 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
             _logger.LogError(e, "Error sending Gotify notification");
             throw;
         }
+    }
+
+    private static string ReplacePlaceholders(string template, Dictionary<string, object> data)
+    {
+        var result = template;
+        foreach (var kvp in data)
+        {
+            var placeholder = "{{" + kvp.Key + "}}";
+            result = result.Replace(placeholder, kvp.Value?.ToString() ?? string.Empty, StringComparison.Ordinal);
+        }
+        return result;
     }
 }
