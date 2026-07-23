@@ -92,25 +92,22 @@ public class MultifySender : IWebhookSender
             ntfyCount,
             genericCount);
 
-        foreach (var option in _configuration.TelegramOptions.Where(o => o.NotificationTypes.Contains(notificationType)))
-        {
-            tasks.Add(SendNotification(_telegramClient, option, itemData, itemType));
-        }
+        // Get delay from advanced settings (convert seconds to milliseconds)
+        var delayMs = Math.Max(0, (_configuration.AdvancedSettings?.DelaySeconds ?? 2) * 1000);
 
-        foreach (var option in _configuration.GotifyOptions.Where(o => o.NotificationTypes.Contains(notificationType)))
-        {
-            tasks.Add(SendNotification(_gotifyClient, option, itemData, itemType));
-        }
+        // Send notifications sequentially within each service type, with delay between them
+        // Different service types still run in parallel
 
-        foreach (var option in _configuration.NtfyOptions.Where(o => o.NotificationTypes.Contains(notificationType)))
-        {
-            tasks.Add(SendNotification(_ntfyClient, option, itemData, itemType));
-        }
+        var telegramOptions = _configuration.TelegramOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var gotifyOptions = _configuration.GotifyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var ntfyOptions = _configuration.NtfyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var genericOptions = _configuration.GenericWebhookOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
 
-        foreach (var option in _configuration.GenericWebhookOptions.Where(o => o.NotificationTypes.Contains(notificationType)))
-        {
-            tasks.Add(SendNotification(_genericClient, option, itemData, itemType));
-        }
+        // Fire all service types in parallel
+        tasks.Add(SendNotificationsSequentially(_telegramClient, telegramOptions, itemData, itemType, delayMs, "Telegram"));
+        tasks.Add(SendNotificationsSequentially(_gotifyClient, gotifyOptions, itemData, itemType, delayMs, "Gotify"));
+        tasks.Add(SendNotificationsSequentially(_ntfyClient, ntfyOptions, itemData, itemType, delayMs, "Ntfy"));
+        tasks.Add(SendNotificationsSequentially(_genericClient, genericOptions, itemData, itemType, delayMs, "Generic"));
 
         if (tasks.Count == 0)
         {
@@ -334,6 +331,27 @@ public class MultifySender : IWebhookSender
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error sending notification to {WebhookName}", option.WebhookName);
+        }
+    }
+
+    private async Task SendNotificationsSequentially<TOption>(IWebhookClient<TOption> client, IReadOnlyList<TOption> options, Dictionary<string, object> itemData, Type? itemType, int delayMs, string serviceName)
+        where TOption : BaseOption
+    {
+        if (options.Count == 0)
+        {
+            return;
+        }
+
+        for (var i = 0; i < options.Count; i++)
+        {
+            await SendNotification(client, options[i], itemData, itemType).ConfigureAwait(false);
+
+            // Add delay between notifications (but not after the last one)
+            if (delayMs > 0 && i < options.Count - 1)
+            {
+                _logger.LogDebug("Waiting {DelayMs}ms before next {ServiceName} notification", delayMs, serviceName);
+                await Task.Delay(delayMs).ConfigureAwait(false);
+            }
         }
     }
 }

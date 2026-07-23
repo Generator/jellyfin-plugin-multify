@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://github.com/Generator/jellyfin-plugin-multify/raw/main/logo.png" alt="Multify Logo" width="300"/>
+</p>
+
 # Jellyfin Plugin Multify
 
 A unified notification plugin for [Jellyfin](https://jellyfin.org/) that sends notifications across multiple systems seamlessly.

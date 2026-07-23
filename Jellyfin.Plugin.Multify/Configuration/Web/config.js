@@ -75,6 +75,7 @@ function multifyController(view) {
             cb.classList.add("multify-notification-type-cb");
             
             const span = document.createElement("span");
+            span.className = "checkboxLabel";
             span.textContent = notificationTypes[key];
             
             cb.addEventListener("change", (e) => {
@@ -152,6 +153,7 @@ function multifyController(view) {
             cb.checked = selected.includes(user.id);
             
             const span = document.createElement("span");
+            span.className = "checkboxLabel";
             span.textContent = user.name;
             
             item.appendChild(cb);
@@ -211,6 +213,7 @@ function multifyController(view) {
             cb.checked = config[itemType.key] ?? true;
             
             const span = document.createElement("span");
+            span.className = "checkboxLabel";
             span.textContent = itemType.label;
             
             item.appendChild(cb);
@@ -309,6 +312,7 @@ function multifyController(view) {
                 cb.checked = (config.LibraryFilter || []).includes(lib.id);
                 
                 const span = document.createElement("span");
+                span.className = "checkboxLabel";
                 span.textContent = lib.name;
                 
                 item.appendChild(cb);
@@ -803,6 +807,15 @@ function multifyController(view) {
                     <span>Log notification events to the Jellyfin admin dashboard activity feed.</span>`;
                 container.appendChild(alertsDiv);
 
+                // Notification Delay
+                const delayDiv = document.createElement("div");
+                delayDiv.className = "inputContainer";
+                delayDiv.style.marginTop = "16px";
+                delayDiv.innerHTML = `
+                    <input is="emby-input" type="number" id="txtDelaySeconds" label="Notification Delay (seconds):" min="1" max="60" value="2"/>
+                    <span>Delay between sequential notifications of the same service type (1-60 seconds). Helps prevent rate limiting.</span>`;
+                container.appendChild(delayDiv);
+
                 // Import/Export Settings
                 const importExportDiv = document.createElement("div");
                 importExportDiv.className = "inputContainer";
@@ -826,6 +839,8 @@ function multifyController(view) {
                     if (ddl) ddl.value = logLevel;
                     const chk = document.getElementById("chkEnableDashboardAlerts");
                     if (chk) chk.checked = currentConfig.AdvancedSettings?.EnableDashboardAlerts ?? false;
+                    const delayInput = document.getElementById("txtDelaySeconds");
+                    if (delayInput) delayInput.value = currentConfig.AdvancedSettings?.DelaySeconds ?? 2;
 
                     // Export Settings handler
                     const exportBtn = document.getElementById("btnExportSettings");
@@ -1269,9 +1284,10 @@ function multifyController(view) {
             AdvancedSettings: activeTabId === "advanced"
                 ? {
                     LogLevel: document.getElementById("ddlLogLevel")?.value || "Information",
-                    EnableDashboardAlerts: document.getElementById("chkEnableDashboardAlerts")?.checked ?? false
+                    EnableDashboardAlerts: document.getElementById("chkEnableDashboardAlerts")?.checked ?? false,
+                    DelaySeconds: parseInt(document.getElementById("txtDelaySeconds")?.value, 10) || 2
                 }
-                : (currentConfig.AdvancedSettings || { LogLevel: "Information", EnableDashboardAlerts: false })
+                : (currentConfig.AdvancedSettings || { LogLevel: "Information", EnableDashboardAlerts: false, DelaySeconds: 2 })
         };
     }
 
@@ -1365,7 +1381,8 @@ function multifyController(view) {
         } else if (activeTabId === "advanced") {
             currentConfig.AdvancedSettings = {
                 LogLevel: document.getElementById("ddlLogLevel")?.value || "Information",
-                EnableDashboardAlerts: document.getElementById("chkEnableDashboardAlerts")?.checked ?? false
+                EnableDashboardAlerts: document.getElementById("chkEnableDashboardAlerts")?.checked ?? false,
+                DelaySeconds: parseInt(document.getElementById("txtDelaySeconds")?.value, 10) || 2
             };
         } else if (activeTabId === "telegram") {
             currentConfig.TelegramOptions = readDestinations("telegram");
