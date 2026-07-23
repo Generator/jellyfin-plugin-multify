@@ -63,6 +63,28 @@ public class MultifySender : IWebhookSender
     {
         _logger.LogDebug("SendNotification called for {NotificationType}, ItemType={ItemType}", notificationType, itemType?.Name ?? "null");
 
+        // Debug: Log loaded notification types
+        foreach (var opt in _configuration.NtfyOptions)
+        {
+            _logger.LogDebug("Loaded ntfy option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
+                opt.WebhookName, string.Join(",", opt.NotificationTypes), opt.EnableWebhook);
+        }
+        foreach (var opt in _configuration.TelegramOptions)
+        {
+            _logger.LogDebug("Loaded telegram option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
+                opt.WebhookName, string.Join(",", opt.NotificationTypes), opt.EnableWebhook);
+        }
+        foreach (var opt in _configuration.GotifyOptions)
+        {
+            _logger.LogDebug("Loaded gotify option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
+                opt.WebhookName, string.Join(",", opt.NotificationTypes), opt.EnableWebhook);
+        }
+        foreach (var opt in _configuration.GenericWebhookOptions)
+        {
+            _logger.LogDebug("Loaded generic option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
+                opt.WebhookName, string.Join(",", opt.NotificationTypes), opt.EnableWebhook);
+        }
+
         // Enrich data with MDBList ratings if configured
         if (_mdblistService != null && !string.IsNullOrEmpty(_configuration.MdblistApiKey))
         {
