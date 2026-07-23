@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/Generator/jellyfin-plugin-multify/raw/main/logo.png" alt="Multify Logo" width="300"/>
+  <img src="assets/logo.png" alt="Multify Logo" width="300"/>
 </p>
 
 # Jellyfin Plugin Multify
