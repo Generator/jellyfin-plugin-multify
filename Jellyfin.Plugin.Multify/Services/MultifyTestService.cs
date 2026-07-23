@@ -104,9 +104,9 @@ public class MultifyTestService : IMultifyTestService
                 };
             }
 
-            // Ensure webhook is enabled for test and send all properties (no template needed)
+            // Ensure webhook is enabled for test and use template (not raw JSON)
             option.EnableWebhook = true;
-            option.SendAllProperties = true;
+            option.SendAllProperties = false;
 
             await SendAsync(request.DestinationType, option, data).ConfigureAwait(false);
 
