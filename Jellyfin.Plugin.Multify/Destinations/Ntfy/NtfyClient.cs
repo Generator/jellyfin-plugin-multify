@@ -86,8 +86,8 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
             };
 
             // Use custom title if provided, otherwise default - with placeholder replacement
-            var title = !string.IsNullOrEmpty(option.Title) 
-                ? ReplacePlaceholders(option.Title, data) 
+            var title = !string.IsNullOrEmpty(option.Title)
+                ? ReplacePlaceholders(option.Title, data)
                 : "Jellyfin Notification";
             request.Headers.Add("Title", title);
             request.Headers.Add("Priority", option.Priority.ToString(System.Globalization.CultureInfo.InvariantCulture));
