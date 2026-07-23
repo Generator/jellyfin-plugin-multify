@@ -32,8 +32,6 @@
             </div>
         </div>
 
-        <a href="#multifyTabContent" class="multify-skip-link">Skip to content</a>
-
         <div class="multifyTabLayout" style="display:grid;grid-template-columns:180px 1fr;gap:24px;min-height:60vh;">
             <nav class="multifyTabNav" id="multifyTabNav" aria-label="Settings Sections" style="display:flex;flex-direction:column;gap:4px;padding-top:8px;"></nav>
             <main class="multifyTabContent" id="multifyTabContent" tabindex="-1" style="padding:8px 0;"></main>
@@ -228,26 +226,6 @@
             --multify-input-bg: rgba(255, 255, 255, 0.05);
             --multify-input-border: rgba(255, 255, 255, 0.15);
             --multify-input-focus: var(--theme-primary-color, #00a4dc);
-        }
-
-        /* Skip link for accessibility */
-        .multify-skip-link {
-            position: absolute;
-            top: 8px;
-            left: 16px;
-            z-index: 20;
-            padding: 8px 12px;
-            border-radius: 4px;
-            background: var(--multify-accent);
-            color: var(--multify-on-accent);
-            text-decoration: none;
-            transform: translateY(-160%);
-        }
-
-        .multify-skip-link:focus-visible {
-            transform: translateY(0);
-            outline: 2px solid var(--multify-on-accent);
-            outline-offset: 2px;
         }
 
         .checkboxContainer {
