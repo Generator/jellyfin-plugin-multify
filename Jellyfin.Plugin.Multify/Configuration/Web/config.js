@@ -118,24 +118,53 @@ function multifyController(view) {
         }
     }
 
-    function buildUserFilterCheckboxes(selected = []) {
+    function buildUserFilterCheckboxes(selected = [], mode = "OnlySelected") {
         const container = document.createElement("div");
-        container.className = "multify-list-block";
+        container.className = "multify-builder-block";
+        container.dataset.field = "UserFilter";
+        container.dataset.mode = mode;
 
-        // Search input
-        const searchInput = document.createElement("input");
-        searchInput.type = "text";
-        searchInput.className = "multify-search-input";
-        searchInput.placeholder = "Search users...";
-        searchInput.addEventListener("input", (e) => {
-            const query = e.target.value.toLowerCase();
-            const items = $$(".multify-check-list-item", container);
-            items.forEach(item => {
-                const label = item.querySelector("span")?.textContent?.toLowerCase() || "";
-                item.classList.toggle("hidden", !label.includes(query));
-            });
+        // Header
+        const header = document.createElement("div");
+        header.className = "multify-builder-block-header";
+        header.innerHTML = "<h3>User Filter</h3><p>Filter notifications by user.</br>Leave empty to notify for all users.</p>";
+        container.appendChild(header);
+
+        // Controls
+        const controls = document.createElement("div");
+        controls.className = "multify-builder-controls";
+
+        // Mode toggle
+        const modeToggle = document.createElement("div");
+        modeToggle.className = "multify-mode-toggle";
+        
+        const onlyBtn = document.createElement("button");
+        onlyBtn.type = "button";
+        onlyBtn.textContent = "Only Selected";
+        onlyBtn.className = mode === "OnlySelected" ? "active" : "";
+        onlyBtn.addEventListener("click", () => {
+            onlyBtn.classList.add("active");
+            exceptBtn.classList.remove("active");
+            container.dataset.mode = "OnlySelected";
         });
-        container.appendChild(searchInput);
+        
+        const exceptBtn = document.createElement("button");
+        exceptBtn.type = "button";
+        exceptBtn.textContent = "All Except";
+        exceptBtn.className = mode === "AllExcept" ? "active" : "";
+        exceptBtn.addEventListener("click", () => {
+            exceptBtn.classList.add("active");
+            onlyBtn.classList.remove("active");
+            container.dataset.mode = "AllExcept";
+        });
+        
+        modeToggle.appendChild(onlyBtn);
+        modeToggle.appendChild(exceptBtn);
+        controls.appendChild(modeToggle);
+
+        // User list
+        const userList = document.createElement("div");
+        userList.className = "multify-list-block";
 
         // Check list container
         const checkList = document.createElement("div");
@@ -161,7 +190,10 @@ function multifyController(view) {
             checkList.appendChild(item);
         }
         
-        container.appendChild(checkList);
+        userList.appendChild(checkList);
+        controls.appendChild(userList);
+        container.appendChild(controls);
+
         return container;
     }
 
@@ -172,21 +204,6 @@ function multifyController(view) {
     function buildItemTypeCheckboxes(config = {}) {
         const container = document.createElement("div");
         container.className = "multify-list-block";
-
-        // Search input
-        const searchInput = document.createElement("input");
-        searchInput.type = "text";
-        searchInput.className = "multify-search-input";
-        searchInput.placeholder = "Search item types...";
-        searchInput.addEventListener("input", (e) => {
-            const query = e.target.value.toLowerCase();
-            const items = $$(".multify-check-list-item", container);
-            items.forEach(item => {
-                const label = item.querySelector("span")?.textContent?.toLowerCase() || "";
-                item.classList.toggle("hidden", !label.includes(query));
-            });
-        });
-        container.appendChild(searchInput);
 
         // Check list container
         const checkList = document.createElement("div");
@@ -243,7 +260,7 @@ function multifyController(view) {
         // Header
         const header = document.createElement("div");
         header.className = "multify-builder-block-header";
-        header.innerHTML = "<h3>Library Filter</h3><p>Filter notifications by library. Leave empty to notify for all libraries.</p>";
+        header.innerHTML = "<h3>Library Filter</h3><p>Filter notifications by library.</br>Leave empty to notify for all libraries.</p>";
         container.appendChild(header);
 
         // Controls
@@ -281,20 +298,6 @@ function multifyController(view) {
         // Library list
         const libraryList = document.createElement("div");
         libraryList.className = "multify-list-block";
-        
-        const searchInput = document.createElement("input");
-        searchInput.type = "text";
-        searchInput.className = "multify-search-input";
-        searchInput.placeholder = "Search libraries...";
-        searchInput.addEventListener("input", (e) => {
-            const query = e.target.value.toLowerCase();
-            const items = $$(".multify-check-list-item", libraryList);
-            items.forEach(item => {
-                const label = item.querySelector("span")?.textContent?.toLowerCase() || "";
-                item.classList.toggle("hidden", !label.includes(query));
-            });
-        });
-        libraryList.appendChild(searchInput);
 
         const checkList = document.createElement("div");
         checkList.className = "paperList checkboxList checkboxList-paperList multify-check-list";
@@ -357,14 +360,14 @@ function multifyController(view) {
 
         // Notification types
         const ntDiv = document.createElement("div");
-        ntDiv.innerHTML = `<label>Notification Type:</label><div data-name="notificationTypeContainer"></div>`;
+        ntDiv.innerHTML = `<label>Notification Type:</label><span style="font-size:0.85em;opacity:0.7;margin-left:8px;">(only one can be selected)</span><div data-name="notificationTypeContainer"></div>`;
         $("[data-name=notificationTypeContainer]", ntDiv).appendChild(buildNotificationTypeCheckboxes(config.NotificationTypes));
         frag.appendChild(ntDiv);
 
         // User filter
         const ufDiv = document.createElement("div");
         ufDiv.innerHTML = `<label>User Filter:</label><div data-name="userFilterContainer"></div>`;
-        $("[data-name=userFilterContainer]", ufDiv).appendChild(buildUserFilterCheckboxes(config.UserFilter));
+        $("[data-name=userFilterContainer]", ufDiv).appendChild(buildUserFilterCheckboxes(config.UserFilter, config.UserFilterMode));
         frag.appendChild(ufDiv);
 
         // Item types
@@ -406,12 +409,18 @@ function multifyController(view) {
         const libraryFilterMode = libraryFilterBlock?.dataset?.mode || "OnlySelected";
         const libraryFilter = getCheckedValues(container, "[data-field=LibraryFilter] [data-name=libraryFilterValue]:checked");
 
+        // Get user filter settings
+        const userFilterBlock = $("[data-field=UserFilter]", container);
+        const userFilterMode = userFilterBlock?.dataset?.mode || "OnlySelected";
+        const userFilter = getCheckedValues(container, "[data-field=UserFilter] [data-name=userFilterValue]:checked");
+
         return {
             WebhookName: $("[data-name=txtWebhookName]", container)?.value || "",
             WebhookUri: $("[data-name=txtWebhookUri]", container)?.value || "",
             EnableWebhook: $("[data-name=chkEnableWebhook]", container)?.checked ?? true,
             NotificationTypes: getCheckedValues(container, "[data-name=notificationTypeValue]:checked"),
-            UserFilter: getCheckedValues(container, "[data-name=userFilterValue]:checked"),
+            UserFilterMode: userFilterMode,
+            UserFilter: userFilter,
             EnableMovies: $("[data-name=EnableMovies]", container)?.checked || false,
             EnableEpisodes: $("[data-name=EnableEpisodes]", container)?.checked || false,
             EnableSeasons: $("[data-name=EnableSeasons]", container)?.checked || false,
@@ -542,7 +551,8 @@ function multifyController(view) {
                 })
             });
 
-            const result = await response.json();
+            const text = await response.text();
+            const result = text ? JSON.parse(text) : { success: response.ok };
 
             if (result.success) {
                 Dashboard.alert("Test notification sent successfully!");
@@ -780,21 +790,6 @@ function multifyController(view) {
                 title.style.marginBottom = "16px";
                 container.appendChild(title);
 
-                // Log Level
-                const logDiv = document.createElement("div");
-                logDiv.className = "inputContainer";
-                logDiv.innerHTML = `
-                    <div class="selectContainer">
-                        <select is="emby-select" id="ddlLogLevel" label="Log Level:">
-                            <option value="Information">Information</option>
-                            <option value="Warning">Warning</option>
-                            <option value="Debug">Debug</option>
-                            <option value="Trace">Trace</option>
-                        </select>
-                    </div>
-                    <span>Controls the minimum severity of plugin log messages. Higher values = less logging.</span>`;
-                container.appendChild(logDiv);
-
                 // Dashboard alerts
                 const alertsDiv = document.createElement("div");
                 alertsDiv.className = "inputContainer";
@@ -834,9 +829,6 @@ function multifyController(view) {
 
                 // Set current values
                 setTimeout(() => {
-                    const logLevel = currentConfig.AdvancedSettings?.LogLevel || "Information";
-                    const ddl = document.getElementById("ddlLogLevel");
-                    if (ddl) ddl.value = logLevel;
                     const chk = document.getElementById("chkEnableDashboardAlerts");
                     if (chk) chk.checked = currentConfig.AdvancedSettings?.EnableDashboardAlerts ?? false;
                     const delayInput = document.getElementById("txtDelaySeconds");
@@ -858,7 +850,6 @@ function multifyController(view) {
                                     NtfyOptions: currentConfig.NtfyOptions || [],
                                     GenericWebhookOptions: currentConfig.GenericWebhookOptions || [],
                                     AdvancedSettings: currentConfig.AdvancedSettings || {
-                                        LogLevel: "Information",
                                         EnableDashboardAlerts: false
                                     }
                                 };
@@ -922,7 +913,6 @@ function multifyController(view) {
                                 currentConfig.NtfyOptions = importedConfig.NtfyOptions || [];
                                 currentConfig.GenericWebhookOptions = importedConfig.GenericWebhookOptions || [];
                                 currentConfig.AdvancedSettings = importedConfig.AdvancedSettings || {
-                                    LogLevel: "Information",
                                     EnableDashboardAlerts: false
                                 };
                                 
@@ -1283,11 +1273,10 @@ function multifyController(view) {
                 : (currentConfig.GenericWebhookOptions || []),
             AdvancedSettings: activeTabId === "advanced"
                 ? {
-                    LogLevel: document.getElementById("ddlLogLevel")?.value || "Information",
                     EnableDashboardAlerts: document.getElementById("chkEnableDashboardAlerts")?.checked ?? false,
                     DelaySeconds: parseInt(document.getElementById("txtDelaySeconds")?.value, 10) || 2
                 }
-                : (currentConfig.AdvancedSettings || { LogLevel: "Information", EnableDashboardAlerts: false, DelaySeconds: 2 })
+                : (currentConfig.AdvancedSettings || { EnableDashboardAlerts: false, DelaySeconds: 2 })
         };
     }
 
@@ -1380,7 +1369,6 @@ function multifyController(view) {
             currentConfig.MdblistApiKey = document.getElementById("txtMdblistApiKey")?.value || "";
         } else if (activeTabId === "advanced") {
             currentConfig.AdvancedSettings = {
-                LogLevel: document.getElementById("ddlLogLevel")?.value || "Information",
                 EnableDashboardAlerts: document.getElementById("chkEnableDashboardAlerts")?.checked ?? false,
                 DelaySeconds: parseInt(document.getElementById("txtDelaySeconds")?.value, 10) || 2
             };
@@ -1444,7 +1432,6 @@ function multifyController(view) {
             NtfyOptions: currentConfig.NtfyOptions || [],
             GenericWebhookOptions: currentConfig.GenericWebhookOptions || [],
             AdvancedSettings: currentConfig.AdvancedSettings || {
-                LogLevel: "Information",
                 EnableDashboardAlerts: false
             }
         };

@@ -63,7 +63,7 @@ public class GenericWebhookClient : BaseClient, IWebhookClient<GenericWebhookOpt
                 return;
             }
 
-            _logger.LogDebug("GenericWebhook SendAsync Body: {@Body}", body);
+            _logger.LogDebug("GenericWebhook sending {BodyLength} bytes to {WebhookName}", body.Length, option.WebhookName);
 
             using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, option.WebhookUri);
             var contentType = MediaTypeNames.Application.Json;
@@ -97,7 +97,7 @@ public class GenericWebhookClient : BaseClient, IWebhookClient<GenericWebhookOpt
         }
         catch (HttpRequestException e)
         {
-            _logger.LogWarning(e, "Error sending generic webhook notification");
+            _logger.LogError(e, "Error sending generic webhook notification");
         }
     }
 }

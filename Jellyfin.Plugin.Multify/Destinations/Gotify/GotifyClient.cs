@@ -104,7 +104,7 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
         }
         catch (HttpRequestException e)
         {
-            _logger.LogWarning(e, "Error sending Gotify notification");
+            _logger.LogError(e, "Error sending Gotify notification");
         }
     }
 }
