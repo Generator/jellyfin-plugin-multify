@@ -543,7 +543,7 @@ function multifyController(view) {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-Emby-Token": window.ApiClient.accessToken()
+                    "Authorization": `MediaBrowser Token="${window.ApiClient.accessToken()}"`
                 },
                 body: JSON.stringify({
                     destinationType: type,
