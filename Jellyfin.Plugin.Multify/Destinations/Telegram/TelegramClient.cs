@@ -116,6 +116,8 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
                 return;
             }
 
+            _logger.LogDebug("Telegram sending {BodyLength} bytes to {WebhookName}: {Body}", body.Length, option.WebhookName, body);
+
             // Check if we should edit an existing message
             if (_messageStore != null && data.TryGetValue("ItemId", out var itemIdObj) && itemIdObj is string itemId)
             {

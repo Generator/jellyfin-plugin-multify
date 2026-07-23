@@ -78,6 +78,10 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
                 return;
             }
 
+            _logger.LogDebug("Ntfy sending {BodyLength} bytes to {WebhookName}: {Body}", body.Length, option.WebhookName, body);
+
+            _logger.LogDebug("ntfy notification body: {Body}", body);
+
             var uri = new Uri(option.WebhookUri.TrimEnd() + $"/{option.Topic}");
 
             using var request = new HttpRequestMessage(HttpMethod.Post, uri)

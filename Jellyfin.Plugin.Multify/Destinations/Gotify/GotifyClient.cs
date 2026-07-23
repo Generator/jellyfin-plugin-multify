@@ -71,6 +71,8 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
                 return;
             }
 
+            _logger.LogDebug("Gotify sending {BodyLength} bytes to {WebhookName}: {Body}", body.Length, option.WebhookName, body);
+
             // Build JSON payload with extras
             var extras = new Dictionary<string, object>
             {

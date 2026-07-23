@@ -63,7 +63,7 @@ public class GenericWebhookClient : BaseClient, IWebhookClient<GenericWebhookOpt
                 return;
             }
 
-            _logger.LogDebug("GenericWebhook sending {BodyLength} bytes to {WebhookName}", body.Length, option.WebhookName);
+            _logger.LogDebug("GenericWebhook sending {BodyLength} bytes to {WebhookName}: {Body}", body.Length, option.WebhookName, body);
 
             using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, option.WebhookUri);
             var contentType = MediaTypeNames.Application.Json;
