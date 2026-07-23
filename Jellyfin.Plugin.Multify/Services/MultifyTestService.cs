@@ -152,12 +152,18 @@ public class MultifyTestService : IMultifyTestService
 
     private BaseOption? ParseOption(TestNotificationRequest request)
     {
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        options.Converters.Add(new JsonStringEnumConverter());
+
         return request.DestinationType.ToLowerInvariant() switch
         {
-            "telegram" => request.Config.Deserialize<TelegramOption>(),
-            "gotify" => request.Config.Deserialize<GotifyOption>(),
-            "ntfy" => request.Config.Deserialize<NtfyOption>(),
-            "generic" => request.Config.Deserialize<GenericWebhookOption>(),
+            "telegram" => request.Config.Deserialize<TelegramOption>(options),
+            "gotify" => request.Config.Deserialize<GotifyOption>(options),
+            "ntfy" => request.Config.Deserialize<NtfyOption>(options),
+            "generic" => request.Config.Deserialize<GenericWebhookOption>(options),
             _ => null
         };
     }
