@@ -6,6 +6,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Nullable>enable</Nullable>
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+    <NoWarn>CA1873</NoWarn>
     <RootNamespace>Jellyfin.Plugin.Multify</RootNamespace>
     <AssemblyName>Jellyfin.Plugin.Multify</AssemblyName>
     <CodeAnalysisRuleSet>jellyfin.ruleset</CodeAnalysisRuleSet>
