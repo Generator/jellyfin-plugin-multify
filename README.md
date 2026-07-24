@@ -96,7 +96,19 @@ See [Template Variables](docs/template-variables.md) for the complete reference 
 
 ## Installation
 
-### From Release
+### From Jellyfin Plugin Catalog (Recommended)
+
+1. Open Jellyfin Dashboard → **Plugins** → **Manage Repositories** → **New Repository**
+2. **Repository Name**: `Multify`
+3. **Repository URL**:
+   ```
+   https://raw.githubusercontent.com/Generator/jellyfin-plugin-multify/main/manifest.json
+   ```
+4. Go to **Catalog**, search "Multify", click **Install**
+5. Restart Jellyfin
+6. Configure at **Dashboard > Plugins > Multify**
+
+### Manual Install
 
 1. Download the latest `.dll` from [GitHub Releases](../../releases)
 2. Place it in your Jellyfin `plugins/Multify` directory
