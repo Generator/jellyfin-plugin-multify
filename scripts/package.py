@@ -27,7 +27,7 @@ PLUGIN_IMAGE_URL = "https://raw.githubusercontent.com/Generator/jellyfin-plugin-
 
 # Jellyfin target → (targetAbi, SDK)
 JELLYFIN_TARGETS = {
-    "10.12": ("10.12.0.0", "net9.0"),
+    "12.0": ("12.0.0.0", "net9.0"),
 }
 
 
