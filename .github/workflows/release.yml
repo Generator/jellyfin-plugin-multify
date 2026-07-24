@@ -1,0 +1,65 @@
+name: '📦 Release Plugin'
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  REPO: ${{ github.repository }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Parse tag
+        id: tag
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          echo "version=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Releasing version: $TAG"
+
+      - name: Build & Package
+        run: |
+          python3 scripts/package.py \
+            --version "${{ steps.tag.outputs.version }}" \
+            --repo "${{ env.REPO }}" \
+            --changelog "Release ${{ steps.tag.outputs.version }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-release
+          path: artifacts/*.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.zip
+          generate_release_notes: true
+
+      - name: Push manifest to manifest branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin manifest || true
+          git checkout manifest || git checkout --orphan manifest
+          git rm -rf . 2>/dev/null || true
+          cp manifest.json .
+          git add manifest.json
+          git commit -m "Update manifest for v${{ steps.tag.outputs.version }}"
+          git push origin manifest
