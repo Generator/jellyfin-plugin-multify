@@ -102,7 +102,7 @@ See [Template Variables](docs/template-variables.md) for the complete reference 
 2. **Repository Name**: `Multify`
 3. **Repository URL**:
    ```
-   https://raw.githubusercontent.com/Generator/jellyfin-plugin-multify/main/manifest.json
+   https://raw.githubusercontent.com/Generator/jellyfin-plugin-multify/manifest/manifest.json
    ```
 4. Go to **Catalog**, search "Multify", click **Install**
 5. Restart Jellyfin

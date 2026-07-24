@@ -56,10 +56,19 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Save manifest from build step
+          cp manifest.json /tmp/manifest.json
+
+          # Switch to manifest branch
           git fetch origin manifest || true
-          git checkout manifest || git checkout --orphan manifest
+          git checkout manifest 2>/dev/null || git checkout --orphan manifest
+
+          # Clean working tree and place manifest
           git rm -rf . 2>/dev/null || true
-          cp manifest.json .
+          cp /tmp/manifest.json .
           git add manifest.json
-          git commit -m "Update manifest for v${{ steps.tag.outputs.version }}"
+
+          # Commit only if there are changes
+          git diff --cached --quiet || git commit -m "Update manifest for v${{ steps.tag.outputs.version }}"
           git push origin manifest
