@@ -67,7 +67,7 @@ public class MultifySender : IWebhookSender
         foreach (var opt in _configuration.NtfyOptions)
         {
             var types = string.Join(",", opt.NotificationTypes);
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Loaded ntfy option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
                 opt.WebhookName,
                 types,
@@ -77,7 +77,7 @@ public class MultifySender : IWebhookSender
         foreach (var opt in _configuration.TelegramOptions)
         {
             var types = string.Join(",", opt.NotificationTypes);
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Loaded telegram option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
                 opt.WebhookName,
                 types,
@@ -87,7 +87,7 @@ public class MultifySender : IWebhookSender
         foreach (var opt in _configuration.GotifyOptions)
         {
             var types = string.Join(",", opt.NotificationTypes);
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Loaded gotify option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
                 opt.WebhookName,
                 types,
@@ -97,7 +97,7 @@ public class MultifySender : IWebhookSender
         foreach (var opt in _configuration.GenericWebhookOptions)
         {
             var types = string.Join(",", opt.NotificationTypes);
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Loaded generic option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
                 opt.WebhookName,
                 types,
@@ -115,9 +115,6 @@ public class MultifySender : IWebhookSender
         {
             EnrichWithItemUrl(itemData);
         }
-
-        // Enrich data with trailer URLs
-        EnrichTrailerUrls(itemData);
 
         var tasks = new List<Task>();
 
@@ -150,17 +147,12 @@ public class MultifySender : IWebhookSender
         tasks.Add(SendNotificationsSequentially(_ntfyClient, ntfyOptions, itemData, itemType, delayMs, "Ntfy"));
         tasks.Add(SendNotificationsSequentially(_genericClient, genericOptions, itemData, itemType, delayMs, "Generic"));
 
-        if (tasks.Count == 0)
-        {
-            _logger.LogDebug("No matching destinations for {NotificationType}", notificationType);
-            return;
-        }
-
-        _logger.LogDebug("Sending to {DestinationCount} destination(s) for {NotificationType}", tasks.Count, notificationType);
+        var totalDestinations = telegramOptions.Count + gotifyOptions.Count + ntfyOptions.Count + genericOptions.Count;
+        _logger.LogDebug("Sending to {DestinationCount} destination(s) for {NotificationType}", totalDestinations, notificationType);
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
 
-        _logger.LogInformation("Completed sending {NotificationType} to {DestinationCount} destination(s)", notificationType, tasks.Count);
+        _logger.LogInformation("Completed sending {NotificationType} to {DestinationCount} destination(s)", notificationType, totalDestinations);
     }
 
     private async Task EnrichWithMdblistRatings(Dictionary<string, object> data)
@@ -289,14 +281,6 @@ public class MultifySender : IWebhookSender
         }
     }
 
-    private static void EnrichTrailerUrls(Dictionary<string, object> data)
-    {
-        // Note: RemoteTrailers are not directly available in the data dictionary
-        // They need to be extracted from the BaseItem when creating the data object
-        // This method is a placeholder for future enrichment if needed
-        // The actual extraction happens in DataObjectHelpers.AddItemData()
-    }
-
     private static string GetMediaType(Dictionary<string, object> data)
     {
         if (data.TryGetValue("ItemType", out var itemTypeObj) && itemTypeObj is string itemType)
@@ -362,7 +346,7 @@ public class MultifySender : IWebhookSender
             return;
         }
 
-        var data = new Dictionary<string, object>(itemData);
+        var data = DeepCopyDict(itemData);
         try
         {
             _logger.LogDebug("Sending to {WebhookName} ({ClientType})", option.WebhookName, typeof(TOption).Name);
@@ -394,5 +378,38 @@ public class MultifySender : IWebhookSender
                 await Task.Delay(delayMs).ConfigureAwait(false);
             }
         }
+    }
+
+    private static Dictionary<string, object> DeepCopyDict(Dictionary<string, object> source)
+    {
+        var copy = new Dictionary<string, object>(source.Count, source.Comparer);
+        foreach (var kvp in source)
+        {
+            // Strings and value types are immutable — safe to share
+            if (kvp.Value is string or int or long or float or double or bool or Guid or DateTime or Enum)
+            {
+                copy[kvp.Key] = kvp.Value;
+            }
+            else if (kvp.Value is IDictionary<string, object> nestedDict)
+            {
+                copy[kvp.Key] = DeepCopyDict(new Dictionary<string, object>(nestedDict));
+            }
+            else if (kvp.Value is System.Collections.IList list)
+            {
+                var listCopy = new List<object>(list.Count);
+                foreach (var item in list)
+                {
+                    listCopy.Add(item);
+                }
+                copy[kvp.Key] = listCopy;
+            }
+            else
+            {
+                // Unknown reference type — share reference (best effort)
+                copy[kvp.Key] = kvp.Value;
+            }
+        }
+
+        return copy;
     }
 }

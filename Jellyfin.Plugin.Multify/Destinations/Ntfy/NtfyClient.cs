@@ -80,8 +80,6 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
 
             _logger.LogDebug("Ntfy sending {BodyLength} bytes to {WebhookName}: {Body}", body.Length, option.WebhookName, body);
 
-            _logger.LogDebug("ntfy notification body: {Body}", body);
-
             var uri = new Uri(option.WebhookUri.TrimEnd() + $"/{option.Topic}");
 
             using var request = new HttpRequestMessage(HttpMethod.Post, uri)
@@ -91,7 +89,7 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
 
             // Use custom title if provided, otherwise default - with placeholder replacement
             var title = !string.IsNullOrEmpty(option.Title)
-                ? ReplacePlaceholders(option.Title, data)
+                ? BaseOption.ReplacePlaceholders(option.Title, data)
                 : "Jellyfin Notification";
             request.Headers.Add("Title", title);
             request.Headers.Add("Priority", option.Priority.ToString(System.Globalization.CultureInfo.InvariantCulture));
@@ -99,7 +97,7 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
             // Add tags if provided (comma-separated, first tag used as emoji icon) - with placeholder replacement
             if (!string.IsNullOrEmpty(option.Tags))
             {
-                var tags = ReplacePlaceholders(option.Tags, data);
+                var tags = BaseOption.ReplacePlaceholders(option.Tags, data);
                 request.Headers.Add("Tags", tags);
             }
 
@@ -144,16 +142,5 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
             _logger.LogError(e, "Error sending ntfy notification");
             throw;
         }
-    }
-
-    private static string ReplacePlaceholders(string template, Dictionary<string, object> data)
-    {
-        var result = template;
-        foreach (var kvp in data)
-        {
-            var placeholder = "{{" + kvp.Key + "}}";
-            result = result.Replace(placeholder, kvp.Value?.ToString() ?? string.Empty, StringComparison.Ordinal);
-        }
-        return result;
     }
 }

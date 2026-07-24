@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Web;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.Multify.Destinations;
 using MediaBrowser.Controller.Entities;
@@ -181,18 +182,19 @@ public static class DataObjectHelpers
             // Extract YouTube video ID from URL (format: https://www.youtube.com/watch?v=VIDEO_ID)
             if (!string.IsNullOrEmpty(firstTrailer.Url) && firstTrailer.Url.Contains("youtube.com/watch", StringComparison.OrdinalIgnoreCase))
             {
-                var url = firstTrailer.Url;
-                var queryStart = url.IndexOf("v=", StringComparison.Ordinal);
-                if (queryStart >= 0)
+                try
                 {
-                    var videoId = url[(queryStart + 2)..];
-                    var ampIndex = videoId.IndexOf('&', StringComparison.Ordinal);
-                    if (ampIndex >= 0)
+                    var uri = new Uri(firstTrailer.Url);
+                    var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+                    var ytId = query.Get("v");
+                    if (!string.IsNullOrEmpty(ytId))
                     {
-                        videoId = videoId[..ampIndex];
+                        data["TrailerYtId"] = ytId;
                     }
-
-                    data["TrailerYtId"] = videoId;
+                }
+                catch (UriFormatException)
+                {
+                    // Invalid URL, skip
                 }
             }
         }

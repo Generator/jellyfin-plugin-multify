@@ -29,8 +29,16 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
     public void RegisterServices(IServiceCollection serviceCollection, MediaBrowser.Controller.IServerApplicationHost applicationHost)
     {
         // Use the plugin instance's configuration (loaded from disk with user settings)
-        var configuration = MultifyPlugin.Instance?.Configuration ?? new PluginConfiguration();
-        serviceCollection.AddSingleton(configuration);
+        // Resolve at runtime to avoid race condition if plugin hasn't been instantiated yet
+        serviceCollection.AddSingleton(sp =>
+        {
+            var config = MultifyPlugin.Instance?.Configuration;
+            if (config == null)
+            {
+                config = new PluginConfiguration();
+            }
+            return config;
+        });
 
         // Register dashboard alert service
         serviceCollection.AddScoped<DashboardAlertService>();

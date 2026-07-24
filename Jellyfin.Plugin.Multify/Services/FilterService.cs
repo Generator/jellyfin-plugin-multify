@@ -58,6 +58,7 @@ public class FilterService
     /// <returns>The filter result.</returns>
     public FilterResult CheckUserFilter(BaseOption option, Dictionary<string, object> data)
     {
+        // If no user filter is defined, allow all users regardless of filter mode
         if (option.UserFilter.Length == 0)
         {
             return FilterResult.Allow;

@@ -12,7 +12,7 @@ namespace Jellyfin.Plugin.Multify;
 /// </summary>
 public class MultifyPlugin : BasePlugin<Configuration.PluginConfiguration>, IHasWebPages
 {
-    private readonly Guid _id = new("A1B2C3D4-E5F6-7890-ABCD-EF1234567890");
+    private readonly Guid _id = new("8e7a42b2-6a49-40e5-a05d-780ba1942cd1");
 
     /// <summary>
     /// Gets the singleton instance.

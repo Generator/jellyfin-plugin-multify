@@ -39,36 +39,19 @@ public class AuthenticationNotifier : IEventConsumer<AuthenticationResultEventAr
             return;
         }
 
-        var isSuccessful = true;
-        var notificationType = isSuccessful
-            ? NotificationType.AuthenticationSuccess
-            : NotificationType.AuthenticationFailure;
-
         _logger.LogDebug(
-            "Authentication event received for user {Username} (Successful={Successful})",
-            eventArgs.User.Name,
-            isSuccessful);
+            "Authentication success event received for user {Username}",
+            eventArgs.User.Name);
 
-        var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", notificationType);
+        var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.AuthenticationSuccess);
         data["Username"] = eventArgs.User.Name ?? "Unknown";
         data["UserId"] = eventArgs.User.Id.ToString();
 
-        await _webhookSender.SendNotification(notificationType, data).ConfigureAwait(false);
+        await _webhookSender.SendNotification(NotificationType.AuthenticationSuccess, data).ConfigureAwait(false);
 
-        if (isSuccessful)
-        {
-            _logger.LogInformation("Authentication success notification sent for {Username}", eventArgs.User.Name);
-            await _dashboardAlert.LogAsync(
-                $"Authentication success: {eventArgs.User.Name}",
-                "MultifyAuthenticationSuccess").ConfigureAwait(false);
-        }
-        else
-        {
-            _logger.LogWarning("Authentication failure notification sent for {Username}", eventArgs.User.Name);
-            await _dashboardAlert.LogAsync(
-                $"Authentication failure: {eventArgs.User.Name}",
-                "MultifyAuthenticationFailure",
-                severity: LogLevel.Warning).ConfigureAwait(false);
-        }
+        _logger.LogInformation("Authentication success notification sent for {Username}", eventArgs.User.Name);
+        await _dashboardAlert.LogAsync(
+            $"Authentication success: {eventArgs.User.Name}",
+            "MultifyAuthenticationSuccess").ConfigureAwait(false);
     }
 }

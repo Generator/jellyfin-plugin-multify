@@ -46,7 +46,8 @@ public class GenericWebhookClient : BaseClient, IWebhookClient<GenericWebhookOpt
                 return;
             }
 
-            // Merge custom fields into data
+            // Merge custom fields into a copy to avoid mutating shared data
+            var dataCopy = new Dictionary<string, object>(data);
             foreach (var field in option.Fields)
             {
                 if (string.IsNullOrEmpty(field.Key))
@@ -54,10 +55,10 @@ public class GenericWebhookClient : BaseClient, IWebhookClient<GenericWebhookOpt
                     continue;
                 }
 
-                data[field.Key] = field.Value;
+                dataCopy[field.Key] = field.Value;
             }
 
-            var body = option.GetMessageBody(data);
+            var body = option.GetMessageBody(dataCopy);
             if (!SendMessageBody(_logger, option, ref body))
             {
                 return;
