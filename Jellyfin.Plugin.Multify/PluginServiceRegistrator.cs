@@ -29,8 +29,8 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
     public void RegisterServices(IServiceCollection serviceCollection, MediaBrowser.Controller.IServerApplicationHost applicationHost)
     {
         // Use the plugin instance's configuration (loaded from disk with user settings)
-        // Resolve at runtime to avoid race condition if plugin hasn't been instantiated yet
-        serviceCollection.AddSingleton(sp =>
+        // Resolve at runtime to avoid stale config after save — Jellyfin replaces the Configuration instance on save
+        serviceCollection.AddScoped<PluginConfiguration>(sp =>
         {
             var config = MultifyPlugin.Instance?.Configuration;
             if (config == null)
