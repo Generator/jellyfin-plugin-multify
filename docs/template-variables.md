@@ -34,7 +34,6 @@ Available when notifications include item data (playback, library events):
 | `{{CriticRating}}` | Critic rating | `74` |
 | `{{Tagline}}` | Item tagline | `Your mind is the scene of the crime` |
 | `{{OriginalTitle}}` | Original language title | `Inception` |
-| `{{OriginalLanguage}}` | Original language code | `en` |
 | `{{Studios}}` | Studios as comma-separated string | `Warner Bros., Legendary` |
 | `{{ProductionLocations}}` | Production locations as comma-separated string | `USA, UK` |
 | `{{Tags}}` | User-defined tags as comma-separated string | `favorite, sci-fi` |

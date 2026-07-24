@@ -106,9 +106,6 @@ public static class DataObjectHelpers
         // Add overview (available on all items)
         data["Overview"] = item.Overview ?? string.Empty;
 
-        // Add original language
-        data["OriginalLanguage"] = item.OriginalLanguage ?? string.Empty;
-
         // Add production year (available on all items)
         data["ProductionYear"] = item.ProductionYear?.ToString(CultureInfo.InvariantCulture) ?? "Unknown";
 
