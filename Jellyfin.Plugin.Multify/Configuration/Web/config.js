@@ -1,5 +1,5 @@
 function multifyController(view) {
-    const PLUGIN_ID = "A1B2C3D4-E5F6-7890-ABCD-EF1234567890";
+    const PLUGIN_ID = "8e7a42b2-6a49-40e5-a05d-780ba1942cd1";
 
     /*** Helpers ***/
     const $ = (sel, ctx) => (ctx || document).querySelector(sel);
