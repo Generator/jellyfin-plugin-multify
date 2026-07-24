@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Xml.Serialization;
 
 namespace Jellyfin.Plugin.Multify.Destinations;
@@ -20,6 +21,7 @@ public class BaseOption
     public bool EnableWebhook { get; set; } = true;
 
     /// <summary>Gets or sets the notification types.</summary>
+    [JsonPropertyName("NotificationTypes")]
     [XmlArray("NotificationTypes")]
     [XmlArrayItem("NotificationType")]
     public NotificationType[] NotificationTypes { get; set; } = Array.Empty<NotificationType>();
@@ -58,19 +60,23 @@ public class BaseOption
     public bool SkipEmptyMessageBody { get; set; }
 
     /// <summary>Gets or sets the user filter.</summary>
+    [JsonPropertyName("UserFilter")]
     [XmlArray("UserFilter")]
     [XmlArrayItem("Guid")]
     public Guid[] UserFilter { get; set; } = Array.Empty<Guid>();
 
     /// <summary>Gets or sets the user filter mode (OnlySelected or AllExcept).</summary>
+    [JsonPropertyName("UserFilterMode")]
     public FilterMode UserFilterMode { get; set; } = FilterMode.OnlySelected;
 
     /// <summary>Gets or sets the library filter.</summary>
+    [JsonPropertyName("LibraryFilter")]
     [XmlArray("LibraryFilter")]
     [XmlArrayItem("Guid")]
     public Guid[] LibraryFilter { get; set; } = Array.Empty<Guid>();
 
     /// <summary>Gets or sets the library filter mode (OnlySelected or AllExcept).</summary>
+    [JsonPropertyName("LibraryFilterMode")]
     public FilterMode LibraryFilterMode { get; set; } = FilterMode.OnlySelected;
 
     /// <summary>
@@ -103,7 +109,7 @@ public class BaseOption
         }
     }
 
-    private static string ReplacePlaceholders(string template, Dictionary<string, object> data)
+    internal static string ReplacePlaceholders(string template, Dictionary<string, object> data)
     {
         var result = template;
         foreach (var kvp in data)

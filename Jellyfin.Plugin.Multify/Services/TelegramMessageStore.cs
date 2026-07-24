@@ -66,6 +66,24 @@ public class TelegramMessageStore
         SaveStore();
     }
 
+    /// <summary>
+    /// Clears all entries from the store. Useful for periodic cleanup since
+    /// Telegram message edits expire after 48 hours anyway.
+    /// </summary>
+    public void CleanupStaleEntries()
+    {
+        var count = _messageStore.Count;
+        if (count == 0)
+        {
+            _logger.LogDebug("Telegram message store is empty, nothing to clean up");
+            return;
+        }
+
+        _messageStore.Clear();
+        SaveStore();
+        _logger.LogInformation("Cleared {Count} entries from Telegram message store", count);
+    }
+
     private static string GetKey(string chatId, string itemId)
     {
         return $"{chatId}:{itemId}";

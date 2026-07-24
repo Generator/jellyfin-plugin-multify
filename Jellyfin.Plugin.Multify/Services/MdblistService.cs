@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using MediaBrowser.Common.Net;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Services;
@@ -48,7 +49,7 @@ public class MdblistService
             var request = new HttpRequestMessage(HttpMethod.Get, uri);
             request.Headers.Add("Authorization", $"Bearer {apiKey}");
 
-            using var client = _httpClientFactory.CreateClient();
+            using var client = _httpClientFactory.CreateClient(NamedClient.Default);
             using var response = await client.SendAsync(request).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
@@ -89,7 +90,7 @@ public class MdblistService
             var request = new HttpRequestMessage(HttpMethod.Get, uri);
             request.Headers.Add("Authorization", $"Bearer {apiKey}");
 
-            using var client = _httpClientFactory.CreateClient();
+            using var client = _httpClientFactory.CreateClient(NamedClient.Default);
             using var response = await client.SendAsync(request).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)

@@ -87,7 +87,7 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
 
             // Use custom title if provided (with placeholder replacement), otherwise default to WebhookName
             var title = !string.IsNullOrEmpty(option.Title)
-                ? ReplacePlaceholders(option.Title, data)
+                ? BaseOption.ReplacePlaceholders(option.Title, data)
                 : option.WebhookName;
 
             var payload = new Dictionary<string, object>
@@ -114,16 +114,5 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
             _logger.LogError(e, "Error sending Gotify notification");
             throw;
         }
-    }
-
-    private static string ReplacePlaceholders(string template, Dictionary<string, object> data)
-    {
-        var result = template;
-        foreach (var kvp in data)
-        {
-            var placeholder = "{{" + kvp.Key + "}}";
-            result = result.Replace(placeholder, kvp.Value?.ToString() ?? string.Empty, StringComparison.Ordinal);
-        }
-        return result;
     }
 }

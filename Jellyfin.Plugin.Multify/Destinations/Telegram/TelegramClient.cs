@@ -29,6 +29,8 @@ public enum TelegramMessageType
 
 /// <summary>
 /// Telegram destination option.
+/// Note: Telegram uses Bot Token in the URL path (https://api.telegram.org/bot{token}/METHOD).
+/// The WebhookUri field from BaseOption is ignored for Telegram destinations.
 /// </summary>
 public class TelegramOption : BaseOption
 {

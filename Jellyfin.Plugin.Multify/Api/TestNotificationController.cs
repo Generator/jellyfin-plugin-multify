@@ -1,6 +1,7 @@
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Multify.Services;
+using MediaBrowser.Common.Api;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,7 @@ namespace Jellyfin.Plugin.Multify.Api;
 /// API controller for test notifications.
 /// </summary>
 [ApiController]
-[Authorize(Policy = "RequiresElevation")]
+[Authorize(Policy = Policies.RequiresElevation)]
 [Route("Multify")]
 [Produces(MediaTypeNames.Application.Json)]
 public class TestNotificationController : ControllerBase
