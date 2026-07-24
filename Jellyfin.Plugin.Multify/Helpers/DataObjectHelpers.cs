@@ -106,6 +106,9 @@ public static class DataObjectHelpers
         // Add overview (available on all items)
         data["Overview"] = item.Overview ?? string.Empty;
 
+        // Add original language
+        data["OriginalLanguage"] = item.OriginalLanguage ?? string.Empty;
+
         // Add production year (available on all items)
         data["ProductionYear"] = item.ProductionYear?.ToString(CultureInfo.InvariantCulture) ?? "Unknown";
 
@@ -162,9 +165,6 @@ public static class DataObjectHelpers
 
         // Add date created
         data["DateCreated"] = item.DateCreated.ToString("O");
-
-        // Add home page URL
-        data["HomePageUrl"] = item.HomePageUrl ?? string.Empty;
 
         // Add image URLs (will be enriched with server URL in MultifySender)
         data["PrimaryImageUrl"] = string.Empty;

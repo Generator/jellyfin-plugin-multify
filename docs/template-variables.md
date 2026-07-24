@@ -41,7 +41,6 @@ Available when notifications include item data (playback, library events):
 | `{{Path}}` | File path | `/media/movies/Inception.mkv` |
 | `{{Container}}` | File container format | `mkv` |
 | `{{DateCreated}}` | Date added to library (ISO 8601) | `2024-01-15T10:30:00.000Z` |
-| `{{HomePageUrl}}` | Official website URL | `https://www.inception.com` |
 
 ## TV Show Variables
 
