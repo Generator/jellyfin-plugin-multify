@@ -46,7 +46,7 @@ public class CleanupTelegramStoreTask : IScheduledTask
         // Weekly on Sunday at 3 AM
         yield return new TaskTriggerInfo
         {
-            Type = TaskTriggerInfo.TriggerWeekly,
+            Type = TaskTriggerInfoType.WeeklyTrigger,
             TimeOfDayTicks = TimeSpan.FromHours(3).Ticks,
             DayOfWeek = DayOfWeek.Sunday
         };
