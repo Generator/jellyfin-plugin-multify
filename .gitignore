@@ -69,6 +69,7 @@ tools/
 tmp/
 AGENTS.md
 PLAN.md
+session-ses_*.md
 
 # Build
 build/
