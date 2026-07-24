@@ -13,7 +13,6 @@ import sys
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SCRIPTS = pathlib.Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
 CSPROJ = ROOT / "Jellyfin.Plugin.Multify.csproj"
 # Note: This script is in scripts/, but CSPROJ is in the repo root
@@ -50,7 +49,6 @@ def publish_jellyfin(jf_version: str, manifest_version: str, out_dir: pathlib.Pa
     run([
         "dotnet", "publish", str(CSPROJ),
         "-c", "Release",
-        f"-p:JellyfinVersion={jf_version}",
         f"-p:Version={manifest_version}",
         "-o", str(out_dir),
         "--nologo",
