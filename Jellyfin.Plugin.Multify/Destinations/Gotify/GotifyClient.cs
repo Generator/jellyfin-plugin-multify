@@ -5,6 +5,7 @@ using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 using Jellyfin.Plugin.Multify.Destinations;
 using Jellyfin.Plugin.Multify.Services;
 using MediaBrowser.Common.Net;
@@ -18,12 +19,15 @@ namespace Jellyfin.Plugin.Multify.Destinations.Gotify;
 public class GotifyOption : BaseOption
 {
     /// <summary>Gets or sets the Gotify application token.</summary>
+    [XmlElement("Token")]
     public string Token { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the message priority.</summary>
+    [XmlElement("Priority")]
     public int Priority { get; set; }
 
     /// <summary>Gets or sets the notification title.</summary>
+    [XmlElement("Title")]
     public string? Title { get; set; }
 }
 

@@ -107,11 +107,8 @@ public class UserDeletedNotifier : IEventConsumer<UserDeletedEventArgs>
 
 /// <summary>
 /// Notifier for user updated events.
-/// TODO: User entity doesn't inherit from EventArgs in Jellyfin 10.11,
-/// so it cannot be used with IEventConsumer&lt;T&gt;. This notifier is
-/// registered as a regular service and called manually when needed.
 /// </summary>
-public class UserUpdatedNotifier
+public class UserUpdatedNotifier : IEventConsumer<UserUpdatedEventArgs>
 {
     private readonly ILogger<UserUpdatedNotifier> _logger;
     private readonly IWebhookSender _webhookSender;
@@ -130,13 +127,10 @@ public class UserUpdatedNotifier
         _dashboardAlert = dashboardAlert;
     }
 
-    /// <summary>
-    /// Processes a user updated event.
-    /// </summary>
-    /// <param name="user">The updated user.</param>
-    /// <returns>A task representing the async operation.</returns>
-    public async Task OnUserUpdated(User user)
+    /// <inheritdoc />
+    public async Task OnEvent(UserUpdatedEventArgs eventArgs)
     {
+        var user = eventArgs.Argument;
         if (user is null)
         {
             return;

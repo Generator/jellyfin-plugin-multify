@@ -17,6 +17,8 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Plugins;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace Jellyfin.Plugin.Multify;
 
@@ -40,13 +42,22 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
             return config;
         });
 
+        // Register AdvancedOption as IOptions for MdblistService
+        serviceCollection.AddScoped<IOptions<AdvancedOption>>(sp =>
+        {
+            var config = sp.GetRequiredService<PluginConfiguration>();
+            return Options.Create(config.AdvancedSettings);
+        });
+
         // Register dashboard alert service
         serviceCollection.AddScoped<DashboardAlertService>();
 
         // Register filter services
         serviceCollection.AddSingleton<FilterService>();
         serviceCollection.AddSingleton<FilterValidator>();
-        serviceCollection.AddSingleton<LibraryCache>();
+
+        // Register LibraryCache as hosted service (with periodic cleanup)
+        serviceCollection.AddHostedService<LibraryCache>();
 
         // Register destination clients
         serviceCollection.AddScoped<IWebhookClient<TelegramOption>, TelegramClient>();
@@ -66,24 +77,30 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // Register test notification service
         serviceCollection.AddScoped<IMultifyTestService, MultifyTestService>();
 
+        // Register library event hosted service (subscribes to ILibraryManager events)
+        serviceCollection.AddHostedService<LibraryEventHostedService>();
+
         // Register event consumers
         serviceCollection.AddScoped<IEventConsumer<PlaybackStartEventArgs>, PlaybackStartNotifier>();
         serviceCollection.AddScoped<IEventConsumer<PlaybackStopEventArgs>, PlaybackStopNotifier>();
-        serviceCollection.AddScoped<IEventConsumer<AuthenticationResultEventArgs>, AuthenticationNotifier>();
-
-        // Library events (not IEventConsumer — ItemChangeEventArgs doesn't inherit EventArgs)
-        serviceCollection.AddScoped<ItemAddedNotifier>();
-        serviceCollection.AddScoped<ItemDeletedNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<PlaybackProgressEventArgs>, PlaybackProgressNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<AuthenticationResultEventArgs>, AuthenticationSuccessNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<AuthenticationRequestEventArgs>, AuthenticationFailureNotifier>();
 
         // User events
         serviceCollection.AddScoped<IEventConsumer<UserCreatedEventArgs>, UserCreatedNotifier>();
         serviceCollection.AddScoped<IEventConsumer<UserDeletedEventArgs>, UserDeletedNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<UserUpdatedEventArgs>, UserUpdatedNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<UserLockedOutEventArgs>, UserLockedOutNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<UserPasswordChangedEventArgs>, UserPasswordChangedNotifier>();
 
         // Task events
         serviceCollection.AddScoped<IEventConsumer<TaskCompletionEventArgs>, TaskCompletedNotifier>();
 
         // Plugin events
         serviceCollection.AddScoped<IEventConsumer<PluginUpdatedEventArgs>, PluginUpdatedNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<PluginInstalledEventArgs>, PluginInstalledNotifier>();
+        serviceCollection.AddScoped<IEventConsumer<PluginUninstalledEventArgs>, PluginUninstalledNotifier>();
 
         // Session events
         serviceCollection.AddScoped<IEventConsumer<SessionStartedEventArgs>, SessionStartedNotifier>();

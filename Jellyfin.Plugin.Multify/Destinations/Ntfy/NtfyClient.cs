@@ -5,6 +5,7 @@ using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 using Jellyfin.Plugin.Multify.Destinations;
 using Jellyfin.Plugin.Multify.Services;
 using MediaBrowser.Common.Net;
@@ -18,21 +19,27 @@ namespace Jellyfin.Plugin.Multify.Destinations.Ntfy;
 public class NtfyOption : BaseOption
 {
     /// <summary>Gets or sets the ntfy topic.</summary>
+    [XmlElement("Topic")]
     public string Topic { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the priority (1-5).</summary>
+    [XmlElement("Priority")]
     public int Priority { get; set; } = 3;
 
     /// <summary>Gets or sets whether to enable markdown.</summary>
+    [XmlElement("EnableMarkdown")]
     public bool EnableMarkdown { get; set; } = true;
 
     /// <summary>Gets or sets the access token.</summary>
+    [XmlElement("AccessToken")]
     public string? AccessToken { get; set; }
 
     /// <summary>Gets or sets the notification title.</summary>
+    [XmlElement("Title")]
     public string? Title { get; set; }
 
     /// <summary>Gets or sets comma-separated tags (first tag used as emoji icon).</summary>
+    [XmlElement("Tags")]
     public string? Tags { get; set; }
 }
 

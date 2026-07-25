@@ -90,6 +90,22 @@ Each destination supports the following shared options:
 | `SkipEmptyMessageBody` | Skip sending when message is empty |
 | `Template` | Base64-encoded message template |
 
+### Advanced Settings
+
+| Option | Description |
+|--------|-------------|
+| `DelaySeconds` | Delay in seconds between sequential notifications of the same service type (1-60, default: 2). Helps prevent rate limiting when multiple notifications are sent to the same destination. |
+| `MdblistCacheTtlHours` | MDBList ratings cache TTL in hours (0 to disable, default: 24) |
+| `MdblistTimeoutSeconds` | MDBList HTTP request timeout in seconds (5-60, default: 10) |
+| `MdblistMaxRetries` | Maximum retry attempts for MDBList requests (0-5, default: 3) |
+| `EnableDashboardAlerts` | Log notification events to Jellyfin admin dashboard activity feed |
+
+### Notification Delay Behavior
+
+When multiple notifications of the **same service type** (e.g., multiple Telegram destinations) are triggered for a single event, they are sent **sequentially** with the configured delay between each. Notifications to **different service types** (e.g., Telegram + Gotify + ntfy) are sent **in parallel** without delay.
+
+This prevents rate limiting from external services while maintaining fast delivery across different notification channels.
+
 ### Available Template Variables
 
 See [Template Variables](docs/template-variables.md) for the complete reference of all available template variables with examples.

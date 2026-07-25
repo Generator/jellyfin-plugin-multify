@@ -4,7 +4,9 @@ using System.Net.Http;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 using Jellyfin.Plugin.Multify.Destinations;
 using Jellyfin.Plugin.Multify.Services;
 using MediaBrowser.Common.Net;
@@ -35,48 +37,134 @@ public enum TelegramMessageType
 public class TelegramOption : BaseOption
 {
     /// <summary>Gets or sets the bot token.</summary>
+    [XmlElement("BotToken")]
     public string BotToken { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the chat ID.</summary>
+    [XmlElement("ChatId")]
     public string ChatId { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the parse mode.</summary>
+    [XmlElement("ParseMode")]
     public string ParseMode { get; set; } = "HTML";
 
     /// <summary>Gets or sets the message type.</summary>
+    [XmlElement("MessageType")]
     public TelegramMessageType MessageType { get; set; }
 
     /// <summary>Gets or sets the optional Telegram Forum Topic thread ID. When set, messages are sent to this specific topic.</summary>
+    [XmlElement("MessageThreadId")]
     public int? MessageThreadId { get; set; }
 }
 
 /// <summary>
-/// Client for the Telegram destination.
-/// </summary>
-public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
-{
-    // Telegram API uses Bot Token in the URL path (https://api.telegram.org/bot{token}/METHOD),
-    // NOT the WebhookUri from BaseOption. The WebhookUri field is ignored for Telegram destinations.
-    private const string ApiBaseUrl = "https://api.telegram.org/bot";
-
-    private readonly ILogger<TelegramClient> _logger;
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly TelegramMessageStore? _messageStore;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TelegramClient"/> class.
+    /// Client for the Telegram destination.
     /// </summary>
-    /// <param name="logger">Instance of the <see cref="ILogger{TelegramClient}"/> interface.</param>
-    /// <param name="httpClientFactory">Instance of the <see cref="IHttpClientFactory"/>.</param>
-    /// <param name="filterService">Instance of the <see cref="FilterService"/>.</param>
-    /// <param name="messageStore">Instance of the <see cref="TelegramMessageStore"/>.</param>
-    public TelegramClient(ILogger<TelegramClient> logger, IHttpClientFactory httpClientFactory, FilterService filterService, TelegramMessageStore? messageStore = null)
-        : base(filterService)
+    public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
     {
-        _logger = logger;
-        _httpClientFactory = httpClientFactory;
-        _messageStore = messageStore;
-    }
+        // Telegram API uses Bot Token in the URL path (https://api.telegram.org/bot{token}/METHOD),
+        // NOT the WebhookUri from BaseOption. The WebhookUri field is ignored for Telegram destinations.
+        private const string ApiBaseUrl = "https://api.telegram.org/bot";
+
+        private readonly ILogger<TelegramClient> _logger;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly TelegramMessageStore? _messageStore;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TelegramClient"/> class.
+        /// </summary>
+        /// <param name="logger">Instance of the <see cref="ILogger{TelegramClient}"/> interface.</param>
+        /// <param name="httpClientFactory">Instance of the <see cref="IHttpClientFactory"/>.</param>
+        /// <param name="filterService">Instance of the <see cref="FilterService"/>.</param>
+        /// <param name="messageStore">Instance of the <see cref="TelegramMessageStore"/>.</param>
+        public TelegramClient(ILogger<TelegramClient> logger, IHttpClientFactory httpClientFactory, FilterService filterService, TelegramMessageStore? messageStore = null)
+            : base(filterService)
+        {
+            _logger = logger;
+            _httpClientFactory = httpClientFactory;
+            _messageStore = messageStore;
+        }
+
+        /// <summary>
+        /// Escapes text for Telegram MarkdownV2 parse mode.
+        /// According to Telegram Bot API: characters _ * [ ] ( ) ~ ` > # + - = | { } . ! must be escaped with \.
+        /// </summary>
+        /// <param name="text">The text to escape.</param>
+        /// <returns>Escaped text safe for MarkdownV2.</returns>
+        public static string EscapeMarkdownV2(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            // Characters that must be escaped in MarkdownV2 (outside of code/pre entities)
+            // _ * [ ] ( ) ~ ` > # + - = | { } . !
+            var charsToEscape = new[] { '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!' };
+            var sb = new StringBuilder(text.Length * 2); // Estimate capacity
+
+            foreach (var c in text)
+            {
+                if (Array.IndexOf(charsToEscape, c) >= 0)
+                {
+                    sb.Append('\\');
+                }
+                sb.Append(c);
+            }
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Escapes text for Telegram Markdown (legacy) parse mode.
+        /// According to Telegram Bot API: characters _ * ` [ must be escaped with \.
+        /// </summary>
+        /// <param name="text">The text to escape.</param>
+        /// <returns>Escaped text safe for Markdown (legacy).</returns>
+        public static string EscapeMarkdown(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            // Characters that must be escaped in legacy Markdown
+            var charsToEscape = new[] { '_', '*', '`', '[' };
+            var sb = new StringBuilder(text.Length * 2);
+
+            foreach (var c in text)
+            {
+                if (Array.IndexOf(charsToEscape, c) >= 0)
+                {
+                    sb.Append('\\');
+                }
+                sb.Append(c);
+            }
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Escapes text based on the Telegram parse mode.
+        /// </summary>
+        /// <param name="text">The text to escape.</param>
+        /// <param name="parseMode">The parse mode (MarkdownV2, Markdown, HTML, or null/empty).</param>
+        /// <returns>Escaped text appropriate for the parse mode.</returns>
+        public static string EscapeForParseMode(string text, string? parseMode)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(parseMode))
+            {
+                return text;
+            }
+
+            return parseMode.ToLowerInvariant() switch
+            {
+                "markdownv2" => EscapeMarkdownV2(text),
+                "markdown" => EscapeMarkdown(text),
+                "html" => text, // HTML uses different escaping (handled by user in template)
+                _ => text
+            };
+        }
 
     /// <summary>
     /// Creates a base payload dictionary with chat_id and optional message_thread_id.
@@ -113,6 +201,9 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
             }
 
             var body = option.GetMessageBody(data);
+            // Escape message body for Markdown/MarkdownV2 parse modes to prevent formatting breaks
+            body = EscapeForParseMode(body, option.ParseMode);
+
             if (!SendMessageBody(_logger, option, ref body))
             {
                 return;
@@ -161,6 +252,9 @@ public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
 
     private async Task EditMessageAsync(TelegramOption option, Dictionary<string, object> data, string body, long messageId)
     {
+        // Escape message body for Markdown/MarkdownV2 parse modes
+        body = EscapeForParseMode(body, option.ParseMode);
+
         try
         {
             switch (option.MessageType)

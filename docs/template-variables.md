@@ -25,6 +25,7 @@ Available when notifications include item data (playback, library events):
 | `{{ItemUrl}}` | Full Jellyfin URL to the item | `https://jellyfin.example.com/web/#/details?id=3c9cf20670bedf5866ff224850824948` |
 | `{{ItemShortId}}` | Short item ID (first 10 chars of GUID) | `3c9cf20670` |
 | `{{ProductionYear}}` | Production year | `2010` |
+| `{{Year}}` | Production year (alias for ProductionYear) | `2010` |
 | `{{Overview}}` | Item plot summary | `A thief who steals corporate secrets...` |
 | `{{Genres}}` | Genres as comma-separated string | `Action, Sci-Fi, Thriller` |
 | `{{PremiereDate}}` | Release date (YYYY-MM-DD) | `2010-07-16` |

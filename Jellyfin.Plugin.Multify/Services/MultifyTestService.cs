@@ -130,24 +130,135 @@ public class MultifyTestService : IMultifyTestService
     {
         return new Dictionary<string, object>
         {
+            // Base Variables
             ["Title"] = "Test Notification",
             ["Body"] = "This is a test message to verify your notification configuration is working correctly.",
             ["Timestamp"] = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", CultureInfo.InvariantCulture),
-            ["ItemType"] = "Movie",
-            ["ItemName"] = "Test Movie (2024)",
             ["ServerName"] = "Jellyfin Server",
+            ["NotificationType"] = "PlaybackStart",
+
+            // Item Variables
+            ["ItemId"] = "3c9cf20670bedf5866ff224850824948",
+            ["ItemName"] = "Test Movie (2024)",
+            ["ItemType"] = "Movie",
+            ["LibraryName"] = "Movies",
+            ["LibraryId"] = "lib123",
+            ["ItemUrl"] = "https://jellyfin.example.com/web/#/details?id=3c9cf20670bedf5866ff224850824948",
+            ["ItemShortId"] = "3c9cf20670",
+            ["ProductionYear"] = "2024",
+            ["Overview"] = "A test movie overview for template verification.",
+            ["Genres"] = "Action, Sci-Fi, Thriller",
+            ["PremiereDate"] = "2024-01-15",
+            ["Runtime"] = "2h 28m",
+            ["OfficialRating"] = "PG-13",
+            ["CommunityRating"] = "8.8",
+            ["CriticRating"] = "74",
+            ["Tagline"] = "Your mind is the scene of the crime",
+            ["OriginalTitle"] = "Test Movie",
+            ["Studios"] = "Warner Bros., Legendary",
+            ["ProductionLocations"] = "USA, UK",
+            ["Tags"] = "favorite, sci-fi",
+            ["Path"] = "/media/movies/Test Movie.mkv",
+            ["Container"] = "mkv",
+            ["DateCreated"] = "2024-01-15T10:30:00.000Z",
+
+            // TV Show Variables
+            ["SeriesName"] = "Test Series",
+            ["SeasonNumber"] = "1",
+            ["SeasonNumber00"] = "01",
+            ["SeasonNumber000"] = "001",
+            ["SeasonName"] = "Season 1",
+            ["EpisodeNumber"] = "1",
+            ["EpisodeNumber00"] = "01",
+            ["EpisodeNumber000"] = "001",
+            ["SeriesStatus"] = "Continuing",
+
+            // Provider IDs
+            ["ImdbId"] = "tt1375666",
+            ["TmdbId"] = "27205",
+            ["TvdbId"] = "12345",
+
+            // User Variables
             ["UserId"] = Guid.Empty.ToString(),
             ["Username"] = "TestUser",
+
+            // Session Variables
+            ["Client"] = "Jellyfin Web",
+            ["DeviceName"] = "Chrome on Windows",
+            ["RemoteEndPoint"] = "192.168.1.100",
+            ["SessionId"] = "session123",
+            ["PlayMethod"] = "DirectPlay",
+            ["IsPaused"] = "False",
+            ["VolumeLevel"] = "80",
+            ["IsMuted"] = "False",
+            ["CanSeek"] = "True",
+            ["AudioStreamIndex"] = "1",
+            ["SubtitleStreamIndex"] = "0",
+            ["RepeatMode"] = "Off",
+            ["PlaybackOrder"] = "Default",
+            ["MediaSourceId"] = "source123",
+            ["LiveStreamId"] = "live123",
+
+            // Playback Variables
+            ["PlaybackPositionTicks"] = "1234567890",
+            ["PlaybackPosition"] = "00:15:30",
+            ["IsAutomated"] = "False",
+            ["PlaySessionId"] = "session456",
+            ["PlayedToCompletion"] = "False",
+
+            // Rating Variables (MDBList)
+            ["MdblistScore"] = "8.5",
+            ["ImdbRating"] = "8.8",
+            ["TmdbRating"] = "8.4",
+            ["RottenTomatoesRating"] = "87",
+            ["MetacriticRating"] = "74",
+            ["LetterboxdRating"] = "4.2",
+            ["PopcornRating"] = "8.5",
+            ["TraktRating"] = "8.6",
+            ["MyAnimeListRating"] = "9.0",
+            ["AnilistRating"] = "8.7",
+            ["RogerEbertRating"] = "4.0",
+
+            // Jellyfin Image URLs
+            ["PrimaryImageUrl"] = "https://jellyfin.example.com/Items/3c9cf20670bedf5866ff224850824948/Images/Primary",
+            ["BackdropImageUrl"] = "https://jellyfin.example.com/Items/3c9cf20670bedf5866ff224850824948/Images/Backdrop",
+            ["ThumbImageUrl"] = "https://jellyfin.example.com/Items/3c9cf20670bedf5866ff224850824948/Images/Thumbnail",
+            ["LogoImageUrl"] = "https://jellyfin.example.com/Items/3c9cf20670bedf5866ff224850824948/Images/Logo",
+            ["BannerImageUrl"] = "https://jellyfin.example.com/Items/3c9cf20670bedf5866ff224850824948/Images/Banner",
+
+            // Trailer Variables
+            ["TrailerUrl"] = "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            ["TrailerYtId"] = "dQw4w9WgXcQ",
+
+            // TMDb Image Variables
             ["TmdbPosterUrl"] = "https://image.tmdb.org/t/p/w500/9gk7adSYeDvHkCSEhniJIsaVti8.jpg",
             ["TmdbBackdropUrl"] = "https://image.tmdb.org/t/p/w1280/9gk7adSYeDvHkCSEhniJIsaVti8.jpg",
             ["TmdbProfileUrl"] = "https://image.tmdb.org/t/p/w185/9gk7adSYeDvHkCSEhniJIsaVti8.jpg",
             ["TmdbStillUrl"] = "https://image.tmdb.org/t/p/w300/9gk7adSYeDvHkCSEhniJIsaVti8.jpg",
             ["TmdbLogoUrl"] = "https://image.tmdb.org/t/p/w500/9gk7adSYeDvHkCSEhniJIsaVti8.jpg",
+
+            // TVDB Image Variables
             ["TvdbPosterUrl"] = "https://artworks.thetvdb.com/banners/posters/73255-1.jpg",
             ["TvdbBannerUrl"] = "https://artworks.thetvdb.com/banners/graphical/73255-g1.jpg",
             ["TvdbFanartUrl"] = "https://artworks.thetvdb.com/banners/fanart/original/73255-1.jpg",
             ["TvdbSmallUrl"] = "https://artworks.thetvdb.com/banners/posters/73255-1.jpg",
-            ["TvdbSeasonUrl"] = "https://artworks.thetvdb.com/banners/seasons/73255-1.jpg"
+            ["TvdbSeasonUrl"] = "https://artworks.thetvdb.com/banners/seasons/73255-1.jpg",
+
+            // Task Variables
+            ["TaskName"] = "Refresh Library",
+            ["TaskId"] = "task123",
+            ["Status"] = "Completed",
+            ["StartTime"] = "2024-01-15T10:00:00.000Z",
+            ["EndTime"] = "2024-01-15T10:05:00.000Z",
+            ["Duration"] = "00:05:00",
+
+            // Plugin Variables
+            ["PluginName"] = "Intro Skipper",
+            ["PluginId"] = "plugin123",
+            ["NewVersion"] = "1.2.3",
+
+            // Year (used in examples but not in table)
+            ["Year"] = "2024"
         };
     }
 

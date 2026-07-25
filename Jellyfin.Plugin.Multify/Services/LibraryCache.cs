@@ -1,18 +1,22 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Services;
 
 /// <summary>
-/// Cache for library ID to name mappings.
+/// Cache for library ID to name mappings with periodic cleanup.
 /// </summary>
-public class LibraryCache
+public class LibraryCache : IHostedService, IDisposable
 {
     private readonly ILogger<LibraryCache> _logger;
     private readonly ConcurrentDictionary<Guid, CacheEntry> _cache = new();
     private readonly TimeSpan _defaultTtl = TimeSpan.FromMinutes(5);
+    private readonly TimeSpan _cleanupInterval = TimeSpan.FromMinutes(10);
+    private Timer? _cleanupTimer;
 
     private long _hitCount;
     private long _missCount;
@@ -24,6 +28,23 @@ public class LibraryCache
     public LibraryCache(ILogger<LibraryCache> logger)
     {
         _logger = logger;
+    }
+
+    /// <inheritdoc />
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        _cleanupTimer = new Timer(CleanupExpiredEntries, null, _cleanupInterval, _cleanupInterval);
+        _logger.LogInformation("Library cache started with periodic cleanup every {Interval} minutes", _cleanupInterval.TotalMinutes);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        _cleanupTimer?.Dispose();
+        _cleanupTimer = null;
+        _logger.LogInformation("Library cache stopped");
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -115,6 +136,36 @@ public class LibraryCache
             misses,
             hitRate,
             count);
+    }
+
+    /// <summary>
+    /// Periodically cleans up expired cache entries.
+    /// </summary>
+    private void CleanupExpiredEntries(object? state)
+    {
+        var now = DateTime.UtcNow;
+        var removedCount = 0;
+
+        foreach (var kvp in _cache)
+        {
+            if (now >= kvp.Value.Expiry)
+            {
+                if (_cache.TryRemove(kvp.Key, out _))
+                {
+                    removedCount++;
+                }
+            }
+        }
+
+        if (removedCount > 0)
+        {
+            _logger.LogDebug("Library cache cleanup: removed {Count} expired entries", removedCount);
+        }
+    }
+
+    public void Dispose()
+    {
+        _cleanupTimer?.Dispose();
     }
 
     /// <summary>

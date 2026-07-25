@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using MediaBrowser.Common.Net;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Jellyfin.Plugin.Multify.Services;
 
@@ -17,16 +19,22 @@ public class MdblistService
 
     private readonly ILogger<MdblistService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly AdvancedOption _advancedOptions;
+
+    // In-memory cache for ratings (key: "imdb:{mediaType}:{imdbId}" or "tmdb:{mediaType}:{tmdbId}")
+    private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MdblistService"/> class.
     /// </summary>
     /// <param name="logger">Instance of the <see cref="ILogger{MdblistService}"/> interface.</param>
     /// <param name="httpClientFactory">Instance of the <see cref="IHttpClientFactory"/>.</param>
-    public MdblistService(ILogger<MdblistService> logger, IHttpClientFactory httpClientFactory)
+    /// <param name="advancedOptions">Advanced plugin options.</param>
+    public MdblistService(ILogger<MdblistService> logger, IHttpClientFactory httpClientFactory, IOptions<AdvancedOption> advancedOptions)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
+        _advancedOptions = advancedOptions.Value;
     }
 
     /// <summary>
@@ -43,31 +51,8 @@ public class MdblistService
             return null;
         }
 
-        try
-        {
-            var uri = new Uri($"{ApiBaseUrl}/imdb/{mediaType}/{imdbId}/");
-            var request = new HttpRequestMessage(HttpMethod.Get, uri);
-            request.Headers.Add("Authorization", $"Bearer {apiKey}");
-
-            using var client = _httpClientFactory.CreateClient(NamedClient.Default);
-            using var response = await client.SendAsync(request).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Failed to fetch ratings from MDBList for {ImdbId}: {StatusCode}", imdbId, response.StatusCode);
-                return null;
-            }
-
-            var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var result = JsonSerializer.Deserialize<JsonElement>(json);
-
-            return ExtractRatings(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error fetching ratings from MDBList for {ImdbId}", imdbId);
-            return null;
-        }
+        var cacheKey = $"imdb:{mediaType}:{imdbId}";
+        return await GetRatingsInternalAsync(apiKey, cacheKey, () => new Uri($"{ApiBaseUrl}/imdb/{mediaType}/{imdbId}/")).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -84,45 +69,131 @@ public class MdblistService
             return null;
         }
 
-        try
+        var cacheKey = $"tmdb:{mediaType}:{tmdbId}";
+        return await GetRatingsInternalAsync(apiKey, cacheKey, () => new Uri($"{ApiBaseUrl}/tmdb/{mediaType}/{tmdbId}/")).ConfigureAwait(false);
+    }
+
+    private async Task<Dictionary<string, object>?> GetRatingsInternalAsync(string apiKey, string cacheKey, Func<Uri> uriFactory)
+    {
+        // Check cache first
+        if (_advancedOptions.MdblistCacheTtlHours > 0 && _cache.TryGetValue(cacheKey, out var cachedEntry))
         {
-            var uri = new Uri($"{ApiBaseUrl}/tmdb/{mediaType}/{tmdbId}/");
-            var request = new HttpRequestMessage(HttpMethod.Get, uri);
-            request.Headers.Add("Authorization", $"Bearer {apiKey}");
-
-            using var client = _httpClientFactory.CreateClient(NamedClient.Default);
-            using var response = await client.SendAsync(request).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
+            if (DateTime.UtcNow < cachedEntry.Expiry)
             {
-                _logger.LogWarning("Failed to fetch ratings from MDBList for TMDb {TmdbId}: {StatusCode}", tmdbId, response.StatusCode);
+                _logger.LogDebug("MDBList cache hit for {CacheKey}", cacheKey);
+                return cachedEntry.Ratings;
+            }
+            else
+            {
+                // Expired, remove from cache
+                _cache.TryRemove(cacheKey, out _);
+            }
+        }
+
+        // Fetch with retry logic
+        var ratings = await FetchWithRetryAsync(apiKey, uriFactory, cacheKey).ConfigureAwait(false);
+
+        // Cache the result if successful
+        if (ratings != null && _advancedOptions.MdblistCacheTtlHours > 0)
+        {
+            var expiry = DateTime.UtcNow.AddHours(_advancedOptions.MdblistCacheTtlHours);
+            _cache[cacheKey] = new CacheEntry { Ratings = ratings, Expiry = expiry };
+            _logger.LogDebug("Cached MDBList ratings for {CacheKey} (TTL: {TtlHours}h)", cacheKey, _advancedOptions.MdblistCacheTtlHours);
+        }
+
+        return ratings;
+    }
+
+    private async Task<Dictionary<string, object>?> FetchWithRetryAsync(string apiKey, Func<Uri> uriFactory, string cacheKey)
+    {
+        var maxRetries = Math.Max(0, Math.Min(5, _advancedOptions.MdblistMaxRetries));
+        var timeout = TimeSpan.FromSeconds(Math.Max(5, Math.Min(60, _advancedOptions.MdblistTimeoutSeconds)));
+
+        for (int attempt = 0; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                var uri = uriFactory();
+                var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                request.Headers.Add("Authorization", $"Bearer {apiKey}");
+
+                using var client = _httpClientFactory.CreateClient(NamedClient.Default);
+                client.Timeout = timeout;
+
+                using var response = await client.SendAsync(request).ConfigureAwait(false);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var result = JsonSerializer.Deserialize<JsonElement>(json);
+                    return ExtractRatings(result);
+                }
+
+                // Handle rate limiting (HTTP 429)
+                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                {
+                    var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(Math.Pow(2, attempt) * 2);
+                    _logger.LogWarning("MDBList rate limited (429) for {CacheKey}. Retrying after {RetryAfter}s (attempt {Attempt}/{MaxRetries})",
+                        cacheKey, retryAfter.TotalSeconds, attempt + 1, maxRetries + 1);
+
+                    if (attempt < maxRetries)
+                    {
+                        await Task.Delay(retryAfter).ConfigureAwait(false);
+                        continue;
+                    }
+                }
+
+                // Log specific error details
+                var errorContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                _logger.LogWarning("Failed to fetch ratings from MDBList for {CacheKey}: {StatusCode} - {ErrorContent}",
+                    cacheKey, response.StatusCode, errorContent);
+
                 return null;
             }
+            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+            {
+                _logger.LogWarning("MDBList request timeout for {CacheKey} after {Timeout}s (attempt {Attempt}/{MaxRetries})",
+                    cacheKey, timeout.TotalSeconds, attempt + 1, maxRetries + 1);
 
-            var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var result = JsonSerializer.Deserialize<JsonElement>(json);
+                if (attempt < maxRetries)
+                {
+                    var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt) * 2); // Exponential backoff: 2s, 4s, 8s...
+                    await Task.Delay(delay).ConfigureAwait(false);
+                    continue;
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(ex, "MDBList HTTP error for {CacheKey} (attempt {Attempt}/{MaxRetries})",
+                    cacheKey, attempt + 1, maxRetries + 1);
 
-            return ExtractRatings(result);
+                if (attempt < maxRetries)
+                {
+                    var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt) * 2);
+                    await Task.Delay(delay).ConfigureAwait(false);
+                    continue;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Unexpected error fetching ratings from MDBList for {CacheKey}", cacheKey);
+                return null;
+            }
         }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error fetching ratings from MDBList for TMDb {TmdbId}", tmdbId);
-            return null;
-        }
+
+        return null;
     }
 
     private static Dictionary<string, object> ExtractRatings(JsonElement result)
     {
         var ratings = new Dictionary<string, object>();
 
-        // Add MDBList score
+        // Add MDBList score (allow zero scores)
         if (result.TryGetProperty("score", out var scoreElement))
         {
             var score = scoreElement.GetDouble();
-            if (score > 0)
-            {
-                ratings["MdblistScore"] = score;
-            }
+            // Include zero scores as they may be valid
+            ratings["MdblistScore"] = score;
         }
 
         // Add ratings from different providers
@@ -136,9 +207,9 @@ public class MdblistService
                     var source = sourceElement.GetString();
                     var ratingScore = ratingScoreElement.GetDouble();
 
-                    if (!string.IsNullOrEmpty(source) && ratingScore > 0)
+                    if (!string.IsNullOrEmpty(source))
                     {
-                        // Normalize source name
+                        // Include zero scores as they may be valid
                         var normalizedName = source.ToLowerInvariant() switch
                         {
                             "imdb" => "ImdbRating",
@@ -161,5 +232,29 @@ public class MdblistService
         }
 
         return ratings;
+    }
+
+    /// <summary>
+    /// Clears the MDBList cache.
+    /// </summary>
+    public void ClearCache()
+    {
+        _cache.Clear();
+        _logger.LogInformation("MDBList cache cleared");
+    }
+
+    /// <summary>
+    /// Gets cache statistics.
+    /// </summary>
+    /// <returns>Number of cached entries.</returns>
+    public int GetCacheCount()
+    {
+        return _cache.Count;
+    }
+
+    private sealed class CacheEntry
+    {
+        public Dictionary<string, object> Ratings { get; set; } = new();
+        public DateTime Expiry { get; set; }
     }
 }

@@ -16,6 +16,7 @@ public class TelegramMessageStore
     private readonly ILogger<TelegramMessageStore> _logger;
     private readonly string _storePath;
     private readonly ConcurrentDictionary<string, long> _messageStore = new();
+    private readonly SemaphoreSlim _fileLock = new(1, 1);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelegramMessageStore"/> class.
@@ -26,7 +27,7 @@ public class TelegramMessageStore
     {
         _logger = logger;
         _storePath = Path.Combine(applicationPaths.DataPath, "multify-telegram-messages.json");
-        LoadStore();
+        _ = LoadStoreAsync();
     }
 
     /// <summary>
@@ -51,7 +52,7 @@ public class TelegramMessageStore
     {
         var key = GetKey(chatId, itemId);
         _messageStore[key] = messageId;
-        SaveStore();
+        _ = SaveStoreAsync();
     }
 
     /// <summary>
@@ -63,7 +64,7 @@ public class TelegramMessageStore
     {
         var key = GetKey(chatId, itemId);
         _messageStore.TryRemove(key, out _);
-        SaveStore();
+        _ = SaveStoreAsync();
     }
 
     /// <summary>
@@ -80,7 +81,7 @@ public class TelegramMessageStore
         }
 
         _messageStore.Clear();
-        SaveStore();
+        _ = SaveStoreAsync();
         _logger.LogInformation("Cleared {Count} entries from Telegram message store", count);
     }
 
@@ -89,13 +90,14 @@ public class TelegramMessageStore
         return $"{chatId}:{itemId}";
     }
 
-    private void LoadStore()
+    private async Task LoadStoreAsync()
     {
+        await _fileLock.WaitAsync().ConfigureAwait(false);
         try
         {
             if (File.Exists(_storePath))
             {
-                var json = File.ReadAllText(_storePath);
+                var json = await File.ReadAllTextAsync(_storePath).ConfigureAwait(false);
                 var data = JsonSerializer.Deserialize<ConcurrentDictionary<string, long>>(json);
                 if (data != null)
                 {
@@ -110,18 +112,27 @@ public class TelegramMessageStore
         {
             _logger.LogWarning(ex, "Failed to load Telegram message store");
         }
+        finally
+        {
+            _fileLock.Release();
+        }
     }
 
-    private void SaveStore()
+    private async Task SaveStoreAsync()
     {
+        await _fileLock.WaitAsync().ConfigureAwait(false);
         try
         {
             var json = JsonSerializer.Serialize(_messageStore);
-            File.WriteAllText(_storePath, json);
+            await File.WriteAllTextAsync(_storePath, json).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to save Telegram message store");
+        }
+        finally
+        {
+            _fileLock.Release();
         }
     }
 }
