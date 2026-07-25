@@ -44,7 +44,7 @@ public class PluginUninstalledNotifier : IEventConsumer<PluginUninstalledEventAr
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.PluginUninstalled);
         data["PluginName"] = pluginInfo.Name ?? "Unknown";
-        data["PluginId"] = pluginInfo.Id?.ToString() ?? "Unknown";
+        data["PluginId"] = pluginInfo.Id.ToString();
         data["PluginVersion"] = pluginInfo.Version?.ToString() ?? "Unknown";
 
         await _webhookSender.SendNotification(

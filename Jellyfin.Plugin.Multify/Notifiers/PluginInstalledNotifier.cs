@@ -44,7 +44,7 @@ public class PluginInstalledNotifier : IEventConsumer<PluginInstalledEventArgs>
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.PluginInstalled);
         data["PluginName"] = installationInfo.Name ?? "Unknown";
-        data["PluginId"] = installationInfo.Id?.ToString() ?? "Unknown";
+        data["PluginId"] = installationInfo.Id.ToString();
         data["PluginVersion"] = installationInfo.Version?.ToString() ?? "Unknown";
         data["SourceUrl"] = installationInfo.SourceUrl ?? string.Empty;
 

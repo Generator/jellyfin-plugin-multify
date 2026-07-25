@@ -43,7 +43,7 @@ public class PluginUpdatedNotifier : IEventConsumer<PluginUpdatedEventArgs>
 
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.PluginUpdated);
         data["PluginName"] = pluginInfo.Name ?? "Unknown";
-        data["PluginId"] = pluginInfo.Id ?? "Unknown";
+        data["PluginId"] = pluginInfo.Id.ToString();
         data["PluginVersion"] = pluginInfo.Version?.ToString() ?? "Unknown";
 
         await _webhookSender.SendNotification(

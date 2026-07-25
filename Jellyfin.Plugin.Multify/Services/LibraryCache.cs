@@ -40,12 +40,14 @@ public sealed class LibraryCache : IHostedService, IDisposable
     }
 
     /// <inheritdoc />
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _cleanupTimer?.Dispose();
-        _cleanupTimer = null;
+        if (_cleanupTimer != null)
+        {
+            await _cleanupTimer.DisposeAsync();
+            _cleanupTimer = null;
+        }
         _logger.LogInformation("Library cache stopped");
-        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -167,21 +169,21 @@ public sealed class LibraryCache : IHostedService, IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        Dispose(true);
+        DisposeAsync().AsTask().Wait();
         GC.SuppressFinalize(this);
     }
 
     /// <summary>
     /// Disposes the resources used by the LibraryCache.
     /// </summary>
-    /// <param name="disposing">True if called from Dispose(), false if called from finalizer.</param>
-    private void Dispose(bool disposing)
+    /// <returns>A task representing the asynchronous dispose operation.</returns>
+    public async ValueTask DisposeAsync()
     {
         if (!_disposed)
         {
-            if (disposing)
+            if (_cleanupTimer != null)
             {
-                _cleanupTimer?.Dispose();
+                await _cleanupTimer.DisposeAsync();
                 _cleanupTimer = null;
             }
 
