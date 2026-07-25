@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Jellyfin.Plugin.Multify.Configuration;
 using Jellyfin.Plugin.Multify.Destinations;
 using Jellyfin.Plugin.Multify.Helpers;
+using MediaBrowser.Controller.Events;
 using MediaBrowser.Controller.Events.Updates;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.Logging;

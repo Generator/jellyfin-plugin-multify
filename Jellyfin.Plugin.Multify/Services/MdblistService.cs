@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.Multify.Configuration;
 using MediaBrowser.Common.Net;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
