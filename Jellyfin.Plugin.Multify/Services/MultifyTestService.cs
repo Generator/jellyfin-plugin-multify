@@ -126,7 +126,7 @@ public class MultifyTestService : IMultifyTestService
         }
     }
 
-private static Dictionary<string, object> CreateTestData()
+    private static Dictionary<string, object> CreateTestData()
     {
         return new Dictionary<string, object>
         {

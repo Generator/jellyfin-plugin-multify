@@ -54,21 +54,21 @@ public class PlaybackStopNotifier : IEventConsumer<PlaybackStopEventArgs>
         data.AddItemData(eventArgs.Item);
         data.AddPlaybackStopData(eventArgs);
 
-        if (eventArgs.Session is not null)
+if (eventArgs.Session is not null)
         {
             data.AddSessionInfo(eventArgs.Session);
         }
 
-foreach (var user in eventArgs.Users)
+        foreach (var user in eventArgs.Users)
+        {
+            var userData = new Dictionary<string, object>(data)
             {
-                var userData = new Dictionary<string, object>(data)
-                {
-                    ["Username"] = user.Username ?? "Unknown",
-                    ["NotificationUsername"] = user.Username ?? "Unknown",
-                    ["UserId"] = user.Id.ToString()
-                };
+                ["Username"] = user.Username ?? "Unknown",
+                ["NotificationUsername"] = user.Username ?? "Unknown",
+                ["UserId"] = user.Id.ToString()
+            };
 
-                await _webhookSender.SendNotification(
+            await _webhookSender.SendNotification(
                 NotificationType.PlaybackStop,
                 userData,
                 eventArgs.Item.GetType()).ConfigureAwait(false);
