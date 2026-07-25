@@ -4,27 +4,26 @@ using Jellyfin.Plugin.Multify.Destinations;
 using Jellyfin.Plugin.Multify.Helpers;
 using MediaBrowser.Controller.Events;
 using MediaBrowser.Controller.Events.Updates;
-using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Notifiers;
 
 /// <summary>
-/// Notifier for plugin uninstalled events.
+/// Notifier for plugin updated events.
 /// </summary>
-public class PluginUninstalledNotifier : IEventConsumer<PluginUninstalledEventArgs>
+public class PluginUpdatedNotifier : IEventConsumer<PluginUpdatedEventArgs>
 {
-    private readonly ILogger<PluginUninstalledNotifier> _logger;
+    private readonly ILogger<PluginUpdatedNotifier> _logger;
     private readonly IWebhookSender _webhookSender;
     private readonly DashboardAlertService _dashboardAlert;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PluginUninstalledNotifier"/> class.
+    /// Initializes a new instance of the <see cref="PluginUpdatedNotifier"/> class.
     /// </summary>
-    /// <param name="logger">Instance of the <see cref="ILogger{PluginUninstalledNotifier}"/> interface.</param>
+    /// <param name="logger">Instance of the <see cref="ILogger{PluginUpdatedNotifier}"/> interface.</param>
     /// <param name="webhookSender">Instance of the <see cref="IWebhookSender"/> interface.</param>
     /// <param name="dashboardAlert">Instance of the <see cref="DashboardAlertService"/>.</param>
-    public PluginUninstalledNotifier(ILogger<PluginUninstalledNotifier> logger, IWebhookSender webhookSender, DashboardAlertService dashboardAlert)
+    public PluginUpdatedNotifier(ILogger<PluginUpdatedNotifier> logger, IWebhookSender webhookSender, DashboardAlertService dashboardAlert)
     {
         _logger = logger;
         _webhookSender = webhookSender;
@@ -32,7 +31,7 @@ public class PluginUninstalledNotifier : IEventConsumer<PluginUninstalledEventAr
     }
 
     /// <inheritdoc />
-    public async Task OnEvent(PluginUninstalledEventArgs eventArgs)
+    public async Task OnEvent(PluginUpdatedEventArgs eventArgs)
     {
         var pluginInfo = eventArgs.Argument;
         if (pluginInfo is null)
@@ -40,21 +39,21 @@ public class PluginUninstalledNotifier : IEventConsumer<PluginUninstalledEventAr
             return;
         }
 
-        _logger.LogDebug("Plugin uninstalled event received: {PluginName} ({PluginId})", pluginInfo.Name, pluginInfo.Id);
+        _logger.LogDebug("Plugin updated event received: {PluginName} ({PluginId})", pluginInfo.Name, pluginInfo.Id);
 
-        var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.PluginUninstalled);
+        var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.PluginUpdated);
         data["PluginName"] = pluginInfo.Name ?? "Unknown";
-        data["PluginId"] = pluginInfo.Id?.ToString() ?? "Unknown";
+        data["PluginId"] = pluginInfo.Id ?? "Unknown";
         data["PluginVersion"] = pluginInfo.Version?.ToString() ?? "Unknown";
 
         await _webhookSender.SendNotification(
-            NotificationType.PluginUninstalled,
+            NotificationType.PluginUpdated,
             data).ConfigureAwait(false);
 
-        _logger.LogInformation("Plugin uninstalled notification sent for {PluginName}", pluginInfo.Name);
+        _logger.LogInformation("Plugin updated notification sent for {PluginName}", pluginInfo.Name);
 
         await _dashboardAlert.LogAsync(
-            $"Plugin uninstalled: {pluginInfo.Name}",
-            "MultifyPluginUninstalled").ConfigureAwait(false);
+            $"Plugin updated: {pluginInfo.Name}",
+            "MultifyPluginUpdated").ConfigureAwait(false);
     }
 }

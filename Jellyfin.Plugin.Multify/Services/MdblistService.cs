@@ -134,8 +134,12 @@ public class MdblistService
                 if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
                 {
                     var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(Math.Pow(2, attempt) * 2);
-                    _logger.LogWarning("MDBList rate limited (429) for {CacheKey}. Retrying after {RetryAfter}s (attempt {Attempt}/{MaxRetries})",
-                        cacheKey, retryAfter.TotalSeconds, attempt + 1, maxRetries + 1);
+                    _logger.LogWarning(
+                "MDBList rate limited (429) for {CacheKey}. Retrying after {RetryAfter}s (attempt {Attempt}/{MaxRetries})",
+                cacheKey,
+                retryAfter.TotalSeconds,
+                attempt + 1,
+                maxRetries + 1);
 
                     if (attempt < maxRetries)
                     {
@@ -146,15 +150,22 @@ public class MdblistService
 
                 // Log specific error details
                 var errorContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                _logger.LogWarning("Failed to fetch ratings from MDBList for {CacheKey}: {StatusCode} - {ErrorContent}",
-                    cacheKey, response.StatusCode, errorContent);
+                _logger.LogWarning(
+                "Failed to fetch ratings from MDBList for {CacheKey}: {StatusCode} - {ErrorContent}",
+                cacheKey,
+                response.StatusCode,
+                errorContent);
 
                 return null;
             }
             catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
             {
-                _logger.LogWarning("MDBList request timeout for {CacheKey} after {Timeout}s (attempt {Attempt}/{MaxRetries})",
-                    cacheKey, timeout.TotalSeconds, attempt + 1, maxRetries + 1);
+                _logger.LogWarning(
+                "MDBList request timeout for {CacheKey} after {Timeout}s (attempt {Attempt}/{MaxRetries})",
+                cacheKey,
+                timeout.TotalSeconds,
+                attempt + 1,
+                maxRetries + 1);
 
                 if (attempt < maxRetries)
                 {
@@ -165,8 +176,12 @@ public class MdblistService
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogWarning(ex, "MDBList HTTP error for {CacheKey} (attempt {Attempt}/{MaxRetries})",
-                    cacheKey, attempt + 1, maxRetries + 1);
+                _logger.LogWarning(
+                ex,
+                "MDBList HTTP error for {CacheKey} (attempt {Attempt}/{MaxRetries})",
+                cacheKey,
+                attempt + 1,
+                maxRetries + 1);
 
                 if (attempt < maxRetries)
                 {
@@ -177,7 +192,10 @@ public class MdblistService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Unexpected error fetching ratings from MDBList for {CacheKey}", cacheKey);
+                _logger.LogWarning(
+                ex,
+                "Unexpected error fetching ratings from MDBList for {CacheKey}",
+                cacheKey);
                 return null;
             }
         }

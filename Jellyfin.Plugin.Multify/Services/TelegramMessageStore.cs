@@ -12,12 +12,13 @@ namespace Jellyfin.Plugin.Multify.Services;
 /// <summary>
 /// Service for storing Telegram message IDs for editing existing notifications.
 /// </summary>
-public class TelegramMessageStore
+public sealed class TelegramMessageStore : IDisposable
 {
     private readonly ILogger<TelegramMessageStore> _logger;
     private readonly string _storePath;
     private readonly ConcurrentDictionary<string, long> _messageStore = new();
     private readonly SemaphoreSlim _fileLock = new(1, 1);
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelegramMessageStore"/> class.
@@ -134,6 +135,30 @@ public class TelegramMessageStore
         finally
         {
             _fileLock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Disposes the resources used by the TelegramMessageStore.
+    /// </summary>
+    /// <param name="disposing">True if called from Dispose(), false if called from finalizer.</param>
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _fileLock?.Dispose();
+            }
+
+            _disposed = true;
         }
     }
 }
