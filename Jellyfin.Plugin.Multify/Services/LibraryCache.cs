@@ -44,7 +44,7 @@ public sealed class LibraryCache : IHostedService, IDisposable
     {
         if (_cleanupTimer != null)
         {
-            await _cleanupTimer.DisposeAsync();
+            await _cleanupTimer.DisposeAsync().ConfigureAwait(false);
             _cleanupTimer = null;
         }
         _logger.LogInformation("Library cache stopped");
@@ -183,7 +183,7 @@ public sealed class LibraryCache : IHostedService, IDisposable
         {
             if (_cleanupTimer != null)
             {
-                await _cleanupTimer.DisposeAsync();
+                await _cleanupTimer.DisposeAsync().ConfigureAwait(false);
                 _cleanupTimer = null;
             }
 
