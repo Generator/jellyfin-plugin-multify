@@ -243,6 +243,7 @@ Test notifications use a simplified set of variables for testing purposes. For c
 | `{{ServerName}}` | Server name | `Jellyfin Server` |
 | `{{ItemType}}` | Item type | `Movie` |
 | `{{ItemName}}` | Item name | `Test Movie (2024)` |
+| `{{Username}}` | Username | `TestUser` |
 | `{{UserId}}` | User ID | `00000000-0000-0000-0000-000000000000` |
 | `{{Timestamp}}` | Current UTC timestamp | `2024-01-15 10:30:00 UTC` |
 | `{{TmdbPosterUrl}}` | TMDB poster image URL | `https://image.tmdb.org/t/p/w500/...` |

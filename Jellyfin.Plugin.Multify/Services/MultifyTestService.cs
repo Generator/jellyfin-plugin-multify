@@ -126,7 +126,7 @@ public class MultifyTestService : IMultifyTestService
         }
     }
 
-    private static Dictionary<string, object> CreateTestData()
+private static Dictionary<string, object> CreateTestData()
     {
         return new Dictionary<string, object>
         {
@@ -137,6 +137,7 @@ public class MultifyTestService : IMultifyTestService
             ["ItemName"] = "Test Movie (2024)",
             ["ServerName"] = "Jellyfin Server",
             ["UserId"] = Guid.Empty.ToString(),
+            ["Username"] = "TestUser",
             ["TmdbPosterUrl"] = "https://image.tmdb.org/t/p/w500/9gk7adSYeDvHkCSEhniJIsaVti8.jpg",
             ["TmdbBackdropUrl"] = "https://image.tmdb.org/t/p/w1280/9gk7adSYeDvHkCSEhniJIsaVti8.jpg",
             ["TmdbProfileUrl"] = "https://image.tmdb.org/t/p/w185/9gk7adSYeDvHkCSEhniJIsaVti8.jpg",
