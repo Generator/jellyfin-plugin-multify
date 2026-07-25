@@ -54,7 +54,7 @@ public class PlaybackStopNotifier : IEventConsumer<PlaybackStopEventArgs>
         data.AddItemData(eventArgs.Item);
         data.AddPlaybackStopData(eventArgs);
 
-if (eventArgs.Session is not null)
+        if (eventArgs.Session is not null)
         {
             data.AddSessionInfo(eventArgs.Session);
         }

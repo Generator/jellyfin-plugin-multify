@@ -54,7 +54,7 @@ public class PlaybackStartNotifier : IEventConsumer<PlaybackStartEventArgs>
         data.AddItemData(eventArgs.Item);
         data.AddPlaybackData(eventArgs);
 
-if (eventArgs.Session is not null)
+        if (eventArgs.Session is not null)
         {
             data.AddSessionInfo(eventArgs.Session);
         }
