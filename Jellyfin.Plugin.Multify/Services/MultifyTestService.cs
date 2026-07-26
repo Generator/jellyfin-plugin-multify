@@ -1,14 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Multify.Destinations;
 using Jellyfin.Plugin.Multify.Destinations.Generic;
 using Jellyfin.Plugin.Multify.Destinations.Gotify;
 using Jellyfin.Plugin.Multify.Destinations.Ntfy;
 using Jellyfin.Plugin.Multify.Destinations.Telegram;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Entities;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Services;
@@ -60,6 +65,7 @@ public interface IMultifyTestService
 public class MultifyTestService : IMultifyTestService
 {
     private readonly ILogger<MultifyTestService> _logger;
+    private readonly ILibraryManager _libraryManager;
     private readonly IWebhookClient<TelegramOption> _telegramClient;
     private readonly IWebhookClient<GotifyOption> _gotifyClient;
     private readonly IWebhookClient<NtfyOption> _ntfyClient;
@@ -69,18 +75,21 @@ public class MultifyTestService : IMultifyTestService
     /// Initializes a new instance of the <see cref="MultifyTestService"/> class.
     /// </summary>
     /// <param name="logger">Instance of the <see cref="ILogger{MultifyTestService}"/> interface.</param>
+    /// <param name="libraryManager">Instance of the <see cref="ILibraryManager"/> interface for querying real library items.</param>
     /// <param name="telegramClient">Instance of the <see cref="IWebhookClient{TelegramOption}"/>.</param>
     /// <param name="gotifyClient">Instance of the <see cref="IWebhookClient{GotifyOption}"/>.</param>
     /// <param name="ntfyClient">Instance of the <see cref="IWebhookClient{NtfyOption}"/>.</param>
     /// <param name="genericClient">Instance of the <see cref="IWebhookClient{GenericWebhookOption}"/>.</param>
     public MultifyTestService(
         ILogger<MultifyTestService> logger,
+        ILibraryManager libraryManager,
         IWebhookClient<TelegramOption> telegramClient,
         IWebhookClient<GotifyOption> gotifyClient,
         IWebhookClient<NtfyOption> ntfyClient,
         IWebhookClient<GenericWebhookOption> genericClient)
     {
         _logger = logger;
+        _libraryManager = libraryManager;
         _telegramClient = telegramClient;
         _gotifyClient = gotifyClient;
         _ntfyClient = ntfyClient;
@@ -92,7 +101,6 @@ public class MultifyTestService : IMultifyTestService
     {
         try
         {
-            var data = CreateTestData();
             var option = ParseOption(request);
 
             if (option == null)
@@ -102,6 +110,14 @@ public class MultifyTestService : IMultifyTestService
                     Success = false,
                     ErrorMessage = $"Unsupported destination type: {request.DestinationType}"
                 };
+            }
+
+            // Try to fetch a real item from the library first
+            var data = await TryFetchRealItemAsync(option).ConfigureAwait(false);
+            if (data == null)
+            {
+                _logger.LogDebug("No real item found, falling back to hardcoded test data");
+                data = CreateTestData();
             }
 
             // Ensure webhook is enabled for test and use template (not raw JSON)
@@ -130,6 +146,260 @@ public class MultifyTestService : IMultifyTestService
         }
     }
 
+    /// <summary>
+    /// Tries to fetch a real library item matching the destination's LibraryFilter,
+    /// and builds test data with real metadata. Falls back to null when no items are found.
+    /// </summary>
+    private async Task<Dictionary<string, object>?> TryFetchRealItemAsync(BaseOption option)
+    {
+        try
+        {
+            var query = new InternalItemsQuery
+            {
+                Limit = 1,
+                OrderBy = [(ItemSortBy.Random, SortOrder.Descending)],
+                Recursive = true,
+                IncludeItemTypes =
+                [
+                    BaseItemKind.Movie,
+                    BaseItemKind.Series,
+                    BaseItemKind.Episode,
+                    BaseItemKind.Season
+                ]
+            };
+
+            // Apply LibraryFilter if configured
+            if (option.LibraryFilter is { Length: > 0 })
+            {
+                var rootFolder = _libraryManager.RootFolder;
+                if (rootFolder is null)
+                {
+                    return null;
+                }
+
+                var folderIds = new List<Guid>();
+                foreach (var filterName in option.LibraryFilter)
+                {
+                    var folder = rootFolder.VirtualChildren
+                        .OfType<Folder>()
+                        .FirstOrDefault(f => string.Equals(f.Name, filterName, StringComparison.OrdinalIgnoreCase));
+                    if (folder is not null)
+                    {
+                        folderIds.Add(folder.Id);
+                    }
+                }
+
+                if (folderIds.Count == 0)
+                {
+                    _logger.LogDebug("No library folders matched LibraryFilter, falling back to hardcoded test data");
+                    return null;
+                }
+
+                query.AncestorIds = [.. folderIds];
+            }
+
+            var items = _libraryManager.GetItemList(query);
+            var item = items.FirstOrDefault();
+            if (item is null)
+            {
+                _logger.LogDebug("No items found in library, falling back to hardcoded test data");
+                return null;
+            }
+
+            _logger.LogInformation("Using real item for test notification: {ItemName} ({ItemType})", item.Name, item.GetType().Name);
+
+            // Start with fallback defaults (ensures all possible template keys exist)
+            var data = CreateDefaultTestData();
+
+            // Overwrite with specifically-set base fields
+            data["ServerName"] = "Jellyfin";
+            data["Timestamp"] = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", CultureInfo.InvariantCulture);
+            data["NotificationType"] = "PlaybackStart";
+            data["Title"] = "Test Notification";
+            data["Body"] = "This is a test message using real item data from your library.";
+
+            // Overwrite with real item data from AddItemData
+            var itemData = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.ItemAdded);
+            itemData = itemData.AddItemData(item);
+            foreach (var kvp in itemData)
+            {
+                data[kvp.Key] = kvp.Value;
+            }
+
+            // Add item-type-specific fields not covered by AddItemData
+            if (item is Movie movie)
+            {
+                data["Year"] = movie.ProductionYear?.ToString(CultureInfo.InvariantCulture) ?? "N/A";
+            }
+            else if (item is Episode episode)
+            {
+                data["SeriesName"] = episode.SeriesName ?? "N/A";
+                data["SeasonNumber"] = (episode.ParentIndexNumber ?? 0).ToString(CultureInfo.InvariantCulture);
+                data["SeasonNumber00"] = (episode.ParentIndexNumber ?? 0).ToString("00", CultureInfo.InvariantCulture);
+                data["SeasonNumber000"] = (episode.ParentIndexNumber ?? 0).ToString("000", CultureInfo.InvariantCulture);
+                data["EpisodeNumber"] = (episode.IndexNumber ?? 0).ToString(CultureInfo.InvariantCulture);
+                data["EpisodeNumber00"] = (episode.IndexNumber ?? 0).ToString("00", CultureInfo.InvariantCulture);
+                data["EpisodeNumber000"] = (episode.IndexNumber ?? 0).ToString("000", CultureInfo.InvariantCulture);
+                data["Year"] = episode.ProductionYear?.ToString(CultureInfo.InvariantCulture) ?? "N/A";
+            }
+            else if (item is Series series)
+            {
+                data["Year"] = series.ProductionYear?.ToString(CultureInfo.InvariantCulture) ?? "N/A";
+                data["SeriesStatus"] = series.Status?.ToString() ?? "N/A";
+            }
+
+            return data;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error fetching real item for test notification, falling back to hardcoded data");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Creates a default data dictionary where all possible template keys are present
+    /// with "N/A" placeholder values. Used as the baseline for real-item test data.
+    /// </summary>
+    private static Dictionary<string, object> CreateDefaultTestData()
+    {
+        return new Dictionary<string, object>
+        {
+            // Base
+            ["Title"] = "N/A",
+            ["Body"] = "N/A",
+            ["Timestamp"] = "N/A",
+            ["ServerName"] = "N/A",
+            ["NotificationType"] = "N/A",
+
+            // Item
+            ["ItemId"] = "N/A",
+            ["ItemName"] = "N/A",
+            ["ItemType"] = "N/A",
+            ["LibraryName"] = "N/A",
+            ["LibraryId"] = "N/A",
+            ["ItemUrl"] = "N/A",
+            ["ItemShortId"] = "N/A",
+            ["ProductionYear"] = "N/A",
+            ["Overview"] = "N/A",
+            ["Genres"] = "N/A",
+            ["PremiereDate"] = "N/A",
+            ["Runtime"] = "N/A",
+            ["OfficialRating"] = "N/A",
+            ["CommunityRating"] = "N/A",
+            ["CriticRating"] = "N/A",
+            ["Tagline"] = "N/A",
+            ["OriginalTitle"] = "N/A",
+            ["Studios"] = "N/A",
+            ["ProductionLocations"] = "N/A",
+            ["Tags"] = "N/A",
+            ["Path"] = "N/A",
+            ["Container"] = "N/A",
+            ["DateCreated"] = "N/A",
+
+            // TV
+            ["SeriesName"] = "N/A",
+            ["SeasonNumber"] = "N/A",
+            ["SeasonNumber00"] = "N/A",
+            ["SeasonNumber000"] = "N/A",
+            ["SeasonName"] = "N/A",
+            ["EpisodeNumber"] = "N/A",
+            ["EpisodeNumber00"] = "N/A",
+            ["EpisodeNumber000"] = "N/A",
+            ["SeriesStatus"] = "N/A",
+
+            // Provider
+            ["ImdbId"] = "N/A",
+            ["TmdbId"] = "N/A",
+            ["TvdbId"] = "N/A",
+
+            // User
+            ["UserId"] = "N/A",
+            ["Username"] = "N/A",
+
+            // Session
+            ["Client"] = "N/A",
+            ["DeviceName"] = "N/A",
+            ["RemoteEndPoint"] = "N/A",
+            ["SessionId"] = "N/A",
+            ["PlayMethod"] = "N/A",
+            ["IsPaused"] = "False",
+            ["VolumeLevel"] = "N/A",
+            ["IsMuted"] = "False",
+            ["CanSeek"] = "N/A",
+            ["AudioStreamIndex"] = "N/A",
+            ["SubtitleStreamIndex"] = "N/A",
+            ["RepeatMode"] = "N/A",
+            ["PlaybackOrder"] = "N/A",
+            ["MediaSourceId"] = "N/A",
+            ["LiveStreamId"] = "N/A",
+
+            // Playback
+            ["PlaybackPositionTicks"] = "0",
+            ["PlaybackPosition"] = "00:00:00",
+            ["IsAutomated"] = "False",
+            ["PlaySessionId"] = "N/A",
+            ["PlayedToCompletion"] = "False",
+
+            // Ratings
+            ["MdblistScore"] = "N/A",
+            ["ImdbRating"] = "N/A",
+            ["TmdbRating"] = "N/A",
+            ["RottenTomatoesRating"] = "N/A",
+            ["MetacriticRating"] = "N/A",
+            ["LetterboxdRating"] = "N/A",
+            ["PopcornRating"] = "N/A",
+            ["TraktRating"] = "N/A",
+            ["MyAnimeListRating"] = "N/A",
+            ["AnilistRating"] = "N/A",
+            ["RogerEbertRating"] = "N/A",
+
+            // Images
+            ["PrimaryImageUrl"] = "N/A",
+            ["BackdropImageUrl"] = "N/A",
+            ["ThumbImageUrl"] = "N/A",
+            ["LogoImageUrl"] = "N/A",
+            ["BannerImageUrl"] = "N/A",
+
+            // Trailer
+            ["TrailerUrl"] = "N/A",
+            ["TrailerYtId"] = "N/A",
+
+            // TMDB Images
+            ["TmdbPosterUrl"] = "N/A",
+            ["TmdbBackdropUrl"] = "N/A",
+            ["TmdbProfileUrl"] = "N/A",
+            ["TmdbStillUrl"] = "N/A",
+            ["TmdbLogoUrl"] = "N/A",
+
+            // TVDB Images
+            ["TvdbPosterUrl"] = "N/A",
+            ["TvdbBannerUrl"] = "N/A",
+            ["TvdbFanartUrl"] = "N/A",
+            ["TvdbSmallUrl"] = "N/A",
+            ["TvdbSeasonUrl"] = "N/A",
+
+            // Task
+            ["TaskName"] = "N/A",
+            ["TaskId"] = "N/A",
+            ["Status"] = "N/A",
+            ["StartTime"] = "N/A",
+            ["EndTime"] = "N/A",
+            ["Duration"] = "N/A",
+
+            // Plugin
+            ["PluginName"] = "N/A",
+            ["PluginId"] = "N/A",
+            ["NewVersion"] = "N/A",
+
+            // Year
+            ["Year"] = "N/A"
+        };
+    }
+
+    /// <summary>
+    /// Creates hardcoded test data with realistic metadata (used as fallback when no library items found).
+    /// </summary>
     private static Dictionary<string, object> CreateTestData()
     {
         return new Dictionary<string, object>
@@ -138,36 +408,36 @@ public class MultifyTestService : IMultifyTestService
             ["Title"] = "Test Notification",
             ["Body"] = "This is a test message to verify your notification configuration is working correctly.",
             ["Timestamp"] = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", CultureInfo.InvariantCulture),
-            ["ServerName"] = "Jellyfin Server",
+            ["ServerName"] = "Jellyfin",
             ["NotificationType"] = "PlaybackStart",
 
             // Item Variables
             ["ItemId"] = "3c9cf20670bedf5866ff224850824948",
-            ["ItemName"] = "Test Movie (2024)",
+            ["ItemName"] = "Inception (2010)",
             ["ItemType"] = "Movie",
             ["LibraryName"] = "Movies",
-            ["LibraryId"] = "lib123",
-            ["ItemUrl"] = "https://jellyfin.example.com/web/#/details?id=3c9cf20670bedf5866ff224850824948",
+            ["LibraryId"] = "N/A",
+            ["ItemUrl"] = "N/A",
             ["ItemShortId"] = "3c9cf20670",
-            ["ProductionYear"] = "2024",
-            ["Overview"] = "A test movie overview for template verification.",
+            ["ProductionYear"] = "2010",
+            ["Overview"] = "A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O., but his tragic past may doom the project and his team to disaster.",
             ["Genres"] = "Action, Sci-Fi, Thriller",
-            ["PremiereDate"] = "2024-01-15",
+            ["PremiereDate"] = "2010-07-16",
             ["Runtime"] = "2h 28m",
             ["OfficialRating"] = "PG-13",
             ["CommunityRating"] = "8.8",
             ["CriticRating"] = "74",
             ["Tagline"] = "Your mind is the scene of the crime",
-            ["OriginalTitle"] = "Test Movie",
+            ["OriginalTitle"] = "Inception",
             ["Studios"] = "Warner Bros., Legendary",
             ["ProductionLocations"] = "USA, UK",
-            ["Tags"] = "favorite, sci-fi",
-            ["Path"] = "/media/movies/Test Movie.mkv",
-            ["Container"] = "mkv",
-            ["DateCreated"] = "2024-01-15T10:30:00.000Z",
+            ["Tags"] = "mind-bending, sci-fi",
+            ["Path"] = "N/A",
+            ["Container"] = "N/A",
+            ["DateCreated"] = "N/A",
 
             // TV Show Variables
-            ["SeriesName"] = "Test Series",
+            ["SeriesName"] = "Breaking Bad",
             ["SeasonNumber"] = "1",
             ["SeasonNumber00"] = "01",
             ["SeasonNumber000"] = "001",
@@ -175,7 +445,7 @@ public class MultifyTestService : IMultifyTestService
             ["EpisodeNumber"] = "1",
             ["EpisodeNumber00"] = "01",
             ["EpisodeNumber000"] = "001",
-            ["SeriesStatus"] = "Continuing",
+            ["SeriesStatus"] = "Ended",
 
             // Provider IDs
             ["ImdbId"] = "tt1375666",
@@ -224,11 +494,11 @@ public class MultifyTestService : IMultifyTestService
             ["RogerEbertRating"] = "4.0",
 
             // Jellyfin Image URLs
-            ["PrimaryImageUrl"] = "https://jellyfin.example.com/Items/3c9cf20670bedf5866ff224850824948/Images/Primary",
-            ["BackdropImageUrl"] = "https://jellyfin.example.com/Items/3c9cf20670bedf5866ff224850824948/Images/Backdrop",
-            ["ThumbImageUrl"] = "https://jellyfin.example.com/Items/3c9cf20670bedf5866ff224850824948/Images/Thumbnail",
-            ["LogoImageUrl"] = "https://jellyfin.example.com/Items/3c9cf20670bedf5866ff224850824948/Images/Logo",
-            ["BannerImageUrl"] = "https://jellyfin.example.com/Items/3c9cf20670bedf5866ff224850824948/Images/Banner",
+            ["PrimaryImageUrl"] = "N/A",
+            ["BackdropImageUrl"] = "N/A",
+            ["ThumbImageUrl"] = "N/A",
+            ["LogoImageUrl"] = "N/A",
+            ["BannerImageUrl"] = "N/A",
 
             // Trailer Variables
             ["TrailerUrl"] = "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -252,9 +522,9 @@ public class MultifyTestService : IMultifyTestService
             ["TaskName"] = "Refresh Library",
             ["TaskId"] = "task123",
             ["Status"] = "Completed",
-            ["StartTime"] = "2024-01-15T10:00:00.000Z",
-            ["EndTime"] = "2024-01-15T10:05:00.000Z",
-            ["Duration"] = "00:05:00",
+            ["StartTime"] = "N/A",
+            ["EndTime"] = "N/A",
+            ["Duration"] = "N/A",
 
             // Plugin Variables
             ["PluginName"] = "Intro Skipper",
@@ -262,7 +532,7 @@ public class MultifyTestService : IMultifyTestService
             ["NewVersion"] = "1.2.3",
 
             // Year (used in examples but not in table)
-            ["Year"] = "2024"
+            ["Year"] = "2010"
         };
     }
 
