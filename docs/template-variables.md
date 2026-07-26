@@ -1,66 +1,91 @@
 # Template Variables
 
-Multify supports template variables that can be used in notification templates. Use the `{{variable}}` syntax to include variables in your templates.
+Multify supports template variables that can be used in notification templates. Use `{{variable}}` syntax in your templates.
+
+Every variable returns an empty string when its data is unavailable for the current event, so templates won't break — they'll just show blanks.
+
+---
 
 ## Base Variables
 
-These variables are available in all notification types:
+Always present in every notification.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `{{ServerName}}` | Jellyfin server name | `My Jellyfin Server` |
+| `{{ServerName}}` | Server identifier (hardcoded `Jellyfin`) | `Jellyfin` |
 | `{{NotificationType}}` | Event type that triggered the notification | `PlaybackStart` |
 | `{{Timestamp}}` | UTC timestamp (ISO 8601) | `2024-01-15T10:30:00.000Z` |
 
+---
+
 ## Item Variables
 
-Available when notifications include item data (playback, library events):
+Available in **library events** (`ItemAdded`, `ItemDeleted`) and **playback events** (`PlaybackStart`, `PlaybackStop`, `PlaybackProgress`).
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `{{ItemId}}` | Unique item identifier | `3c9cf20670bedf5866ff224850824948` |
+| `{{ItemId}}` | Item GUID | `3c9cf20670bedf5866ff224850824948` |
 | `{{ItemName}}` | Item display name | `Inception` |
-| `{{ItemType}}` | Item type class name | `Movie` |
+| `{{ItemType}}` | Jellyfin item type class name | `Movie`, `Episode`, `Series`, `Season` |
 | `{{LibraryName}}` | Library containing the item | `Movies` |
-| `{{ItemUrl}}` | Full Jellyfin URL to the item | `https://jellyfin.example.com/web/#/details?id=3c9cf20670bedf5866ff224850824948` |
-| `{{ItemShortId}}` | Short item ID (first 10 chars of GUID) | `3c9cf20670` |
+| `{{LibraryId}}` | Library GUID | `a1b2c3d4-...` |
+| `{{ItemUrl}}` | Deep link to item in Jellyfin web UI | `https://jellyfin.example.com/web/#/details?id=...` |
+| `{{ItemShortId}}` | First 10 hex chars of ItemId | `3c9cf20670` |
 | `{{ProductionYear}}` | Production year | `2010` |
-| `{{Year}}` | Production year (alias for ProductionYear) | `2010` |
-| `{{Overview}}` | Item plot summary | `A thief who steals corporate secrets...` |
-| `{{Genres}}` | Genres as comma-separated string | `Action, Sci-Fi, Thriller` |
+| `{{Overview}}` | Plot summary | `A thief who steals corporate secrets...` |
+| `{{Genres}}` | Comma-separated genres | `Action, Sci-Fi, Thriller` |
 | `{{PremiereDate}}` | Release date (YYYY-MM-DD) | `2010-07-16` |
-| `{{Runtime}}` | Formatted runtime | `2h 28m` |
-| `{{OfficialRating}}` | Content rating (MPAA) | `PG-13` |
+| `{{Runtime}}` | Formatted duration | `2h 28m` |
+| `{{OfficialRating}}` | Content rating (MPAA, TV rating) | `PG-13` |
 | `{{CommunityRating}}` | Community rating | `8.8` |
 | `{{CriticRating}}` | Critic rating | `74` |
 | `{{Tagline}}` | Item tagline | `Your mind is the scene of the crime` |
 | `{{OriginalTitle}}` | Original language title | `Inception` |
-| `{{Studios}}` | Studios as comma-separated string | `Warner Bros., Legendary` |
-| `{{ProductionLocations}}` | Production locations as comma-separated string | `USA, UK` |
-| `{{Tags}}` | User-defined tags as comma-separated string | `favorite, sci-fi` |
-| `{{Path}}` | File path | `/media/movies/Inception.mkv` |
+| `{{Studios}}` | Comma-separated studios | `Warner Bros., Legendary` |
+| `{{ProductionLocations}}` | Comma-separated locations | `USA, UK` |
+| `{{Tags}}` | Comma-separated user tags | `favorite, sci-fi` |
+| `{{Path}}` | File path on server | `/media/movies/Inception.mkv` |
 | `{{Container}}` | File container format | `mkv` |
 | `{{DateCreated}}` | Date added to library (ISO 8601) | `2024-01-15T10:30:00.000Z` |
 
-## TV Show Variables
+### Movie-only
 
-Additional variables for TV show episodes and series:
+Only populated when `{{ItemType}}` is `Movie`.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{Year}}` | Production year (copy of `ProductionYear` for Movies) | `2010` |
+
+> **Note**: For non-Movie items use `{{ProductionYear}}` instead — `{{Year}}` will be empty.
+
+### TV Episode-only
+
+Only populated when `{{ItemType}}` is `Episode`.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `{{SeriesName}}` | Parent series name | `Breaking Bad` |
+| `{{SeasonName}}` | Season display name | `Season 1` |
 | `{{SeasonNumber}}` | Season number (raw) | `1` |
-| `{{SeasonNumber00}}` | Season number (zero-padded to 2 digits) | `01` |
-| `{{SeasonNumber000}}` | Season number (zero-padded to 3 digits) | `001` |
-| `{{SeasonName}}` | Season name (if available) | `Season 1` |
+| `{{SeasonNumber00}}` | Season number (zero-padded to 2) | `01` |
+| `{{SeasonNumber000}}` | Season number (zero-padded to 3) | `001` |
 | `{{EpisodeNumber}}` | Episode number (raw) | `1` |
-| `{{EpisodeNumber00}}` | Episode number (zero-padded to 2 digits) | `01` |
-| `{{EpisodeNumber000}}` | Episode number (zero-padded to 3 digits) | `001` |
-| `{{SeriesStatus}}` | Series status (Series items only) | `Ended` |
+| `{{EpisodeNumber00}}` | Episode number (zero-padded to 2) | `01` |
+| `{{EpisodeNumber000}}` | Episode number (zero-padded to 3) | `001` |
+
+### TV Series-only
+
+Only populated when `{{ItemType}}` is `Series`.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{SeriesStatus}}` | Series release status | `Ended`, `Continuing` |
+
+---
 
 ## Provider IDs
 
-Media provider identifiers for external services:
+Populated when the item has the corresponding external ID.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
@@ -68,52 +93,142 @@ Media provider identifiers for external services:
 | `{{TmdbId}}` | TMDb identifier | `27205` |
 | `{{TvdbId}}` | TVDb identifier | `12345` |
 
-## User Variables
+---
 
-Available for user-related events:
+## User Info
+
+Available in **playback events** (per-user) and **user events** (UserCreated, UserDeleted, UserLockedOut, UserPasswordChanged, UserUpdated).
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `{{Username}}` | Authenticated username | `john_doe` |
-| `{{UserId}}` | Unique user identifier | `abc123` |
+| `{{Username}}` | Username | `john_doe` |
+| `{{UserId}}` | User GUID | `abc123` |
+| `{{NotificationUsername}}` | Username (playback events only) | `john_doe` |
 
-## Session Variables
+> `{{Username}}` and `{{NotificationUsername}}` are identical in playback events. `{{NotificationUsername}}` is only set during playback notifications.
 
-Available for session and playback events:
+---
+
+## Client Info
+
+Available in **playback events** and **session events** (SessionStart). Identifies the device/app that initiated the action.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `{{Client}}` | Client application name | `Jellyfin Web` |
 | `{{DeviceName}}` | Device name | `Chrome on Windows` |
 | `{{RemoteEndPoint}}` | Client IP address | `192.168.1.100` |
-| `{{SessionId}}` | Unique session identifier | `session123` |
-| `{{PlayMethod}}` | Playback method | `Transcode`, `DirectStream`, or `DirectPlay` |
-| `{{IsPaused}}` | Whether playback is paused | `True` or `False` |
-| `{{VolumeLevel}}` | Current volume level (0-100) | `80` |
-| `{{IsMuted}}` | Whether audio is muted | `True` or `False` |
-| `{{CanSeek}}` | Whether seeking is possible | `True` or `False` |
-| `{{AudioStreamIndex}}` | Active audio stream index | `1` |
-| `{{SubtitleStreamIndex}}` | Active subtitle stream index | `0` |
-| `{{RepeatMode}}` | Repeat mode | `Off`, `RepeatOne`, or `RepeatAll` |
-| `{{PlaybackOrder}}` | Playback order | `Default` or `Shuffle` |
-| `{{MediaSourceId}}` | Media source identifier | `source123` |
-| `{{LiveStreamId}}` | Live stream identifier | `live123` |
+| `{{SessionId}}` | Session GUID | `abc123def456` |
 
-## Playback Variables
+---
 
-Available for playback start and stop events:
+## Playback State
+
+Available in **playback events** (`PlaybackStart`, `PlaybackStop`, `PlaybackProgress`). Reflects the current player state at the time of the event.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `{{PlaybackPositionTicks}}` | Current position in ticks | `1234567890` |
-| `{{PlaybackPosition}}` | Formatted position (HH:MM:SS) | `00:15:30` |
-| `{{IsAutomated}}` | Whether progress is automated | `True` or `False` |
-| `{{PlaySessionId}}` | Play session identifier | `session456` |
-| `{{PlayedToCompletion}}` | Whether item played to end (stop only) | `True` or `False` |
+| `{{PlayMethod}}` | How media is being delivered | `DirectPlay`, `DirectStream`, `Transcode` |
+| `{{IsPaused}}` | Whether playback is currently paused | `True`, `False` |
+| `{{VolumeLevel}}` | Client volume (0–100) | `80` |
+| `{{IsMuted}}` | Whether audio is muted | `True`, `False` |
+| `{{CanSeek}}` | Whether seeking is permitted | `True`, `False` |
+| `{{AudioStreamIndex}}` | Active audio track | `1` |
+| `{{SubtitleStreamIndex}}` | Active subtitle track | `0` |
+| `{{RepeatMode}}` | Repeat setting | `Off`, `RepeatOne`, `RepeatAll` |
+| `{{PlaybackOrder}}` | Queue playback order | `Default`, `Shuffle` |
+| `{{MediaSourceId}}` | Media source identifier | `source123` |
+| `{{LiveStreamId}}` | Live stream identifier (live TV only) | `live123` |
 
-## Rating Variables
+---
 
-Available when MDBList API key is configured:
+## Playback Position
+
+Available in **playback events**. Captures the moment-in-time data of the event.
+
+| Variable | Description | Availability | Example |
+|----------|-------------|--------------|---------|
+| `{{PlaybackPositionTicks}}` | Current position in 10 MHz ticks | Start / Progress / Stop | `1234567890` |
+| `{{PlaybackPosition}}` | Formatted position (HH:MM:SS) | Start / Progress / Stop | `00:15:30` |
+| `{{PlaySessionId}}` | Play session GUID | Start / Progress / Stop | `session456` |
+| `{{IsAutomated}}` | Whether this is an automated progress report | Progress only | `True`, `False` |
+| `{{PlayedToCompletion}}` | Whether item played to end | Stop only | `True`, `False` |
+
+---
+
+## Jellyfin Images
+
+URLs to item images served by the Jellyfin server.
+
+**Availability**: Library events and playback events, **only when `ServerUrl` is configured** in plugin General settings. Without it, all image variables will be empty.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{PrimaryImageUrl}}` | Primary poster image | `https://jellyfin.example.com/Items/abc/Images/Primary` |
+| `{{BackdropImageUrl}}` | Backdrop image | `https://jellyfin.example.com/Items/abc/Images/Backdrop` |
+| `{{ThumbImageUrl}}` | Thumbnail image | `https://jellyfin.example.com/Items/abc/Images/Thumbnail` |
+| `{{LogoImageUrl}}` | Logo image | `https://jellyfin.example.com/Items/abc/Images/Logo` |
+| `{{BannerImageUrl}}` | Banner image | `https://jellyfin.example.com/Items/abc/Images/Banner` |
+
+### Per-destination behaviour
+
+- **Telegram**: Use `{{PrimaryImageUrl}}` with `MessageType = Photo (1)` to send photo with caption.
+- **Gotify**: Image URL is automatically set as `extras.client::notification.bigImageUrl`.
+- **ntfy**: Image URL is automatically attached via the `Attach` header.
+- **Generic Webhook**: Include image URLs in the JSON payload for custom processing.
+
+---
+
+## Trailers
+
+Available when the item has remote trailers.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{TrailerUrl}}` | First remote trailer URL | `https://www.youtube.com/watch?v=dQw4w9WgXcQ` |
+| `{{TrailerYtId}}` | Extracted YouTube video ID | `dQw4w9WgXcQ` |
+
+### Template usage
+
+```
+{{ItemName}}
+Trailer: {{TrailerUrl}}
+YouTube: https://youtu.be/{{TrailerYtId}}
+```
+
+---
+
+## TMDb Images
+
+URLs to TMDb-hosted images. Requires the item to have a `TmdbId` provider ID.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{TmdbPosterUrl}}` | TMDb poster (w500) | `https://image.tmdb.org/t/p/w500/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
+| `{{TmdbBackdropUrl}}` | TMDb backdrop (w1280) | `https://image.tmdb.org/t/p/w1280/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg` |
+| `{{TmdbProfileUrl}}` | TMDb profile (w185) | `https://image.tmdb.org/t/p/w185/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
+| `{{TmdbStillUrl}}` | TMDb still (w300) | `https://image.tmdb.org/t/p/w300/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
+| `{{TmdbLogoUrl}}` | TMDb logo (w154) | `https://image.tmdb.org/t/p/w154/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
+
+---
+
+## TVDB Images
+
+URLs to TVDB-hosted images. Requires the item to have a `TvdbId` provider ID.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{TvdbPosterUrl}}` | TVDB poster | `https://artworks.thetvdb.com/banners/posters/12345-1.jpg` |
+| `{{TvdbBannerUrl}}` | TVDB banner | `https://artworks.thetvdb.com/banners/graphical/12345-g.jpg` |
+| `{{TvdbFanartUrl}}` | TVDB fanart | `https://artworks.thetvdb.com/banners/fanart/12345-1.jpg` |
+| `{{TvdbSmallUrl}}` | TVDB small/cached poster | `https://artworks.thetvdb.com/banners/_cache/posters/12345-1.jpg` |
+| `{{TvdbSeasonUrl}}` | TVDB season artwork | `https://artworks.thetvdb.com/banners/seasons/12345-1-1.jpg` |
+
+---
+
+## Ratings
+
+Available when an **MDBList API key** is configured in plugin General settings. Populated only for items that have an `ImdbId` or `TmdbId`.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
@@ -129,121 +244,115 @@ Available when MDBList API key is configured:
 | `{{AnilistRating}}` | AniList rating | `8.7` |
 | `{{RogerEbertRating}}` | Roger Ebert rating | `4.0` |
 
-## Image Variables
-
-URLs to item images from Jellyfin server:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `{{PrimaryImageUrl}}` | Primary poster image URL | `https://jellyfin.example.com/Items/abc123/Images/Primary` |
-| `{{BackdropImageUrl}}` | Backdrop/banner image URL | `https://jellyfin.example.com/Items/abc123/Images/Backdrop` |
-| `{{ThumbImageUrl}}` | Thumbnail image URL | `https://jellyfin.example.com/Items/abc123/Images/Thumbnail` |
-| `{{LogoImageUrl}}` | Logo image URL | `https://jellyfin.example.com/Items/abc123/Images/Logo` |
-| `{{BannerImageUrl}}` | Banner image URL | `https://jellyfin.example.com/Items/abc123/Images/Banner` |
-
-### Image Usage by Destination
-
-- **Telegram**: Use `{{PrimaryImageUrl}}` with `MessageType = SendPhoto` to send photo with caption
-- **Gotify**: Image URL is automatically added to `extras.client::notification.bigImageUrl` for display
-- **ntfy**: Image URL is automatically added as attachment via `Attach` header
-- **Generic Webhook**: Include image URLs in JSON payload for custom processing
-
-## Trailer Variables
-
-Available when item has trailers:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `{{TrailerUrl}}` | First trailer URL | `https://www.youtube.com/watch?v=dQw4w9WgXcQ` |
-| `{{TrailerYtId}}` | YouTube video ID | `dQw4w9WgXcQ` |
-
-### Trailer Usage Examples
-
-```
-🎬 {{ItemName}}
-🎥 Trailer: {{TrailerUrl}}
-📺 YouTube: https://youtu.be/{{TrailerYtId}}
-```
-
-## TMDb Image Variables
-
-URLs to TMDb images (requires TMDb ID):
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `{{TmdbPosterUrl}}` | TMDb poster image | `https://image.tmdb.org/t/p/w500/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
-| `{{TmdbBackdropUrl}}` | TMDb backdrop image | `https://image.tmdb.org/t/p/w1280/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg` |
-| `{{TmdbProfileUrl}}` | TMDb profile image | `https://image.tmdb.org/t/p/w185/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
-| `{{TmdbStillUrl}}` | TMDb still image | `https://image.tmdb.org/t/p/w300/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
-| `{{TmdbLogoUrl}}` | TMDb logo image | `https://image.tmdb.org/t/p/w154/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
-
-## TVDB Image Variables
-
-URLs to TVDB images (requires TVDB ID):
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `{{TvdbPosterUrl}}` | TVDB poster image | `https://artworks.thetvdb.com/banners/posters/12345-1.jpg` |
-| `{{TvdbBannerUrl}}` | TVDB banner image | `https://artworks.thetvdb.com/banners/graphical/12345-g.jpg` |
-| `{{TvdbFanartUrl}}` | TVDB fanart image | `https://artworks.thetvdb.com/banners/fanart/12345-1.jpg` |
-| `{{TvdbSmallUrl}}` | TVDB small image | `https://artworks.thetvdb.com/banners/_cache/posters/12345-1.jpg` |
-| `{{TvdbSeasonUrl}}` | TVDB season image | `https://artworks.thetvdb.com/banners/seasons/12345-1-1.jpg` |
+---
 
 ## Task Variables
 
-Available for task completion events:
+Available for **task completion events** (`TaskCompleted`).
 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `{{TaskName}}` | Scheduled task name | `Refresh Library` |
 | `{{TaskId}}` | Task identifier | `task123` |
-| `{{Status}}` | Task completion status | `Completed` |
+| `{{Status}}` | Completion status | `Completed` |
 | `{{StartTime}}` | Task start time (ISO 8601) | `2024-01-15T10:00:00.000Z` |
 | `{{EndTime}}` | Task end time (ISO 8601) | `2024-01-15T10:05:00.000Z` |
-| `{{Duration}}` | Task duration | `00:05:00` |
+| `{{Duration}}` | Formatted duration | `00:05:00` |
+
+---
 
 ## Plugin Variables
 
-Available for plugin events:
+Available for **plugin events** (`PluginInstalled`, `PluginUpdated`, `PluginUninstalled`).
 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `{{PluginName}}` | Plugin display name | `Intro Skipper` |
 | `{{PluginId}}` | Plugin identifier | `plugin123` |
-| `{{NewVersion}}` | New plugin version | `1.2.3` |
+| `{{NewVersion}}` | Version string | `1.2.3` |
+
+---
 
 ## Template Examples
 
-### Playback Notification
+### Movie Added
+
 ```
 🎬 {{ItemName}} ({{Year}})
-📂 {{LibraryName}} • ⏱️ {{Runtime}}
+📂 {{LibraryName}} · ⏱️ {{Runtime}}
 🎭 {{Genres}}
-
 ⭐ {{ImdbRating}}/10 (IMDb) | {{MdblistScore}} (MDBList)
 ```
 
-### TV Episode Notification
+### TV Episode Added
+
 ```
 📺 {{SeriesName}} - S{{SeasonNumber00}}E{{EpisodeNumber00}}
-📝 {{ItemName}}
+📝 {{ItemName}} ({{ProductionYear}})
 📂 {{LibraryName}}
-
 {{Overview}}
 ```
 
-### Library Update Notification
+### Library Update
+
 ```
 🆕 New {{ItemType}} added to {{LibraryName}}!
-🎬 {{ItemName}} ({{Year}})
+🎬 {{ItemName}} ({{ProductionYear}})
 🎭 {{Genres}}
 ⭐ {{ImdbRating}}/10
 ```
 
+### Playback Started
+
+```
+▶️ {{Client}} · {{DeviceName}}
+🎬 {{ItemName}} ({{ProductionYear}})
+👤 {{Username}}
+⏱️ {{PlaybackPosition}} / {{Runtime}}
+📡 {{PlayMethod}}
+```
+
+### Generic Item Deleted
+
+```
+🗑️ {{ItemType}} removed: {{ItemName}}
+📂 {{LibraryName}}
+```
+
+---
+
+## Quick Reference: What's Available in Each Event Type
+
+| Variables | ItemAdded / ItemDeleted | PlaybackStart / Stop / Progress | User events | TaskCompleted | Plugin events |
+|-----------|------------------------|--------------------------------|-------------|---------------|---------------|
+| Base | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Item | ✓ | ✓ | — | — | — |
+| Episode vars | ✓ | ✓ | — | — | — |
+| Series vars | ✓ | ✓ | — | — | — |
+| Movie vars | ✓ | ✓ | — | — | — |
+| Provider IDs | ✓ | ✓ | — | — | — |
+| User | — | ✓ | ✓ | — | — |
+| Client | — | ✓ | — | — | — |
+| Playback State | — | ✓ | — | — | — |
+| Playback Position | — | ✓ | — | — | — |
+| Jellyfin Images | ✓ | ✓ | — | — | — |
+| TMDb/TVDB Images | ✓ | ✓ | — | — | — |
+| Trailers | ✓ | ✓ | — | — | — |
+| Ratings | ✓ | ✓ | — | — | — |
+| Task | — | — | — | ✓ | — |
+| Plugin | — | — | — | — | ✓ |
+
+---
+
 ## Notes
 
-- Variables return empty string if data is not available
-- Rating variables only appear if MDBList API key is configured
-- TV show variables only appear for episode items
-- Library name requires item to be in a library
-- Runtime is formatted as hours and minutes (e.g., "1h 30m" or "45m")
+- Variables return an empty string when their data is not available for the current event.
+- `{{Year}}` is Movie-only; use `{{ProductionYear}}` for all item types.
+- `{{SeriesStatus}}` is Series-only (populated when `ItemType` is `Series`), not available on Episodes.
+- Episode variables (`SeasonNumber`, `EpisodeNumber`, etc.) are only populated when `ItemType` is `Episode`.
+- Jellyfin image variables require the `ServerUrl` setting in plugin General settings.
+- Rating variables require an MDBList API key configured in plugin General settings.
+- Library name and library ID require the item to belong to a library.
+- Runtime is formatted as hours and minutes (e.g., `1h 30m` or `45m`).
+- `{{IsPaused}}` originates from the session's current player state, not from the event arguments.
+- `{{MediaSourceId}}` appears in both playback state and event data; values may differ.
