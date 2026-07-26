@@ -37,9 +37,11 @@ See [Supported Notification Events](docs/supported-events.md) for the complete l
 **HTML Parse Mode** supports: `<b>`, `<i>`, `<a href="">`, `<code>`, `<pre>`, `<blockquote>`
 
 > [!NOTE]
-> **MarkdownV2 escaping:** When using `MarkdownV2` parse mode, all `{{variable}}` values are automatically escaped for the following characters: `_ * [ ] ( ) ~ > # + - = | { } . !`. This prevents user-generated content (like movie titles with parentheses or underscores) from breaking the formatting.
+> **MarkdownV2 escaping:** Telegram's MarkdownV2 requires the following characters to be escaped with a preceding `\` when used as literal text: `` _ * [ ] ( ) ~ ` > # + - = | { } . ! ``
 >
-> Your template **formatting markers** (`*bold*`, `_italic_`, `[links](url)`, etc.) are left untouched — only the substituted values get escaped. This means you can safely write `*Title:* {{ItemName}}` and get **Title:** rendered in bold, while `{{ItemName}}` values with special characters remain safe.
+> Your template must escape these characters wherever they appear in **literal template text**. For example, parentheses around a year must be written as `\({{Year}}\)`, not `({{Year}})`.
+>
+> `{{variable}}` values are automatically escaped, so you don't need to worry about user-generated content inside variables — only the template body itself needs manual escaping.
 
 ### Gotify
 
