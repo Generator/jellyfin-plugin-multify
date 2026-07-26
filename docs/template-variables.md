@@ -353,10 +353,10 @@ Templates differ depending on the destination's message type. Below are examples
 Uses Telegram's MarkdownV2 parse mode. Characters `_ * [ ] ( ) ~ ` > # + - = | { } . !` must be escaped with `\` in the template body. Variable values are auto-escaped.
 
 ```
-**Nova Temporada Adicionada**
+**New Season Added**
 
-**Série TV:** {{SeriesName}}
-**Temporada:** {{SeasonNumber00}}
+**TV Series:** {{SeriesName}}
+**Season:** {{SeasonNumber00}}
 **Jellyfin:** [{{ItemShortId}}]({{ItemUrl}})
 ```
 
@@ -365,11 +365,11 @@ Uses Telegram's MarkdownV2 parse mode. Characters `_ * [ ] ( ) ~ ` > # + - = | {
 Sends a photo with a caption. The photo URL is taken from the data dictionary (`PrimaryImageUrl` → `TmdbPosterUrl` → `TvdbPosterUrl`), **not** from the template body. The template body becomes the caption text only — do not include image URLs in the caption.
 
 ```
-**Filme:** {{ItemName}} \({{Year}}\)
+**Movie:** {{ItemName}} \({{Year}}\)
 {{Overview}}
 
-**Gêneros:** {{Genres}}
-**Biblioteca:** {{LibraryName}}
+**Genres:** {{Genres}}
+**Library:** {{LibraryName}}
 **IMDb:** [{{ImdbId}}](https://www.imdb.com/title/{{ImdbId}}) {{ImdbRating}} ⭐
 **TMDB:** {{TmdbRating}} ⭐
 ```
@@ -379,11 +379,11 @@ Sends a photo with a caption. The photo URL is taken from the data dictionary (`
 Uses Telegram's Rich Markdown (GitHub Flavored Markdown-like). Supports `**bold**`, `*italic*`, `[links](url)`, `![](url)` inline images, headings, lists, and tables. No character escaping needed.
 
 ```
-**Nova Temporada Adicionada**
+**New Season Added**
 ![]({{TmdbPosterUrl}})
 
-**Série TV:** {{SeriesName}}
-**Temporada:** {{SeasonNumber00}}
+**TV Series:** {{SeriesName}}
+**Season:** {{SeasonNumber00}}
 **Jellyfin:** [{{ItemShortId}}]({{ItemUrl}})
 ```
 
@@ -395,8 +395,8 @@ Plain text with Markdown support. No character escaping needed.
 **{{ItemName}}** ({{Year}})
 {{Overview}}
 
-Genre: {{Genres}}
-Rating: {{ImdbRating}}/10
+**Genres:** {{Genres}}
+**Rating:** {{ImdbRating}}/10
 ```
 
 ### ntfy
@@ -407,7 +407,7 @@ Plain text with Markdown support. Supports `**bold**`, `[links](url)`, and emoji
 {{ItemName}} ({{Year}})
 {{Overview}}
 
-Watch on Jellyfin: {{ItemUrl}}
+**Jellyfin:** {{ItemUrl}}
 ```
 
 ### Generic Webhook
@@ -417,7 +417,7 @@ Sends a JSON payload. The template is rendered as a string and sent as the reque
 ```
 {
   "event": "{{NotificationType}}",
-  "item": "{{ItemName}}",
+  "title": "{{ItemName}}",
   "year": "{{Year}}",
   "url": "{{ItemUrl}}"
 }

@@ -567,6 +567,16 @@ public class TelegramOption : BaseOption
         if (!response.IsSuccessStatusCode)
         {
             var errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var errorDesc = TryGetTelegramDescription(errorJson);
+
+            // If media is unreachable (local network URL), strip image blocks and retry
+            if (errorDesc != null && errorDesc.Contains("RICH_MESSAGE_PHOTO_NO_MEDIA_FOUND", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Telegram sendRichMessage: media URL unreachable, stripping image blocks and retrying as text");
+                var textBody = Regex.Replace(body, @"!\[.*?\]\(.*?\)", string.Empty);
+                return await SendTextAsync(option, textBody).ConfigureAwait(false);
+            }
+
             _logger.LogError("Telegram sendRichMessage failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, errorJson);
             ThrowWithDescription(response, errorJson);
         }
@@ -577,6 +587,27 @@ public class TelegramOption : BaseOption
         if (result.TryGetProperty("result", out var resultElement) && resultElement.TryGetProperty("message_id", out var messageIdElement))
         {
             return messageIdElement.GetInt64();
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Extracts the Telegram error description from a JSON error response, or null if not found.
+    /// </summary>
+    private static string? TryGetTelegramDescription(string errorJson)
+    {
+        try
+        {
+            var errorDoc = JsonSerializer.Deserialize<JsonElement>(errorJson);
+            if (errorDoc.TryGetProperty("description", out var desc))
+            {
+                return desc.GetString();
+            }
+        }
+        catch
+        {
+            // Ignore parse errors
         }
 
         return null;
