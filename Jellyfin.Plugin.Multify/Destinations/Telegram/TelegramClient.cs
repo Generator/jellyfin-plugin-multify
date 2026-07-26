@@ -194,17 +194,7 @@ public class TelegramOption : BaseOption
         {
             if (kvp.Value is string strValue)
             {
-                // Do not escape URLs — MarkdownV2 does not allow escaped characters inside
-                // the URL portion of [text](url) or ![alt](url) syntax.
-                if (strValue.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-                    strValue.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                {
-                    escaped[kvp.Key] = strValue;
-                }
-                else
-                {
-                    escaped[kvp.Key] = EscapeForParseMode(strValue, parseMode);
-                }
+                escaped[kvp.Key] = EscapeForParseMode(strValue, parseMode);
             }
             else
             {
@@ -213,6 +203,29 @@ public class TelegramOption : BaseOption
         }
 
         return escaped;
+    }
+
+    /// <summary>
+    /// Un-escapes MarkdownV2 characters inside the URL portions of <c>[text](url)</c>
+    /// and <c>![alt](url)</c> syntax. URLs must NOT have backslash-escaped characters,
+    /// even though the rest of the message does.
+    /// </summary>
+    /// <param name="body">The fully rendered message body with all placeholders substituted.</param>
+    /// <returns>The body with URL portions un-escaped.</returns>
+    internal static string UnescapeMarkdownV2Urls(string body)
+    {
+        // Match [text](url) and ![alt](url) patterns and un-escape the URL portion
+        var charsToUnescape = new[] { '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!' };
+        return Regex.Replace(body, @"!?\[.*?\]\(([^)]*)\)", match =>
+        {
+            var url = match.Groups[1].Value;
+            foreach (var c in charsToUnescape)
+            {
+                url = url.Replace($"\\{c}", c.ToString());
+            }
+
+            return match.Value.Replace(match.Groups[1].Value, url);
+        });
     }
 
     /// <summary>
@@ -252,6 +265,14 @@ public class TelegramOption : BaseOption
             // Escape variable VALUES before substitution so template formatting markers stay intact
             var escapedData = EscapeDataValues(data, option.ParseMode);
             var body = option.GetMessageBody(escapedData);
+
+            // Post-process: un-escape MarkdownV2 characters inside the URL portions of
+            // [text](url) and ![alt](url) syntax. URLs must NOT have backslash-escaped
+            // characters, even though plain text does need them escaped.
+            if (string.Equals(option.ParseMode, "MarkdownV2", StringComparison.OrdinalIgnoreCase))
+            {
+                body = UnescapeMarkdownV2Urls(body);
+            }
 
             if (!SendMessageBody(_logger, option, ref body))
             {
