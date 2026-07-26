@@ -319,7 +319,27 @@ public class TelegramOption : BaseOption
             .PostAsync(uri, content)
             .ConfigureAwait(false);
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            _logger.LogError("Telegram editMessageText failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, errorJson);
+
+            try
+            {
+                var errorDoc = JsonSerializer.Deserialize<JsonElement>(errorJson);
+                if (errorDoc.TryGetProperty("description", out var desc))
+                {
+                    _logger.LogError("Telegram error description: {Description}", desc.GetString());
+                }
+            }
+            catch
+            {
+                // Ignore parse errors on the error response
+            }
+
+            response.EnsureSuccessStatusCode();
+        }
+
         return messageId;
     }
 
@@ -346,7 +366,26 @@ public class TelegramOption : BaseOption
             .PostAsync(uri, content)
             .ConfigureAwait(false);
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            _logger.LogError("Telegram editMessageCaption failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, errorJson);
+
+            try
+            {
+                var errorDoc = JsonSerializer.Deserialize<JsonElement>(errorJson);
+                if (errorDoc.TryGetProperty("description", out var desc))
+                {
+                    _logger.LogError("Telegram error description: {Description}", desc.GetString());
+                }
+            }
+            catch
+            {
+                // Ignore parse errors on the error response
+            }
+
+            response.EnsureSuccessStatusCode();
+        }
     }
 
     private async Task EditRichMessageAsync(TelegramOption option, string body, long messageId)
@@ -379,7 +418,26 @@ public class TelegramOption : BaseOption
             .PostAsync(uri, content)
             .ConfigureAwait(false);
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            _logger.LogError("Telegram editMessageText (rich) failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, errorJson);
+
+            try
+            {
+                var errorDoc = JsonSerializer.Deserialize<JsonElement>(errorJson);
+                if (errorDoc.TryGetProperty("description", out var desc))
+                {
+                    _logger.LogError("Telegram error description: {Description}", desc.GetString());
+                }
+            }
+            catch
+            {
+                // Ignore parse errors on the error response
+            }
+
+            response.EnsureSuccessStatusCode();
+        }
     }
 
     private async Task<long?> SendTextAsync(TelegramOption option, string body)
@@ -397,7 +455,28 @@ public class TelegramOption : BaseOption
             .PostAsync(uri, content)
             .ConfigureAwait(false);
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            _logger.LogError("Telegram sendMessage failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, errorJson);
+
+            // Try to extract and log the description field for more detail
+            try
+            {
+                var errorDoc = JsonSerializer.Deserialize<JsonElement>(errorJson);
+                if (errorDoc.TryGetProperty("description", out var desc))
+                {
+                    _logger.LogError("Telegram error description: {Description}", desc.GetString());
+                }
+            }
+            catch
+            {
+                // Ignore parse errors on the error response
+            }
+
+            response.EnsureSuccessStatusCode();
+        }
+
         var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         var result = JsonSerializer.Deserialize<JsonElement>(responseJson);
 
@@ -445,7 +524,8 @@ public class TelegramOption : BaseOption
 
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogWarning("Telegram rejected photo URL ({StatusCode}), falling back to text", (int)response.StatusCode);
+            var errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            _logger.LogWarning("Telegram rejected photo URL ({StatusCode}): {ErrorBody}, falling back to text", (int)response.StatusCode, errorJson);
             return await SendTextAsync(option, body).ConfigureAwait(false);
         }
 
@@ -489,7 +569,27 @@ public class TelegramOption : BaseOption
             .PostAsync(uri, content)
             .ConfigureAwait(false);
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            _logger.LogError("Telegram sendRichMessage failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, errorJson);
+
+            try
+            {
+                var errorDoc = JsonSerializer.Deserialize<JsonElement>(errorJson);
+                if (errorDoc.TryGetProperty("description", out var desc))
+                {
+                    _logger.LogError("Telegram error description: {Description}", desc.GetString());
+                }
+            }
+            catch
+            {
+                // Ignore parse errors on the error response
+            }
+
+            response.EnsureSuccessStatusCode();
+        }
+
         var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         var result = JsonSerializer.Deserialize<JsonElement>(responseJson);
 

@@ -65,8 +65,8 @@ public class FilterService
         }
 
         var userId = data.TryGetValue("UserId", out var userIdObj)
-            ? Guid.Parse(userIdObj.ToString()!)
-            : Guid.Empty;
+            ? userIdObj.ToString() ?? string.Empty
+            : string.Empty;
 
         bool isInFilter = Array.IndexOf(option.UserFilter, userId) != -1;
         bool shouldSend = option.UserFilterMode == FilterMode.AllExcept ? !isInFilter : isInFilter;
@@ -99,8 +99,8 @@ public class FilterService
         }
 
         var libraryId = data.TryGetValue("LibraryId", out var libraryIdObj)
-            ? Guid.Parse(libraryIdObj.ToString()!)
-            : Guid.Empty;
+            ? libraryIdObj.ToString() ?? string.Empty
+            : string.Empty;
 
         bool isInFilter = Array.IndexOf(option.LibraryFilter, libraryId) != -1;
         bool shouldSend = option.LibraryFilterMode == FilterMode.AllExcept ? !isInFilter : isInFilter;

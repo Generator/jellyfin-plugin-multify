@@ -59,21 +59,21 @@ public class BaseOption
     /// <summary>Gets or sets whether to skip empty message body.</summary>
     public bool SkipEmptyMessageBody { get; set; }
 
-    /// <summary>Gets or sets the user filter.</summary>
+    /// <summary>Gets or sets the user filter (user IDs as strings, typically GUIDs).</summary>
     [JsonPropertyName("UserFilter")]
     [XmlArray("UserFilter")]
     [XmlArrayItem("Guid")]
-    public Guid[] UserFilter { get; set; } = Array.Empty<Guid>();
+    public string[] UserFilter { get; set; } = Array.Empty<string>();
 
     /// <summary>Gets or sets the user filter mode (OnlySelected or AllExcept).</summary>
     [JsonPropertyName("UserFilterMode")]
     public FilterMode UserFilterMode { get; set; } = FilterMode.OnlySelected;
 
-    /// <summary>Gets or sets the library filter.</summary>
+    /// <summary>Gets or sets the library filter (library IDs as strings, typically GUIDs).</summary>
     [JsonPropertyName("LibraryFilter")]
     [XmlArray("LibraryFilter")]
     [XmlArrayItem("Guid")]
-    public Guid[] LibraryFilter { get; set; } = Array.Empty<Guid>();
+    public string[] LibraryFilter { get; set; } = Array.Empty<string>();
 
     /// <summary>Gets or sets the library filter mode (OnlySelected or AllExcept).</summary>
     [JsonPropertyName("LibraryFilterMode")]

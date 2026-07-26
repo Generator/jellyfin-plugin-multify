@@ -51,9 +51,9 @@ public class FilterValidator
         {
             for (int i = 0; i < option.UserFilter.Length; i++)
             {
-                if (option.UserFilter[i] == Guid.Empty)
+                if (string.IsNullOrEmpty(option.UserFilter[i]))
                 {
-                    var error = $"UserFilter contains empty GUID at index {i}";
+                    var error = $"UserFilter contains empty value at index {i}";
                     errors.Add(error);
                     _logger.LogWarning("Validation error for {WebhookName}: {Error}", option.WebhookName, error);
                 }
@@ -65,9 +65,9 @@ public class FilterValidator
         {
             for (int i = 0; i < option.LibraryFilter.Length; i++)
             {
-                if (option.LibraryFilter[i] == Guid.Empty)
+                if (string.IsNullOrEmpty(option.LibraryFilter[i]))
                 {
-                    var error = $"LibraryFilter contains empty GUID at index {i}";
+                    var error = $"LibraryFilter contains empty value at index {i}";
                     errors.Add(error);
                     _logger.LogWarning("Validation error for {WebhookName}: {Error}", option.WebhookName, error);
                 }
