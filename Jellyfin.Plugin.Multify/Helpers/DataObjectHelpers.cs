@@ -227,6 +227,30 @@ public static class DataObjectHelpers
             data["Year"] = movie.ProductionYear?.ToString(CultureInfo.InvariantCulture) ?? "Unknown";
         }
 
+        // Add season-specific data
+        if (item is MediaBrowser.Controller.Entities.TV.Season season)
+        {
+            var seasonNumber = season.IndexNumber ?? 0;
+
+            data["SeasonNumber"] = seasonNumber.ToString(CultureInfo.InvariantCulture);
+            data["SeasonNumber00"] = seasonNumber.ToString("00", CultureInfo.InvariantCulture);
+            data["SeasonNumber000"] = seasonNumber.ToString("000", CultureInfo.InvariantCulture);
+
+            data["SeasonName"] = season.Name ?? "Unknown";
+
+            // Get series info from parent series
+            var seriesItem = season.Series;
+            if (seriesItem is not null)
+            {
+                data["SeriesName"] = seriesItem.Name ?? "Unknown";
+                data["SeriesStatus"] = seriesItem.Status?.ToString() ?? "Unknown";
+            }
+            else
+            {
+                data["SeriesName"] = "Unknown";
+            }
+        }
+
         // Add episode-specific data
         if (item is MediaBrowser.Controller.Entities.TV.Episode episode)
         {

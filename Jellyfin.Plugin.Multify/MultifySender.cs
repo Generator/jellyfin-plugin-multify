@@ -279,6 +279,23 @@ public class MultifySender : IWebhookSender
         {
             data["BannerImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Banner";
         }
+
+        // --- External provider image URL mapping ---
+        // TMDB image URLs → Jellyfin image URLs
+        // These are never fetched from TMDB directly; we map to Jellyfin's own images
+        // (which were likely scraped from TMDB and served by the Jellyfin server).
+        data["TmdbPosterUrl"] = (string)data["PrimaryImageUrl"];
+        data["TmdbBackdropUrl"] = (string)data["BackdropImageUrl"];
+        data["TmdbProfileUrl"] = (string)data["PrimaryImageUrl"];
+        data["TmdbStillUrl"] = (string)data["ThumbImageUrl"];
+        data["TmdbLogoUrl"] = (string)data["LogoImageUrl"];
+
+        // TVDB image URLs → Jellyfin image URLs
+        data["TvdbPosterUrl"] = (string)data["PrimaryImageUrl"];
+        data["TvdbBannerUrl"] = (string)data["BannerImageUrl"];
+        data["TvdbFanartUrl"] = (string)data["BackdropImageUrl"];
+        data["TvdbSmallUrl"] = (string)data["ThumbImageUrl"];
+        data["TvdbSeasonUrl"] = (string)data["ThumbImageUrl"];
     }
 
     private static string GetMediaType(Dictionary<string, object> data)

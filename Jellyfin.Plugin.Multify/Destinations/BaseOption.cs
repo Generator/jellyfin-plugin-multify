@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Xml.Serialization;
 
 namespace Jellyfin.Plugin.Multify.Destinations;
@@ -117,6 +118,10 @@ public class BaseOption
             var placeholder = "{{" + kvp.Key + "}}";
             result = result.Replace(placeholder, kvp.Value?.ToString() ?? string.Empty, StringComparison.Ordinal);
         }
+
+        // Safety net: strip markdown image syntax with empty/blank URLs (![alt]())
+        // to prevent MarkdownV2 parse errors like "Invalid tg://emoji or tg://time URL specified"
+        result = Regex.Replace(result, @"!\[.*?\]\(\s*\)", string.Empty);
 
         return result;
     }

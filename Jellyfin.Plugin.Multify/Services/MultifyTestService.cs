@@ -156,17 +156,24 @@ public class MultifyTestService : IMultifyTestService
     {
         try
         {
+            // Build IncludeItemTypes from destination's Enable* flags
+            var includeTypes = new List<BaseItemKind>();
+            if (option.EnableMovies) includeTypes.Add(BaseItemKind.Movie);
+            if (option.EnableSeries) includeTypes.Add(BaseItemKind.Series);
+            if (option.EnableEpisodes) includeTypes.Add(BaseItemKind.Episode);
+            if (option.EnableSeasons) includeTypes.Add(BaseItemKind.Season);
+
+            // Fall back to all types if none enabled (defensive — at least one should be)
+            if (includeTypes.Count == 0)
+            {
+                includeTypes = [BaseItemKind.Movie, BaseItemKind.Series, BaseItemKind.Episode, BaseItemKind.Season];
+            }
+
             var query = new InternalItemsQuery
             {
                 Limit = 1,
                 Recursive = true,
-                IncludeItemTypes =
-                [
-                    BaseItemKind.Movie,
-                    BaseItemKind.Series,
-                    BaseItemKind.Episode,
-                    BaseItemKind.Season
-                ]
+                IncludeItemTypes = [.. includeTypes]
             };
 
             // Apply LibraryFilter if configured
@@ -254,6 +261,48 @@ public class MultifyTestService : IMultifyTestService
             {
                 data["Year"] = series.ProductionYear?.ToString(CultureInfo.InvariantCulture) ?? "N/A";
                 data["SeriesStatus"] = series.Status?.ToString() ?? "N/A";
+            }
+            else if (item is Season season)
+            {
+                data["SeriesName"] = season.Series?.Name ?? "N/A";
+                data["SeasonNumber"] = (season.IndexNumber ?? 0).ToString(CultureInfo.InvariantCulture);
+                data["SeasonNumber00"] = (season.IndexNumber ?? 0).ToString("00", CultureInfo.InvariantCulture);
+                data["SeasonNumber000"] = (season.IndexNumber ?? 0).ToString("000", CultureInfo.InvariantCulture);
+                data["Year"] = season.ProductionYear?.ToString(CultureInfo.InvariantCulture) ?? "N/A";
+            }
+
+            // Populate external provider image URLs from Jellyfin image URLs
+            // (same mapping as MultifySender.EnrichImageUrls for the real flow)
+            var serverUrl = MultifyPlugin.Instance?.Configuration?.ServerUrl;
+            if (!string.IsNullOrEmpty(serverUrl) && data.TryGetValue("ItemId", out var itemIdObj) && itemIdObj is string itemId && !string.IsNullOrEmpty(itemId))
+            {
+                serverUrl = serverUrl.TrimEnd('/');
+                var primaryUrl = $"{serverUrl}/Items/{itemId}/Images/Primary";
+                var backdropUrl = $"{serverUrl}/Items/{itemId}/Images/Backdrop";
+                var thumbUrl = $"{serverUrl}/Items/{itemId}/Images/Thumbnail";
+                var logoUrl = $"{serverUrl}/Items/{itemId}/Images/Logo";
+                var bannerUrl = $"{serverUrl}/Items/{itemId}/Images/Banner";
+
+                // Jellyfin image URLs
+                data["PrimaryImageUrl"] = primaryUrl;
+                data["BackdropImageUrl"] = backdropUrl;
+                data["ThumbImageUrl"] = thumbUrl;
+                data["LogoImageUrl"] = logoUrl;
+                data["BannerImageUrl"] = bannerUrl;
+
+                // TMDB → Jellyfin mapping
+                data["TmdbPosterUrl"] = primaryUrl;
+                data["TmdbBackdropUrl"] = backdropUrl;
+                data["TmdbProfileUrl"] = primaryUrl;
+                data["TmdbStillUrl"] = thumbUrl;
+                data["TmdbLogoUrl"] = logoUrl;
+
+                // TVDB → Jellyfin mapping
+                data["TvdbPosterUrl"] = primaryUrl;
+                data["TvdbBannerUrl"] = bannerUrl;
+                data["TvdbFanartUrl"] = backdropUrl;
+                data["TvdbSmallUrl"] = thumbUrl;
+                data["TvdbSeasonUrl"] = thumbUrl;
             }
 
             return data;
