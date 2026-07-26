@@ -167,6 +167,45 @@ public class TelegramOption : BaseOption
         }
 
     /// <summary>
+    /// Creates a copy of the data dictionary with string values escaped for the given parse mode.
+    /// Values whose keys end with "Url" or "Uri" are excluded (URLs should not be escaped
+    /// as they appear inside MarkdownV2 link syntax <c>[text](url)</c>).
+    /// </summary>
+    /// <param name="data">The original data dictionary.</param>
+    /// <param name="parseMode">The Telegram parse mode (MarkdownV2, Markdown, HTML, or null).</param>
+    /// <returns>A new dictionary with escaped string values.</returns>
+    private static Dictionary<string, object> EscapeDataValues(Dictionary<string, object> data, string? parseMode)
+    {
+        if (string.IsNullOrEmpty(parseMode))
+        {
+            return data;
+        }
+
+        var lowerMode = parseMode.ToLowerInvariant();
+        if (lowerMode == "html")
+        {
+            return data;
+        }
+
+        var escaped = new Dictionary<string, object>(data.Count);
+        foreach (var kvp in data)
+        {
+            if (kvp.Value is string strValue
+                && !kvp.Key.EndsWith("Url", StringComparison.OrdinalIgnoreCase)
+                && !kvp.Key.EndsWith("Uri", StringComparison.OrdinalIgnoreCase))
+            {
+                escaped[kvp.Key] = EscapeForParseMode(strValue, parseMode);
+            }
+            else
+            {
+                escaped[kvp.Key] = kvp.Value;
+            }
+        }
+
+        return escaped;
+    }
+
+    /// <summary>
     /// Creates a base payload dictionary with chat_id and optional message_thread_id.
     /// All Telegram API methods should use this to ensure consistent field inclusion.
     /// </summary>
@@ -200,9 +239,9 @@ public class TelegramOption : BaseOption
                 return;
             }
 
-            var body = option.GetMessageBody(data);
-            // Escape message body for Markdown/MarkdownV2 parse modes to prevent formatting breaks
-            body = EscapeForParseMode(body, option.ParseMode);
+            // Escape variable VALUES before substitution so template formatting markers stay intact
+            var escapedData = EscapeDataValues(data, option.ParseMode);
+            var body = option.GetMessageBody(escapedData);
 
             if (!SendMessageBody(_logger, option, ref body))
             {

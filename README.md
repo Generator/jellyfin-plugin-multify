@@ -36,6 +36,11 @@ See [Supported Notification Events](docs/supported-events.md) for the complete l
 
 **HTML Parse Mode** supports: `<b>`, `<i>`, `<a href="">`, `<code>`, `<pre>`, `<blockquote>`
 
+> [!NOTE]
+> **MarkdownV2 escaping:** When using `MarkdownV2` parse mode, template variable values are automatically escaped for the following characters: `_ * [ ] ( ) ~ > # + - = | { } . !`. This prevents user-generated content (like movie titles with parentheses or underscores) from breaking the formatting.
+>
+> Your template **formatting markers** (`*bold*`, `_italic_`, `[links](url)`, etc.) are left untouched — only the `{{variable}}` values get escaped. URL variables (ending in `Url` or `Uri`) are excluded from escaping so links remain functional.
+
 ### Gotify
 
 | Setting | Description |
