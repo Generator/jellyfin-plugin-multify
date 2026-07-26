@@ -362,21 +362,7 @@ public class TelegramOption : BaseOption
         {
             var errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             _logger.LogError("Telegram editMessageText failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, errorJson);
-
-            try
-            {
-                var errorDoc = JsonSerializer.Deserialize<JsonElement>(errorJson);
-                if (errorDoc.TryGetProperty("description", out var desc))
-                {
-                    _logger.LogError("Telegram error description: {Description}", desc.GetString());
-                }
-            }
-            catch
-            {
-                // Ignore parse errors on the error response
-            }
-
-            response.EnsureSuccessStatusCode();
+            ThrowWithDescription(response, errorJson);
         }
 
         return messageId;
@@ -409,21 +395,7 @@ public class TelegramOption : BaseOption
         {
             var errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             _logger.LogError("Telegram editMessageCaption failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, errorJson);
-
-            try
-            {
-                var errorDoc = JsonSerializer.Deserialize<JsonElement>(errorJson);
-                if (errorDoc.TryGetProperty("description", out var desc))
-                {
-                    _logger.LogError("Telegram error description: {Description}", desc.GetString());
-                }
-            }
-            catch
-            {
-                // Ignore parse errors on the error response
-            }
-
-            response.EnsureSuccessStatusCode();
+            ThrowWithDescription(response, errorJson);
         }
     }
 
@@ -461,21 +433,7 @@ public class TelegramOption : BaseOption
         {
             var errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             _logger.LogError("Telegram editMessageText (rich) failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, errorJson);
-
-            try
-            {
-                var errorDoc = JsonSerializer.Deserialize<JsonElement>(errorJson);
-                if (errorDoc.TryGetProperty("description", out var desc))
-                {
-                    _logger.LogError("Telegram error description: {Description}", desc.GetString());
-                }
-            }
-            catch
-            {
-                // Ignore parse errors on the error response
-            }
-
-            response.EnsureSuccessStatusCode();
+            ThrowWithDescription(response, errorJson);
         }
     }
 
@@ -498,22 +456,7 @@ public class TelegramOption : BaseOption
         {
             var errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             _logger.LogError("Telegram sendMessage failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, errorJson);
-
-            // Try to extract and log the description field for more detail
-            try
-            {
-                var errorDoc = JsonSerializer.Deserialize<JsonElement>(errorJson);
-                if (errorDoc.TryGetProperty("description", out var desc))
-                {
-                    _logger.LogError("Telegram error description: {Description}", desc.GetString());
-                }
-            }
-            catch
-            {
-                // Ignore parse errors on the error response
-            }
-
-            response.EnsureSuccessStatusCode();
+            ThrowWithDescription(response, errorJson);
         }
 
         var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -612,21 +555,7 @@ public class TelegramOption : BaseOption
         {
             var errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             _logger.LogError("Telegram sendRichMessage failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, errorJson);
-
-            try
-            {
-                var errorDoc = JsonSerializer.Deserialize<JsonElement>(errorJson);
-                if (errorDoc.TryGetProperty("description", out var desc))
-                {
-                    _logger.LogError("Telegram error description: {Description}", desc.GetString());
-                }
-            }
-            catch
-            {
-                // Ignore parse errors on the error response
-            }
-
-            response.EnsureSuccessStatusCode();
+            ThrowWithDescription(response, errorJson);
         }
 
         var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -638,5 +567,34 @@ public class TelegramOption : BaseOption
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Throws an <see cref="HttpRequestException"/> with the Telegram error description
+    /// as the message, instead of the generic "Response status code does not indicate success" text.
+    /// </summary>
+    /// <param name="response">The HTTP response.</param>
+    /// <param name="errorJson">The error body JSON from Telegram.</param>
+    private static void ThrowWithDescription(HttpResponseMessage response, string errorJson)
+    {
+        try
+        {
+            var errorDoc = JsonSerializer.Deserialize<JsonElement>(errorJson);
+            if (errorDoc.TryGetProperty("description", out var desc))
+            {
+                var message = desc.GetString() ?? "Unknown Telegram error";
+                throw new HttpRequestException(message);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            throw;
+        }
+        catch
+        {
+            // Ignore parse errors on the error JSON and fall through to generic
+        }
+
+        response.EnsureSuccessStatusCode();
     }
 }
