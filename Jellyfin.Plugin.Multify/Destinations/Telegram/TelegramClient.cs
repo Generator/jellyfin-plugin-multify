@@ -214,11 +214,12 @@ public class TelegramOption : BaseOption
             // Only attempt edit for ItemAdded/ItemUpdated events with a TmdbId
             var notificationType = data.TryGetValue("NotificationType", out var typeObj) ? typeObj?.ToString() : null;
             var isEditEvent = notificationType is "ItemAdded" or "ItemUpdated";
-            var hasTmdbId = data.TryGetValue("TmdbId", out var tmdbIdObj) && tmdbIdObj is string tmdbId && !string.IsNullOrEmpty(tmdbId);
+            data.TryGetValue("TmdbId", out var tmdbIdObj);
+            var tmdbId = tmdbIdObj as string;
 
-            if (isEditEvent && hasTmdbId && _messageStore != null)
+            if (isEditEvent && !string.IsNullOrEmpty(tmdbId) && _messageStore != null)
             {
-                var existingMessageId = _messageStore.GetMessageId(option.ChatId, option.MessageThreadId, tmdbId!);
+                var existingMessageId = _messageStore.GetMessageId(option.ChatId, option.MessageThreadId, tmdbId);
                 if (existingMessageId.HasValue)
                 {
                     await EditMessageAsync(option, data, body, existingMessageId.Value).ConfigureAwait(false);
@@ -242,9 +243,9 @@ public class TelegramOption : BaseOption
             }
 
             // Store the message ID for future edits (only for ItemAdded/ItemUpdated with TmdbId)
-            if (isEditEvent && hasTmdbId && _messageStore != null && newMessageId.HasValue)
+            if (isEditEvent && !string.IsNullOrEmpty(tmdbId) && _messageStore != null && newMessageId.HasValue)
             {
-                _messageStore.StoreMessageId(option.ChatId, option.MessageThreadId, tmdbId!, newMessageId.Value);
+                _messageStore.StoreMessageId(option.ChatId, option.MessageThreadId, tmdbId, newMessageId.Value);
             }
         }
         catch (HttpRequestException e)

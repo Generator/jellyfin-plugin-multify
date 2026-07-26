@@ -92,7 +92,7 @@ public sealed class TelegramMessageStore : IDisposable
 
     private static string GetKey(string chatId, int? messageThreadId, string tmdbId)
     {
-        var threadId = messageThreadId?.ToString() ?? "0";
+        var threadId = messageThreadId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "0";
         return $"{chatId}:{threadId}:{tmdbId}";
     }
 
