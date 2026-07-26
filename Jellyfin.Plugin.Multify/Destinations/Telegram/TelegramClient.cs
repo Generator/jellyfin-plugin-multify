@@ -221,10 +221,10 @@ public class TelegramOption : BaseOption
             var url = match.Groups[1].Value;
             foreach (var c in charsToUnescape)
             {
-                url = url.Replace($"\\{c}", c.ToString());
+                url = url.Replace($"\\{c}", c.ToString(), StringComparison.Ordinal);
             }
 
-            return match.Value.Replace(match.Groups[1].Value, url);
+            return match.Value.Replace(match.Groups[1].Value, url, StringComparison.Ordinal);
         });
     }
 
