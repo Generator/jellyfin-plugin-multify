@@ -158,10 +158,25 @@ public class MultifyTestService : IMultifyTestService
         {
             // Build IncludeItemTypes from destination's Enable* flags
             var includeTypes = new List<BaseItemKind>();
-            if (option.EnableMovies) includeTypes.Add(BaseItemKind.Movie);
-            if (option.EnableSeries) includeTypes.Add(BaseItemKind.Series);
-            if (option.EnableEpisodes) includeTypes.Add(BaseItemKind.Episode);
-            if (option.EnableSeasons) includeTypes.Add(BaseItemKind.Season);
+            if (option.EnableMovies)
+            {
+                includeTypes.Add(BaseItemKind.Movie);
+            }
+
+            if (option.EnableSeries)
+            {
+                includeTypes.Add(BaseItemKind.Series);
+            }
+
+            if (option.EnableEpisodes)
+            {
+                includeTypes.Add(BaseItemKind.Episode);
+            }
+
+            if (option.EnableSeasons)
+            {
+                includeTypes.Add(BaseItemKind.Season);
+            }
 
             // Fall back to all types if none enabled (defensive — at least one should be)
             if (includeTypes.Count == 0)
