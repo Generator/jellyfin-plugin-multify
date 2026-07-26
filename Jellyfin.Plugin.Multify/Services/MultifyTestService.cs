@@ -11,9 +11,11 @@ using Jellyfin.Plugin.Multify.Destinations.Generic;
 using Jellyfin.Plugin.Multify.Destinations.Gotify;
 using Jellyfin.Plugin.Multify.Destinations.Ntfy;
 using Jellyfin.Plugin.Multify.Destinations.Telegram;
+using Jellyfin.Plugin.Multify.Helpers;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Entities;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Services;
@@ -157,7 +159,6 @@ public class MultifyTestService : IMultifyTestService
             var query = new InternalItemsQuery
             {
                 Limit = 1,
-                OrderBy = [(ItemSortBy.Random, SortOrder.Descending)],
                 Recursive = true,
                 IncludeItemTypes =
                 [
@@ -178,14 +179,21 @@ public class MultifyTestService : IMultifyTestService
                 }
 
                 var folderIds = new List<Guid>();
+                var virtualChildren = rootFolder.VirtualChildren;
                 foreach (var filterName in option.LibraryFilter)
                 {
-                    var folder = rootFolder.VirtualChildren
-                        .OfType<Folder>()
-                        .FirstOrDefault(f => string.Equals(f.Name, filterName, StringComparison.OrdinalIgnoreCase));
-                    if (folder is not null)
+                    if (virtualChildren is null)
                     {
-                        folderIds.Add(folder.Id);
+                        continue;
+                    }
+
+                    foreach (var child in virtualChildren)
+                    {
+                        if (child is Folder folder && string.Equals(folder.Name, filterName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            folderIds.Add(folder.Id);
+                            break;
+                        }
                     }
                 }
 
@@ -199,7 +207,7 @@ public class MultifyTestService : IMultifyTestService
             }
 
             var items = _libraryManager.GetItemList(query);
-            var item = items.FirstOrDefault();
+            var item = items.Count > 0 ? items[0] : null;
             if (item is null)
             {
                 _logger.LogDebug("No items found in library, falling back to hardcoded test data");
