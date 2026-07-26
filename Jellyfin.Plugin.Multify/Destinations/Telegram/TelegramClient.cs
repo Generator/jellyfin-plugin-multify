@@ -168,8 +168,10 @@ public class TelegramOption : BaseOption
 
     /// <summary>
     /// Creates a copy of the data dictionary with string values escaped for the given parse mode.
-    /// Values whose keys end with "Url" or "Uri" are excluded (URLs should not be escaped
-    /// as they appear inside MarkdownV2 link syntax <c>[text](url)</c>).
+    /// All string values are escaped — even URLs — because variables like <c>{{PrimaryImageUrl}}</c>
+    /// may appear as raw text in the message body where MarkdownV2 special characters need escaping.
+    /// For URLs used inside <c>[text](url)</c> links, Telegram's MarkdownV2 parser accepts
+    /// escaped characters inside the URL parentheses and strips them before making the HTTP request.
     /// </summary>
     /// <param name="data">The original data dictionary.</param>
     /// <param name="parseMode">The Telegram parse mode (MarkdownV2, Markdown, HTML, or null).</param>
@@ -190,9 +192,7 @@ public class TelegramOption : BaseOption
         var escaped = new Dictionary<string, object>(data.Count);
         foreach (var kvp in data)
         {
-            if (kvp.Value is string strValue
-                && !kvp.Key.EndsWith("Url", StringComparison.OrdinalIgnoreCase)
-                && !kvp.Key.EndsWith("Uri", StringComparison.OrdinalIgnoreCase))
+            if (kvp.Value is string strValue)
             {
                 escaped[kvp.Key] = EscapeForParseMode(strValue, parseMode);
             }
