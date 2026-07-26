@@ -434,17 +434,7 @@ public class TelegramOption : BaseOption
     {
         var richMessage = new
         {
-            content = new
-            {
-                blocks = new object[]
-                {
-                    new
-                    {
-                        type = "paragraph",
-                        text = body
-                    }
-                }
-            }
+            markdown = body
         };
 
         var payload = CreatePayload(option);
@@ -555,19 +545,11 @@ public class TelegramOption : BaseOption
 
     private async Task<long?> SendRichMessageAsync(TelegramOption option, Dictionary<string, object> data, string body)
     {
+        // Use the markdown field so the body is parsed as Rich Markdown (GitHub Flavored Markdown-like),
+        // which supports **bold**, *italic*, [links](url), ![](url) images, headings, lists, etc.
         var richMessage = new
         {
-            content = new
-            {
-                blocks = new object[]
-                {
-                    new
-                    {
-                        type = "paragraph",
-                        text = body
-                    }
-                }
-            }
+            markdown = body
         };
 
         var payload = CreatePayload(option);

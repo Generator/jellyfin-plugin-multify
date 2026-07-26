@@ -344,6 +344,87 @@ Available for **plugin events** (`PluginInstalled`, `PluginUpdated`, `PluginUnin
 
 ---
 
+## Message Type Examples
+
+Templates differ depending on the destination's message type. Below are examples for each supported format.
+
+### Telegram — SendText (MarkdownV2)
+
+Uses Telegram's MarkdownV2 parse mode. Characters `_ * [ ] ( ) ~ ` > # + - = | { } . !` must be escaped with `\` in the template body. Variable values are auto-escaped.
+
+```
+**Nova Temporada Adicionada**
+
+**Série TV:** {{SeriesName}}
+**Temporada:** {{SeasonNumber00}}
+**Jellyfin:** [{{ItemShortId}}]({{ItemUrl}})
+```
+
+### Telegram — SendPhoto (MarkdownV2 caption)
+
+Sends a photo with a caption. The photo URL is taken from the data dictionary (`PrimaryImageUrl` → `TmdbPosterUrl` → `TvdbPosterUrl`), **not** from the template body. The template body becomes the caption text only — do not include image URLs in the caption.
+
+```
+**Filme:** {{ItemName}} \({{Year}}\)
+{{Overview}}
+
+**Gêneros:** {{Genres}}
+**Biblioteca:** {{LibraryName}}
+**IMDb:** [{{ImdbId}}](https://www.imdb.com/title/{{ImdbId}}) {{ImdbRating}} ⭐
+**TMDB:** {{TmdbRating}} ⭐
+```
+
+### Telegram — SendRichMessage (Rich Markdown)
+
+Uses Telegram's Rich Markdown (GitHub Flavored Markdown-like). Supports `**bold**`, `*italic*`, `[links](url)`, `![](url)` inline images, headings, lists, and tables. No character escaping needed.
+
+```
+**Nova Temporada Adicionada**
+![]({{TmdbPosterUrl}})
+
+**Série TV:** {{SeriesName}}
+**Temporada:** {{SeasonNumber00}}
+**Jellyfin:** [{{ItemShortId}}]({{ItemUrl}})
+```
+
+### Gotify
+
+Plain text with Markdown support. No character escaping needed.
+
+```
+**{{ItemName}}** ({{Year}})
+{{Overview}}
+
+Genre: {{Genres}}
+Rating: {{ImdbRating}}/10
+```
+
+### ntfy
+
+Plain text with Markdown support. Supports `**bold**`, `[links](url)`, and emoji. Tags can be set separately in the config.
+
+```
+{{ItemName}} ({{Year}})
+{{Overview}}
+
+Watch on Jellyfin: {{ItemUrl}}
+```
+
+### Generic Webhook
+
+Sends a JSON payload. The template is rendered as a string and sent as the request body. Use `SendAllProperties` to send all variables as JSON instead.
+
+```
+{
+  "event": "{{NotificationType}}",
+  "item": "{{ItemName}}",
+  "year": "{{Year}}",
+  "url": "{{ItemUrl}}"
+}
+```
+
+---
+
 ## Notes
 
 - Variables return an empty string when their data is not available for the current event.
