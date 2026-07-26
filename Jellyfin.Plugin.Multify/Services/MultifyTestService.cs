@@ -298,6 +298,13 @@ public class MultifyTestService : IMultifyTestService
                 var logoUrl = $"{serverUrl}/Items/{itemId}/Images/Logo";
                 var bannerUrl = $"{serverUrl}/Items/{itemId}/Images/Banner";
 
+                // Item URL and short ID
+                var itemUrl = $"{serverUrl}/web/#/details?id={itemId}";
+                var shortId = itemId.Replace("-", string.Empty, StringComparison.Ordinal);
+                shortId = shortId.Length > 10 ? shortId[..10] : shortId;
+                data["ItemUrl"] = itemUrl;
+                data["ItemShortId"] = shortId;
+
                 // Jellyfin image URLs
                 data["PrimaryImageUrl"] = primaryUrl;
                 data["BackdropImageUrl"] = backdropUrl;

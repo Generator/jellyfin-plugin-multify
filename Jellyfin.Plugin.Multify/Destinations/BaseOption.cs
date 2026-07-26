@@ -119,9 +119,9 @@ public class BaseOption
             result = result.Replace(placeholder, kvp.Value?.ToString() ?? string.Empty, StringComparison.Ordinal);
         }
 
-        // Safety net: strip markdown image syntax with empty/blank URLs (![alt]())
-        // to prevent MarkdownV2 parse errors like "Invalid tg://emoji or tg://time URL specified"
-        result = Regex.Replace(result, @"!\[.*?\]\(\s*\)", string.Empty);
+        // Safety net: strip markdown link/image syntax with empty/blank URLs
+        // (![alt]() or [text]()) to prevent MarkdownV2 parse errors
+        result = Regex.Replace(result, @"!?\[.*?\]\(\s*\)", string.Empty);
 
         return result;
     }
