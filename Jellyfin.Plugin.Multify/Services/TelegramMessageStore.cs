@@ -33,38 +33,41 @@ public sealed class TelegramMessageStore : IDisposable
     }
 
     /// <summary>
-    /// Gets the message ID for a chat and item.
+    /// Gets the message ID for a chat, thread, and TMDB item.
     /// </summary>
     /// <param name="chatId">The chat ID.</param>
-    /// <param name="itemId">The item ID.</param>
+    /// <param name="messageThreadId">The optional forum topic thread ID.</param>
+    /// <param name="tmdbId">The TMDB ID of the item.</param>
     /// <returns>The message ID, or null if not found.</returns>
-    public long? GetMessageId(string chatId, string itemId)
+    public long? GetMessageId(string chatId, int? messageThreadId, string tmdbId)
     {
-        var key = GetKey(chatId, itemId);
+        var key = GetKey(chatId, messageThreadId, tmdbId);
         return _messageStore.TryGetValue(key, out var messageId) ? messageId : null;
     }
 
     /// <summary>
-    /// Stores the message ID for a chat and item.
+    /// Stores the message ID for a chat, thread, and TMDB item.
     /// </summary>
     /// <param name="chatId">The chat ID.</param>
-    /// <param name="itemId">The item ID.</param>
+    /// <param name="messageThreadId">The forum topic thread ID.</param>
+    /// <param name="tmdbId">The TMDB ID of the item.</param>
     /// <param name="messageId">The message ID.</param>
-    public void StoreMessageId(string chatId, string itemId, long messageId)
+    public void StoreMessageId(string chatId, int? messageThreadId, string tmdbId, long messageId)
     {
-        var key = GetKey(chatId, itemId);
+        var key = GetKey(chatId, messageThreadId, tmdbId);
         _messageStore[key] = messageId;
         _ = SaveStoreAsync();
     }
 
     /// <summary>
-    /// Removes the message ID for a chat and item.
+    /// Removes the message ID for a chat, thread, and TMDB item.
     /// </summary>
     /// <param name="chatId">The chat ID.</param>
-    /// <param name="itemId">The item ID.</param>
-    public void RemoveMessageId(string chatId, string itemId)
+    /// <param name="messageThreadId">The forum topic thread ID.</param>
+    /// <param name="tmdbId">The TMDB ID of the item.</param>
+    public void RemoveMessageId(string chatId, int? messageThreadId, string tmdbId)
     {
-        var key = GetKey(chatId, itemId);
+        var key = GetKey(chatId, messageThreadId, tmdbId);
         _messageStore.TryRemove(key, out _);
         _ = SaveStoreAsync();
     }
@@ -87,9 +90,10 @@ public sealed class TelegramMessageStore : IDisposable
         _logger.LogInformation("Cleared {Count} entries from Telegram message store", count);
     }
 
-    private static string GetKey(string chatId, string itemId)
+    private static string GetKey(string chatId, int? messageThreadId, string tmdbId)
     {
-        return $"{chatId}:{itemId}";
+        var threadId = messageThreadId?.ToString() ?? "0";
+        return $"{chatId}:{threadId}:{tmdbId}";
     }
 
     private async Task LoadStoreAsync()

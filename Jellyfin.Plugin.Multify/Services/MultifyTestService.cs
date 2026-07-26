@@ -108,6 +108,10 @@ public class MultifyTestService : IMultifyTestService
             option.EnableWebhook = true;
             option.SendAllProperties = false;
 
+            // Clear TmdbId so test messages are always sent as new (never edited)
+            // Test data keeps all other template variables intact
+            data["TmdbId"] = string.Empty;
+
             await SendAsync(request.DestinationType, option, data).ConfigureAwait(false);
 
             _logger.LogDebug("Test notification sent successfully to {DestinationType}", request.DestinationType);

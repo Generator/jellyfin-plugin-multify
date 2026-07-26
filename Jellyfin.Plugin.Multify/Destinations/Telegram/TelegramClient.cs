@@ -211,10 +211,14 @@ public class TelegramOption : BaseOption
 
             _logger.LogDebug("Telegram sending {BodyLength} bytes to {WebhookName}: {Body}", body.Length, option.WebhookName, body);
 
-            // Check if we should edit an existing message
-            if (_messageStore != null && data.TryGetValue("ItemId", out var itemIdObj) && itemIdObj is string itemId)
+            // Only attempt edit for ItemAdded/ItemUpdated events with a TmdbId
+            var notificationType = data.TryGetValue("NotificationType", out var typeObj) ? typeObj?.ToString() : null;
+            var isEditEvent = notificationType is "ItemAdded" or "ItemUpdated";
+            var hasTmdbId = data.TryGetValue("TmdbId", out var tmdbIdObj) && tmdbIdObj is string tmdbId && !string.IsNullOrEmpty(tmdbId);
+
+            if (isEditEvent && hasTmdbId && _messageStore != null)
             {
-                var existingMessageId = _messageStore.GetMessageId(option.ChatId, itemId);
+                var existingMessageId = _messageStore.GetMessageId(option.ChatId, option.MessageThreadId, tmdbId!);
                 if (existingMessageId.HasValue)
                 {
                     await EditMessageAsync(option, data, body, existingMessageId.Value).ConfigureAwait(false);
@@ -237,10 +241,10 @@ public class TelegramOption : BaseOption
                     break;
             }
 
-            // Store the message ID for future edits
-            if (_messageStore != null && newMessageId.HasValue && data.TryGetValue("ItemId", out var itemIdObj2) && itemIdObj2 is string itemId2)
+            // Store the message ID for future edits (only for ItemAdded/ItemUpdated with TmdbId)
+            if (isEditEvent && hasTmdbId && _messageStore != null && newMessageId.HasValue)
             {
-                _messageStore.StoreMessageId(option.ChatId, itemId2, newMessageId.Value);
+                _messageStore.StoreMessageId(option.ChatId, option.MessageThreadId, tmdbId!, newMessageId.Value);
             }
         }
         catch (HttpRequestException e)
@@ -252,9 +256,8 @@ public class TelegramOption : BaseOption
 
     private async Task EditMessageAsync(TelegramOption option, Dictionary<string, object> data, string body, long messageId)
     {
-        // Escape message body for Markdown/MarkdownV2 parse modes
-        body = EscapeForParseMode(body, option.ParseMode);
-
+        // Body is already escaped in SendAsync before being passed here
+        // Do NOT re-escape, as it would double-escape MarkdownV2 characters
         try
         {
             switch (option.MessageType)
@@ -276,17 +279,25 @@ public class TelegramOption : BaseOption
         {
             _logger.LogWarning(ex, "Error editing Telegram message {MessageId}, sending new message", messageId);
             // Fall back to sending a new message
+            long? newMessageId = null;
             switch (option.MessageType)
             {
                 case TelegramMessageType.SendPhoto:
-                    await SendPhotoAsync(option, data, body).ConfigureAwait(false);
+                    newMessageId = await SendPhotoAsync(option, data, body).ConfigureAwait(false);
                     break;
                 case TelegramMessageType.SendRichMessage:
-                    await SendRichMessageAsync(option, data, body).ConfigureAwait(false);
+                    newMessageId = await SendRichMessageAsync(option, data, body).ConfigureAwait(false);
                     break;
                 default:
-                    await SendTextAsync(option, body).ConfigureAwait(false);
+                    newMessageId = await SendTextAsync(option, body).ConfigureAwait(false);
                     break;
+            }
+
+            // Store the new message ID so future edits use the correct message
+            if (_messageStore != null && newMessageId.HasValue
+                && data.TryGetValue("TmdbId", out var tmdbIdObj) && tmdbIdObj is string tmdbId && !string.IsNullOrEmpty(tmdbId))
+            {
+                _messageStore.StoreMessageId(option.ChatId, option.MessageThreadId, tmdbId, newMessageId.Value);
             }
         }
     }
@@ -431,7 +442,12 @@ public class TelegramOption : BaseOption
             .PostAsync(uri, content)
             .ConfigureAwait(false);
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Telegram rejected photo URL ({StatusCode}), falling back to text", (int)response.StatusCode);
+            return await SendTextAsync(option, body).ConfigureAwait(false);
+        }
+
         var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         var result = JsonSerializer.Deserialize<JsonElement>(responseJson);
 
