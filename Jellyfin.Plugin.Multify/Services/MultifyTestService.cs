@@ -374,15 +374,22 @@ public class MultifyTestService : IMultifyTestService
                     case ImageType.Primary:
                         data["TmdbPosterUrl"] = image.Url;
                         data["TmdbProfileUrl"] = image.Url;
+                        // Also update PrimaryImageUrl so {{PrimaryImageUrl}} resolves to a
+                        // publicly accessible CDN URL (instead of a local Jellyfin URL that
+                        // services like Telegram cannot fetch)
+                        data["PrimaryImageUrl"] = image.Url;
                         break;
                     case ImageType.Backdrop:
                         data["TmdbBackdropUrl"] = image.Url;
+                        data["BackdropImageUrl"] = image.Url;
                         break;
                     case ImageType.Logo:
                         data["TmdbLogoUrl"] = image.Url;
+                        data["LogoImageUrl"] = image.Url;
                         break;
                     case ImageType.Thumb:
                         data["TmdbStillUrl"] = image.Url;
+                        data["ThumbImageUrl"] = image.Url;
                         break;
                 }
             }
