@@ -46,13 +46,14 @@ public class TmdbService
         try
         {
             var json = await CallTmdbApiAsync($"/movie/{tmdbId}").ConfigureAwait(false);
-            if (json == null)
+            if (json is null)
             {
                 return result;
             }
 
-            var posterPath = json.GetProperty("poster_path").GetString();
-            var backdropPath = json.GetProperty("backdrop_path").GetString();
+            var root = json.Value;
+            var posterPath = root.GetProperty("poster_path").GetString();
+            var backdropPath = root.GetProperty("backdrop_path").GetString();
 
             if (!string.IsNullOrEmpty(posterPath))
             {
@@ -87,13 +88,14 @@ public class TmdbService
         try
         {
             var json = await CallTmdbApiAsync($"/tv/{tmdbId}").ConfigureAwait(false);
-            if (json == null)
+            if (json is null)
             {
                 return result;
             }
 
-            var posterPath = json.GetProperty("poster_path").GetString();
-            var backdropPath = json.GetProperty("backdrop_path").GetString();
+            var root = json.Value;
+            var posterPath = root.GetProperty("poster_path").GetString();
+            var backdropPath = root.GetProperty("backdrop_path").GetString();
 
             if (!string.IsNullOrEmpty(posterPath))
             {

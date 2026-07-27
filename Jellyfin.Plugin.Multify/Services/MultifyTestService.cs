@@ -318,7 +318,6 @@ public class MultifyTestService : IMultifyTestService
                 data["TmdbProfileUrl"] = primaryUrl;
                 data["TmdbStillUrl"] = thumbUrl;
                 data["TmdbLogoUrl"] = logoUrl;
-
             }
 
             return data;

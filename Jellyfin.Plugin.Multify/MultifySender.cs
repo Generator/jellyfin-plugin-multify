@@ -289,7 +289,6 @@ public class MultifySender : IWebhookSender
         {
             data["BannerImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Banner";
         }
-
     }
 
     private async Task EnrichWithTmdbImages(Dictionary<string, object> data)
