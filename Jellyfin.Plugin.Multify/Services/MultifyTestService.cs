@@ -417,18 +417,18 @@ public class MultifyTestService : IMultifyTestService
     {
         if (item is Episode episode)
         {
-            if (episode.SeasonId.HasValue)
+            if (episode.SeasonId != Guid.Empty)
             {
-                var seasonItem = _libraryManager.GetItemById(episode.SeasonId.Value);
+                var seasonItem = _libraryManager.GetItemById(episode.SeasonId);
                 if (seasonItem != null)
                 {
                     await EnrichSingleParentPosterTest(data, seasonItem, "Season", serverUrl).ConfigureAwait(false);
                 }
             }
 
-            if (episode.SeriesId.HasValue)
+            if (episode.SeriesId != Guid.Empty)
             {
-                var seriesItem = _libraryManager.GetItemById(episode.SeriesId.Value);
+                var seriesItem = _libraryManager.GetItemById(episode.SeriesId);
                 if (seriesItem != null)
                 {
                     await EnrichSingleParentPosterTest(data, seriesItem, "Series", serverUrl).ConfigureAwait(false);
@@ -437,9 +437,9 @@ public class MultifyTestService : IMultifyTestService
         }
         else if (item is Season season)
         {
-            if (season.SeriesId.HasValue)
+            if (season.SeriesId != Guid.Empty)
             {
-                var seriesItem = _libraryManager.GetItemById(season.SeriesId.Value);
+                var seriesItem = _libraryManager.GetItemById(season.SeriesId);
                 if (seriesItem != null)
                 {
                     await EnrichSingleParentPosterTest(data, seriesItem, "Series", serverUrl).ConfigureAwait(false);

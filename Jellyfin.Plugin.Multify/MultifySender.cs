@@ -392,9 +392,9 @@ public class MultifySender : IWebhookSender
         if (item is Episode episode)
         {
             // Season poster
-            if (episode.SeasonId.HasValue)
+            if (episode.SeasonId != Guid.Empty)
             {
-                var seasonItem = _libraryManager.GetItemById(episode.SeasonId.Value);
+                var seasonItem = _libraryManager.GetItemById(episode.SeasonId);
                 if (seasonItem != null)
                 {
                     await EnrichSingleParentPoster(data, seasonItem, "Season", serverUrl).ConfigureAwait(false);
@@ -402,9 +402,9 @@ public class MultifySender : IWebhookSender
             }
 
             // Series poster
-            if (episode.SeriesId.HasValue)
+            if (episode.SeriesId != Guid.Empty)
             {
-                var seriesItem = _libraryManager.GetItemById(episode.SeriesId.Value);
+                var seriesItem = _libraryManager.GetItemById(episode.SeriesId);
                 if (seriesItem != null)
                 {
                     await EnrichSingleParentPoster(data, seriesItem, "Series", serverUrl).ConfigureAwait(false);
@@ -414,9 +414,9 @@ public class MultifySender : IWebhookSender
         else if (item is Season season)
         {
             // Series poster (season poster is the current item, already enriched)
-            if (season.SeriesId.HasValue)
+            if (season.SeriesId != Guid.Empty)
             {
-                var seriesItem = _libraryManager.GetItemById(season.SeriesId.Value);
+                var seriesItem = _libraryManager.GetItemById(season.SeriesId);
                 if (seriesItem != null)
                 {
                     await EnrichSingleParentPoster(data, seriesItem, "Series", serverUrl).ConfigureAwait(false);
