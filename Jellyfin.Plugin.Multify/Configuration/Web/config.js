@@ -210,8 +210,9 @@ function multifyController(view) {
         btnBar.style.cssText = "display:flex;gap:8px;margin-bottom:8px;";
 
         const btnSelectAll = document.createElement("button");
+        btnSelectAll.setAttribute("is", "emby-button");
         btnSelectAll.type = "button";
-        btnSelectAll.className = "raised";
+        btnSelectAll.className = "raised multify-action-button";
         btnSelectAll.textContent = "Select All";
         btnSelectAll.addEventListener("click", () => {
             const cbs = container.querySelectorAll("input[type=checkbox][data-name]");
@@ -219,8 +220,9 @@ function multifyController(view) {
         });
 
         const btnSelectNone = document.createElement("button");
+        btnSelectNone.setAttribute("is", "emby-button");
         btnSelectNone.type = "button";
-        btnSelectNone.className = "raised";
+        btnSelectNone.className = "raised multify-action-button";
         btnSelectNone.textContent = "Select None";
         btnSelectNone.addEventListener("click", () => {
             const cbs = container.querySelectorAll("input[type=checkbox][data-name]");
