@@ -55,6 +55,14 @@ public class TelegramOption : BaseOption
     /// <summary>Gets or sets the optional Telegram Forum Topic thread ID. When set, messages are sent to this specific topic.</summary>
     [XmlElement("MessageThreadId")]
     public int? MessageThreadId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the photo URL template for SendPhoto messages.
+    /// Supports template variables like <c>{{TmdbPosterUrl}}</c>, <c>{{PrimaryImageUrl}}</c>, etc.
+    /// When set, this URL is used instead of the default lookup chain.
+    /// </summary>
+    [XmlElement("PhotoUrlTemplate")]
+    public string? PhotoUrlTemplate { get; set; }
 }
 
 /// <summary>
@@ -493,14 +501,34 @@ public class TelegramOption : BaseOption
 
     private async Task<long?> SendPhotoAsync(TelegramOption option, Dictionary<string, object> data, string body)
     {
-        // Try to get photo URL from data - check PrimaryImageUrl first, then PhotoUrl
+        // Photo URL lookup chain:
+        //   1. PhotoUrlTemplate (resolved with template variables)
+        //   2. PrimaryImageUrl (Jellyfin primary image)
+        //   3. TmdbPosterUrl (TMDB CDN poster)
+        //   4. PhotoUrl (legacy fallback)
+        //   5. Fallback to text
         string? photoUrl = null;
 
-        if (data.TryGetValue("PrimaryImageUrl", out var primaryObj) && primaryObj is string primaryUrl && !string.IsNullOrEmpty(primaryUrl))
+        if (!string.IsNullOrEmpty(option.PhotoUrlTemplate))
+        {
+            var resolved = BaseOption.ReplacePlaceholders(option.PhotoUrlTemplate, data);
+            if (!string.IsNullOrEmpty(resolved) && Uri.TryCreate(resolved, UriKind.Absolute, out _))
+            {
+                photoUrl = resolved;
+            }
+        }
+
+        if (string.IsNullOrEmpty(photoUrl) && data.TryGetValue("PrimaryImageUrl", out var primaryObj) && primaryObj is string primaryUrl && !string.IsNullOrEmpty(primaryUrl))
         {
             photoUrl = primaryUrl;
         }
-        else if (data.TryGetValue("PhotoUrl", out var photoUrlObj) && photoUrlObj is string photoUrlStr && !string.IsNullOrEmpty(photoUrlStr))
+
+        if (string.IsNullOrEmpty(photoUrl) && data.TryGetValue("TmdbPosterUrl", out var tmdbObj) && tmdbObj is string tmdbUrl && !string.IsNullOrEmpty(tmdbUrl))
+        {
+            photoUrl = tmdbUrl;
+        }
+
+        if (string.IsNullOrEmpty(photoUrl) && data.TryGetValue("PhotoUrl", out var photoUrlObj) && photoUrlObj is string photoUrlStr && !string.IsNullOrEmpty(photoUrlStr))
         {
             photoUrl = photoUrlStr;
         }

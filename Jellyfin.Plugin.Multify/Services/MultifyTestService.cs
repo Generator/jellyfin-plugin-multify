@@ -319,12 +319,6 @@ public class MultifyTestService : IMultifyTestService
                 data["TmdbStillUrl"] = thumbUrl;
                 data["TmdbLogoUrl"] = logoUrl;
 
-                // TVDB → Jellyfin mapping
-                data["TvdbPosterUrl"] = primaryUrl;
-                data["TvdbBannerUrl"] = bannerUrl;
-                data["TvdbFanartUrl"] = backdropUrl;
-                data["TvdbSmallUrl"] = thumbUrl;
-                data["TvdbSeasonUrl"] = thumbUrl;
             }
 
             return data;
@@ -451,13 +445,6 @@ public class MultifyTestService : IMultifyTestService
             ["TmdbStillUrl"] = "N/A",
             ["TmdbLogoUrl"] = "N/A",
 
-            // TVDB Images
-            ["TvdbPosterUrl"] = "N/A",
-            ["TvdbBannerUrl"] = "N/A",
-            ["TvdbFanartUrl"] = "N/A",
-            ["TvdbSmallUrl"] = "N/A",
-            ["TvdbSeasonUrl"] = "N/A",
-
             // Task
             ["TaskName"] = "N/A",
             ["TaskId"] = "N/A",
@@ -583,19 +570,12 @@ public class MultifyTestService : IMultifyTestService
             ["TrailerUrl"] = "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
             ["TrailerYtId"] = "dQw4w9WgXcQ",
 
-            // TMDb Image Variables
-            ["TmdbPosterUrl"] = "https://image.tmdb.org/t/p/w500/9gk7adSYeDvHkCSEhniJIsaVti8.jpg",
-            ["TmdbBackdropUrl"] = "https://image.tmdb.org/t/p/w1280/9gk7adSYeDvHkCSEhniJIsaVti8.jpg",
-            ["TmdbProfileUrl"] = "https://image.tmdb.org/t/p/w185/9gk7adSYeDvHkCSEhniJIsaVti8.jpg",
-            ["TmdbStillUrl"] = "https://image.tmdb.org/t/p/w300/9gk7adSYeDvHkCSEhniJIsaVti8.jpg",
-            ["TmdbLogoUrl"] = "https://image.tmdb.org/t/p/w500/9gk7adSYeDvHkCSEhniJIsaVti8.jpg",
-
-            // TVDB Image Variables
-            ["TvdbPosterUrl"] = "https://artworks.thetvdb.com/banners/posters/73255-1.jpg",
-            ["TvdbBannerUrl"] = "https://artworks.thetvdb.com/banners/graphical/73255-g1.jpg",
-            ["TvdbFanartUrl"] = "https://artworks.thetvdb.com/banners/fanart/original/73255-1.jpg",
-            ["TvdbSmallUrl"] = "https://artworks.thetvdb.com/banners/posters/73255-1.jpg",
-            ["TvdbSeasonUrl"] = "https://artworks.thetvdb.com/banners/seasons/73255-1.jpg",
+            // TMDb Image Variables (actual Inception poster — TMDB ID 27205)
+            ["TmdbPosterUrl"] = "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
+            ["TmdbBackdropUrl"] = "https://image.tmdb.org/t/p/w1280/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
+            ["TmdbProfileUrl"] = "https://image.tmdb.org/t/p/w185/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
+            ["TmdbStillUrl"] = "https://image.tmdb.org/t/p/w300/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
+            ["TmdbLogoUrl"] = "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
 
             // Task Variables
             ["TaskName"] = "Refresh Library",

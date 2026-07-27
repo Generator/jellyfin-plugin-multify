@@ -172,7 +172,7 @@ URLs to item images served by the Jellyfin server.
 
 ### Per-destination behaviour
 
-- **Telegram**: Use `{{PrimaryImageUrl}}` with `MessageType = Photo (1)` to send photo with caption.
+- **Telegram**: With `MessageType = Photo`, the photo URL is taken from the data dictionary (`PhotoUrlTemplate` → `PrimaryImageUrl` → `TmdbPosterUrl`), **not** from the template body. The template body becomes the caption only — do not include image URLs in the caption.
 - **Gotify**: Image URL is automatically set as `extras.client::notification.bigImageUrl`.
 - **ntfy**: Image URL is automatically attached via the `Attach` header.
 - **Generic Webhook**: Include image URLs in the JSON payload for custom processing.
@@ -218,13 +218,9 @@ URLs to TVDB-hosted images. Requires the item to have a `TvdbId` provider ID.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `{{TvdbPosterUrl}}` | TVDB poster | `https://artworks.thetvdb.com/banners/posters/12345-1.jpg` |
-| `{{TvdbBannerUrl}}` | TVDB banner | `https://artworks.thetvdb.com/banners/graphical/12345-g.jpg` |
-| `{{TvdbFanartUrl}}` | TVDB fanart | `https://artworks.thetvdb.com/banners/fanart/12345-1.jpg` |
-| `{{TvdbSmallUrl}}` | TVDB small/cached poster | `https://artworks.thetvdb.com/banners/_cache/posters/12345-1.jpg` |
-| `{{TvdbSeasonUrl}}` | TVDB season artwork | `https://artworks.thetvdb.com/banners/seasons/12345-1-1.jpg` |
-
 ---
+
+
 
 ## Ratings
 
@@ -362,7 +358,7 @@ Uses Telegram's MarkdownV2 parse mode. Characters `_ * [ ] ( ) ~ ` > # + - = | {
 
 ### Telegram — SendPhoto (MarkdownV2 caption)
 
-Sends a photo with a caption. The photo URL is taken from the data dictionary (`PrimaryImageUrl` → `TmdbPosterUrl` → `TvdbPosterUrl`), **not** from the template body. The template body becomes the caption text only — do not include image URLs in the caption.
+Sends a photo with a caption. The photo URL is taken from the data dictionary (`PrimaryImageUrl` → `TmdbPosterUrl`), **not** from the template body. The template body becomes the caption text only — do not include image URLs in the caption.
 
 ```
 **Movie:** {{ItemName}} \({{Year}}\)

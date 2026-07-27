@@ -29,6 +29,7 @@ public class MultifySender : IWebhookSender
     private readonly IWebhookClient<NtfyOption> _ntfyClient;
     private readonly IWebhookClient<GenericWebhookOption> _genericClient;
     private readonly MdblistService? _mdblistService;
+    private readonly TmdbService? _tmdbService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MultifySender"/> class.
@@ -40,6 +41,7 @@ public class MultifySender : IWebhookSender
     /// <param name="ntfyClient">Instance of the <see cref="IWebhookClient{NtfyOption}"/>.</param>
     /// <param name="genericClient">Instance of the <see cref="IWebhookClient{GenericWebhookOption}"/>.</param>
     /// <param name="mdblistService">Instance of the <see cref="MdblistService"/>.</param>
+    /// <param name="tmdbService">Instance of the <see cref="TmdbService"/>.</param>
     public MultifySender(
         ILogger<MultifySender> logger,
         PluginConfiguration configuration,
@@ -47,7 +49,8 @@ public class MultifySender : IWebhookSender
         IWebhookClient<GotifyOption> gotifyClient,
         IWebhookClient<NtfyOption> ntfyClient,
         IWebhookClient<GenericWebhookOption> genericClient,
-        MdblistService? mdblistService = null)
+        MdblistService? mdblistService = null,
+        TmdbService? tmdbService = null)
     {
         _logger = logger;
         _configuration = configuration;
@@ -56,6 +59,7 @@ public class MultifySender : IWebhookSender
         _ntfyClient = ntfyClient;
         _genericClient = genericClient;
         _mdblistService = mdblistService;
+        _tmdbService = tmdbService;
     }
 
     /// <inheritdoc />
@@ -114,6 +118,12 @@ public class MultifySender : IWebhookSender
         if (!string.IsNullOrEmpty(_configuration.ServerUrl))
         {
             EnrichWithItemUrl(itemData);
+        }
+
+        // Enrich data with TMDB image URLs if TMDB API key is configured
+        if (_tmdbService != null && !string.IsNullOrEmpty(_configuration.TmdbApiKey))
+        {
+            await EnrichWithTmdbImages(itemData).ConfigureAwait(false);
         }
 
         var tasks = new List<Task>();
@@ -280,22 +290,49 @@ public class MultifySender : IWebhookSender
             data["BannerImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Banner";
         }
 
-        // --- External provider image URL mapping ---
-        // TMDB image URLs → Jellyfin image URLs
-        // These are never fetched from TMDB directly; we map to Jellyfin's own images
-        // (which were likely scraped from TMDB and served by the Jellyfin server).
-        data["TmdbPosterUrl"] = (string)data["PrimaryImageUrl"];
-        data["TmdbBackdropUrl"] = (string)data["BackdropImageUrl"];
-        data["TmdbProfileUrl"] = (string)data["PrimaryImageUrl"];
-        data["TmdbStillUrl"] = (string)data["ThumbImageUrl"];
-        data["TmdbLogoUrl"] = (string)data["LogoImageUrl"];
+    }
 
-        // TVDB image URLs → Jellyfin image URLs
-        data["TvdbPosterUrl"] = (string)data["PrimaryImageUrl"];
-        data["TvdbBannerUrl"] = (string)data["BannerImageUrl"];
-        data["TvdbFanartUrl"] = (string)data["BackdropImageUrl"];
-        data["TvdbSmallUrl"] = (string)data["ThumbImageUrl"];
-        data["TvdbSeasonUrl"] = (string)data["ThumbImageUrl"];
+    private async Task EnrichWithTmdbImages(Dictionary<string, object> data)
+    {
+        // Check for TmdbId in the data
+        if (!data.TryGetValue("TmdbId", out var tmdbIdObj) || tmdbIdObj is not string tmdbIdStr || !int.TryParse(tmdbIdStr, out var tmdbId))
+        {
+            return;
+        }
+
+        // Determine media type from ItemType
+        var isSeries = false;
+        if (data.TryGetValue("ItemType", out var itemTypeObj) && itemTypeObj is string itemType)
+        {
+            isSeries = itemType.Contains("Series", StringComparison.OrdinalIgnoreCase)
+                || itemType.Contains("Season", StringComparison.OrdinalIgnoreCase)
+                || itemType.Contains("Episode", StringComparison.OrdinalIgnoreCase);
+        }
+
+        Dictionary<string, string>? imageUrls = null;
+
+        if (isSeries)
+        {
+            imageUrls = await _tmdbService!.FetchSeriesImageUrlsAsync(tmdbId).ConfigureAwait(false);
+        }
+        else
+        {
+            imageUrls = await _tmdbService!.FetchMovieImageUrlsAsync(tmdbId).ConfigureAwait(false);
+        }
+
+        if (imageUrls == null || imageUrls.Count == 0)
+        {
+            _logger.LogDebug("No TMDB image URLs found for {ItemType} {TmdbId}", isSeries ? "series" : "movie", tmdbId);
+            return;
+        }
+
+        // Only overwrite if we got actual values
+        foreach (var kvp in imageUrls)
+        {
+            data[kvp.Key] = kvp.Value;
+        }
+
+        _logger.LogDebug("Enriched TMDB image URLs for {ItemType} {TmdbId}: {Count} URLs", isSeries ? "series" : "movie", tmdbId, imageUrls.Count);
     }
 
     private static string GetMediaType(Dictionary<string, object> data)

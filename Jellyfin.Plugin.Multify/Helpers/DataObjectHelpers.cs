@@ -208,13 +208,6 @@ public static class DataObjectHelpers
         data["TmdbStillUrl"] = string.Empty;
         data["TmdbLogoUrl"] = string.Empty;
 
-        // Add TVDB image URL variables (will be enriched with API calls if TVDB ID available)
-        data["TvdbPosterUrl"] = string.Empty;
-        data["TvdbBannerUrl"] = string.Empty;
-        data["TvdbFanartUrl"] = string.Empty;
-        data["TvdbSmallUrl"] = string.Empty;
-        data["TvdbSeasonUrl"] = string.Empty;
-
         // Add series-specific data
         if (item is MediaBrowser.Controller.Entities.TV.Series series)
         {

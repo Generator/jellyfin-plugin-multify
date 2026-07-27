@@ -577,10 +577,11 @@ function multifyController(view) {
             specific.BotToken = $("[data-name=txtBotToken]", card)?.value || "";
             specific.ChatId = $("[data-name=txtChatId]", card)?.value || "";
             specific.ParseMode = $("[data-name=ddlParseMode]", card)?.value || "HTML";
-            specific.MessageType = parseInt($("[data-name=ddlMessageType]", card)?.value || "0", 10);
+            specific.MessageType = $("[data-name=ddlMessageType]", card)?.value || "SendText";
             const topicIdVal = $("[data-name=txtTopicId]", card)?.value;
             specific.MessageThreadId = topicIdVal ? parseInt(topicIdVal, 10) : null;
             specific.DisableNotification = $("[data-name=chkDisableNotification]", card)?.checked || false;
+            specific.PhotoUrlTemplate = $("[data-name=txtPhotoUrlTemplate]", card)?.value || null;
         } else if (type === "gotify") {
             specific.Token = $("[data-name=txtToken]", card)?.value || "";
             specific.Priority = parseInt($("[data-name=txtPriority]", card)?.value || "0", 10);
@@ -948,21 +949,36 @@ function multifyController(view) {
             </div>
             <div class="selectContainer">
                 <select is="emby-select" data-name="ddlMessageType" label="Message Type:">
-                    <option value="0">Text (sendMessage)</option>
-                    <option value="1">Photo (sendPhoto)</option>
-                    <option value="2">Rich Message (sendRichMessage)</option>
+                    <option value="SendText">Text (sendMessage)</option>
+                    <option value="SendPhoto">Photo (sendPhoto)</option>
+                    <option value="SendRichMessage">Rich Message (sendRichMessage)</option>
                 </select>
             </div>
             <div class="inputContainer"><input is="emby-input" type="number" data-name="txtTopicId" label="Forum Topic ID (optional):"/><span>For Telegram Forum Topics. Leave empty to send to the general topic.</span></div>
-            <div class="inputContainer"><label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkDisableNotification"/><span>Disable Notification (silent message)</span></label><span>When enabled, the message will be sent without sound or vibration.</span></div>`, null, { showUrl: false });
+            <div class="inputContainer"><label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkDisableNotification"/><span>Disable Notification (silent message)</span></label><span>When enabled, the message will be sent without sound or vibration.</span></div>
+            <div class="inputContainer" data-name="photoUrlTemplateGroup" style="display:none"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImageUrl}}</code>. Leave empty to use the default lookup chain (PrimaryImageUrl → TmdbPosterUrl).</span></div>`, null, { showUrl: false });
 
         setTimeout(() => {
             const setVal = (n, v) => { const el = $("[data-name=" + n + "]", card); if (el) el.value = v != null ? String(v) : ""; };
+            const togglePhotoUrlField = (messageType) => {
+                const group = $("[data-name=photoUrlTemplateGroup]", card);
+                if (group) group.style.display = messageType === "SendPhoto" ? "" : "none";
+            };
             setVal("txtBotToken", config.BotToken);
             setVal("txtChatId", config.ChatId);
             setVal("ddlParseMode", config.ParseMode || "HTML");
-            setVal("ddlMessageType", config.MessageType ?? 0);
+            setVal("ddlMessageType", config.MessageType ?? "SendText");
             setVal("txtTopicId", config.MessageThreadId);
+            setVal("txtPhotoUrlTemplate", config.PhotoUrlTemplate);
+            // Toggle photo URL field visibility based on current message type
+            togglePhotoUrlField(config.MessageType ?? "SendText");
+            // Listen for changes on the message type dropdown
+            const msgTypeEl = $("[data-name=ddlMessageType]", card);
+            if (msgTypeEl) {
+                msgTypeEl.addEventListener("change", function () {
+                    togglePhotoUrlField(this.value);
+                });
+            }
         }, 0);
 
         return card;
@@ -1073,10 +1089,11 @@ function multifyController(view) {
                 specific.BotToken = $("[data-name=txtBotToken]", card)?.value || "";
                 specific.ChatId = $("[data-name=txtChatId]", card)?.value || "";
                 specific.ParseMode = $("[data-name=ddlParseMode]", card)?.value || "HTML";
-                specific.MessageType = parseInt($("[data-name=ddlMessageType]", card)?.value || "0", 10);
+                specific.MessageType = $("[data-name=ddlMessageType]", card)?.value || "SendText";
                 const topicIdVal = $("[data-name=txtTopicId]", card)?.value;
                 specific.MessageThreadId = topicIdVal ? parseInt(topicIdVal, 10) : null;
                 specific.DisableNotification = $("[data-name=chkDisableNotification]", card)?.checked || false;
+                specific.PhotoUrlTemplate = $("[data-name=txtPhotoUrlTemplate]", card)?.value || null;
             } else if (type === "gotify") {
                 specific.Token = $("[data-name=txtToken]", card)?.value || "";
                 specific.Priority = $("[data-name=txtPriority]", card)?.value || 0;

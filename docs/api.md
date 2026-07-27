@@ -248,7 +248,7 @@ Test notifications use a simplified set of variables for testing purposes. For c
 | `{{Timestamp}}` | Current UTC timestamp | `2024-01-15 10:30:00 UTC` |
 | `{{TmdbPosterUrl}}` | TMDB poster image URL | `https://image.tmdb.org/t/p/w500/...` |
 | `{{TmdbBackdropUrl}}` | TMDB backdrop image URL | `https://image.tmdb.org/t/p/w1280/...` |
-| `{{TvdbPosterUrl}}` | TVDB poster image URL | `https://artworks.thetvdb.com/banners/posters/...` |
+
 
 ### Example Template
 
