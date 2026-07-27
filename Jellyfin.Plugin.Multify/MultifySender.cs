@@ -316,9 +316,8 @@ public class MultifySender : IWebhookSender
         try
         {
             // Query Jellyfin's provider system for TMDB remote images
-            var query = new RemoteImageQuery
+            var query = new RemoteImageQuery("TheMovieDb")
             {
-                ProviderName = "TheMovieDb",
                 IncludeAllLanguages = true,
                 IncludeDisabledProviders = false
             };
