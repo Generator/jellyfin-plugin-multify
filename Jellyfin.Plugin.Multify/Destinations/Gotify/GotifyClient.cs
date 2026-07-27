@@ -29,6 +29,15 @@ public class GotifyOption : BaseOption
     /// <summary>Gets or sets the notification title.</summary>
     [XmlElement("Title")]
     public string? Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets the photo URL template for attaching images.
+    /// Supports template variables like <c>{{TmdbPosterUrl}}</c>, <c>{{PrimaryImageUrl}}</c>, etc.
+    /// When set, the resolved URL is sent as <c>extras.client::notification.bigImageUrl</c>.
+    /// When empty, no image is sent (avoids duplication with inline images in the body).
+    /// </summary>
+    [XmlElement("PhotoUrlTemplate")]
+    public string? PhotoUrlTemplate { get; set; }
 }
 
 /// <summary>
@@ -83,10 +92,16 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
                 ["client::display"] = new { contentType = "text/markdown" }
             };
 
-            // Add image URL to extras if available (correct format: bigImageUrl)
-            if (data.TryGetValue("PrimaryImageUrl", out var imageObj) && imageObj is string imageUrl && !string.IsNullOrEmpty(imageUrl))
+            // Add image URL to extras if PhotoUrlTemplate is configured.
+            // When no template is set, no image is sent — this lets users use inline
+            // images in the body without duplicating them as bigImageUrl.
+            if (!string.IsNullOrEmpty(option.PhotoUrlTemplate))
             {
-                extras["client::notification"] = new { bigImageUrl = imageUrl };
+                var imageUrl = BaseOption.ReplacePlaceholders(option.PhotoUrlTemplate, data);
+                if (!string.IsNullOrEmpty(imageUrl))
+                {
+                    extras["client::notification"] = new { bigImageUrl = imageUrl };
+                }
             }
 
             // Use custom title if provided (with placeholder replacement), otherwise default to WebhookName

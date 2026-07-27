@@ -995,12 +995,14 @@ function multifyController(view) {
         const card = wrapDestinationCard(config, "gotify", `
             <div class="inputContainer"><input is="emby-input" type="text" data-name="txtToken" label="Token:"/></div>
             <div class="inputContainer"><input is="emby-input" type="number" data-name="txtPriority" label="Priority:"/></div>
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>`, null);
+            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>
+            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImageUrl}}</code>. Leave empty for no image attachment.</span></div>`, null);
 
         setTimeout(() => {
             const el = $("[data-name=txtToken]", card); if (el) el.value = config.Token || "";
             const pr = $("[data-name=txtPriority]", card); if (pr) pr.value = config.Priority || 0;
             const ti = $("[data-name=txtTitle]", card); if (ti) ti.value = config.Title || "";
+            const pu = $("[data-name=txtPhotoUrlTemplate]", card); if (pu) pu.value = config.PhotoUrlTemplate || "";
         }, 0);
 
         return card;
@@ -1107,6 +1109,7 @@ function multifyController(view) {
                 specific.Token = $("[data-name=txtToken]", card)?.value || "";
                 specific.Priority = $("[data-name=txtPriority]", card)?.value || 0;
                 specific.Title = $("[data-name=txtTitle]", card)?.value || "";
+                specific.PhotoUrlTemplate = $("[data-name=txtPhotoUrlTemplate]", card)?.value || null;
             } else if (type === "ntfy") {
                 specific.Topic = $("[data-name=txtTopic]", card)?.value || "";
                 specific.Priority = parseInt($("[data-name=ddlPriority]", card)?.value || "3", 10);
