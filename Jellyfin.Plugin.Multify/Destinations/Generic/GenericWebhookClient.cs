@@ -93,6 +93,9 @@ public class GenericWebhookClient : BaseClient, IWebhookClient<GenericWebhookOpt
                 .SendAsync(httpRequestMessage)
                 .ConfigureAwait(false);
 
+            var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            _logger.LogDebug("Generic webhook response: {Response}", responseJson);
+
             response.EnsureSuccessStatusCode();
             _logger.LogDebug("Generic webhook notification sent successfully");
         }

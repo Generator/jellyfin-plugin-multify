@@ -155,6 +155,9 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
                 .SendAsync(request)
                 .ConfigureAwait(false);
 
+            var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            _logger.LogDebug("ntfy response: {Response}", responseJson);
+
             response.EnsureSuccessStatusCode();
             _logger.LogDebug("ntfy notification sent successfully");
         }

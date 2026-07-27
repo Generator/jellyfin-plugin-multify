@@ -125,6 +125,9 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
                 .PostAsync(uri, content)
                 .ConfigureAwait(false);
 
+            var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            _logger.LogDebug("Gotify response: {Response}", responseJson);
+
             response.EnsureSuccessStatusCode();
             _logger.LogDebug("Gotify notification sent successfully");
         }

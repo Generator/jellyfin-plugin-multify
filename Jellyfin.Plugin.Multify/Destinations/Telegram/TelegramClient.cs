@@ -414,6 +414,9 @@ public class TelegramOption : BaseOption
             ThrowWithDescription(response, errorJson);
         }
 
+        var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        _logger.LogDebug("Telegram editMessageText response: {Response}", responseJson);
+
         return messageId;
     }
 
@@ -446,6 +449,9 @@ public class TelegramOption : BaseOption
             _logger.LogError("Telegram editMessageCaption failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, errorJson);
             ThrowWithDescription(response, errorJson);
         }
+
+        var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        _logger.LogDebug("Telegram editMessageCaption response: {Response}", responseJson);
     }
 
     private async Task EditRichMessageAsync(TelegramOption option, string body, long messageId)
@@ -474,6 +480,9 @@ public class TelegramOption : BaseOption
             _logger.LogError("Telegram editMessageText (rich) failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, errorJson);
             ThrowWithDescription(response, errorJson);
         }
+
+        var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        _logger.LogDebug("Telegram editMessageText (rich) response: {Response}", responseJson);
     }
 
     private async Task<long?> SendTextAsync(TelegramOption option, string body)
@@ -499,6 +508,7 @@ public class TelegramOption : BaseOption
         }
 
         var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        _logger.LogDebug("Telegram sendMessage response: {Response}", responseJson);
         var result = JsonSerializer.Deserialize<JsonElement>(responseJson);
 
         if (result.TryGetProperty("result", out var resultElement) && resultElement.TryGetProperty("message_id", out var messageIdElement))
@@ -571,6 +581,7 @@ public class TelegramOption : BaseOption
         }
 
         var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        _logger.LogDebug("Telegram sendPhoto response: {Response}", responseJson);
         var result = JsonSerializer.Deserialize<JsonElement>(responseJson);
 
         if (result.TryGetProperty("result", out var resultElement) && resultElement.TryGetProperty("message_id", out var messageIdElement))
@@ -620,6 +631,7 @@ public class TelegramOption : BaseOption
         }
 
         var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        _logger.LogDebug("Telegram sendRichMessage response: {Response}", responseJson);
         var result = JsonSerializer.Deserialize<JsonElement>(responseJson);
 
         if (result.TryGetProperty("result", out var resultElement) && resultElement.TryGetProperty("message_id", out var messageIdElement))
