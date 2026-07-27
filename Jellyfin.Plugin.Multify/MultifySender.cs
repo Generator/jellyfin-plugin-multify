@@ -413,7 +413,10 @@ public class MultifySender : IWebhookSender
         }
         else if (item is Season season)
         {
-            // Series poster (season poster is the current item, already enriched)
+            // Current item IS the Season — copy poster URLs to Season-prefixed keys
+            CopySelfPosterToPrefixed(data, "Season");
+
+            // Series poster (parent)
             if (season.SeriesId != Guid.Empty)
             {
                 var seriesItem = _libraryManager.GetItemById(season.SeriesId);
@@ -423,7 +426,12 @@ public class MultifySender : IWebhookSender
                 }
             }
         }
-        // For Movie and Series items, parent posters = current item poster (no separate parent)
+        else if (item is Series)
+        {
+            // Current item IS the Series — copy poster URLs to Series-prefixed keys
+            CopySelfPosterToPrefixed(data, "Series");
+        }
+        // For Movie items, parent posters remain empty (no season/series concept)
     }
 
     /// <summary>
@@ -475,6 +483,25 @@ public class MultifySender : IWebhookSender
         catch (Exception ex)
         {
             _logger.LogTrace(ex, "Error enriching {Prefix} poster for parent item {ParentId}", prefix, parentId);
+        }
+    }
+
+    /// <summary>
+    /// Copies the current item's poster URLs (PrimaryImageUrl, TmdbPosterUrl) into
+    /// prefixed keys for the given <paramref name="prefix"/> (e.g. "Season", "Series").
+    /// Used when the current item IS the parent (e.g. a Series item should have
+    /// SeriesPrimaryImageUrl = PrimaryImageUrl).
+    /// </summary>
+    private static void CopySelfPosterToPrefixed(Dictionary<string, object> data, string prefix)
+    {
+        if (data.TryGetValue("PrimaryImageUrl", out var primary) && primary is string primaryStr)
+        {
+            data[$"{prefix}PrimaryImageUrl"] = primaryStr;
+        }
+
+        if (data.TryGetValue("TmdbPosterUrl", out var tmdb) && tmdb is string tmdbStr)
+        {
+            data[$"Tmdb{prefix}PosterUrl"] = tmdbStr;
         }
     }
 
