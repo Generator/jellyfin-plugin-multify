@@ -463,6 +463,13 @@ function multifyController(view) {
         const title = document.createElement("strong");
         title.className = "multify-destination-title";
         title.textContent = config.WebhookName || "Webhook Name";
+        title.addEventListener("click", (e) => {
+            e.stopPropagation();
+            card.classList.toggle("collapsed");
+            const isExpanded = !card.classList.contains("collapsed");
+            toggleBtn.setAttribute("aria-expanded", isExpanded);
+            toggleBtn.innerHTML = isExpanded ? '<span class="material-icons">expand_less</span>' : '<span class="material-icons">expand_more</span>';
+        });
         header.appendChild(title);
 
         // Action buttons container

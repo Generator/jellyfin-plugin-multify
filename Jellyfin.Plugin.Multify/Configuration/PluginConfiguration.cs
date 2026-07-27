@@ -49,8 +49,4 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Gets or sets the MDBList API key.</summary>
     [XmlElement("MdblistApiKey")]
     public string MdblistApiKey { get; set; } = string.Empty;
-
-    /// <summary>Gets or sets the TMDB API key for fetching image URLs directly.</summary>
-    [XmlElement("TmdbApiKey")]
-    public string TmdbApiKey { get; set; } = string.Empty;
 }

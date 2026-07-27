@@ -54,6 +54,65 @@ This is handled automatically. For example, if `{{ItemName}}` is `"Inception (20
 
 ---
 
+## Telegram Rich Messages (SendRichMessage)
+
+### How do I include an image in a rich message?
+
+Use the `<img src="url"/>` HTML tag **inline** in your template. Telegram's `sendRichMessage` supports mixing Markdown and HTML in the same message, so you can use `**bold**` alongside `<img>` tags.
+
+**Wrong** (Markdown inline image syntax — not supported by Telegram):
+```markdown
+**Nova Temporada Adicionada**
+![{{SeriesName}}]({{TmdbPosterUrl}})
+```
+
+**Right** (HTML `<img>` tag — renders as a photo block):
+```markdown
+**Nova Temporada Adicionada**
+
+<img src="{{TmdbPosterUrl}}"/>
+
+**Série TV:** {{SeriesName}}
+```
+
+### Can I mix Markdown and HTML in the same rich message?
+
+**Yes.** Telegram's API explicitly supports this. The `<img>` tag uses HTML, while everything else (bold, italic, links) can use Markdown:
+
+```markdown
+**Bold text** and *italic text*
+
+<img src="{{TmdbPosterUrl}}"/>
+
+[Open in Jellyfin]({{ItemUrl}})
+```
+
+### Why doesn't `![alt](url)` work for images?
+
+Telegram's rich message parser does **not** support Markdown image syntax (`![alt](url)`). Using it will cause a `can't parse entities: Invalid tg://emoji` error. Always use `<img src="url"/>` instead.
+
+### What HTML tags are available for rich messages?
+
+| Tag | Purpose | Example |
+|-----|---------|---------|
+| `<img src="url"/>` | Inline photo | `<img src="{{TmdbPosterUrl}}"/>` |
+| `<b>` or `<strong>` | Bold | `<b>text</b>` |
+| `<i>` or `<em>` | Italic | `<i>text</i>` |
+| `<u>` or `<ins>` | Underline | `<u>text</u>` |
+| `<s>` or `<strike>` | Strikethrough | `<s>text</s>` |
+| `<code>` | Monospace | `<code>text</code>` |
+| `<a href="url">` | Link | `<a href="{{ItemUrl}}">Open</a>` |
+| `<tg-emoji emoji-id="..."/>` | Custom emoji | `<tg-emoji emoji-id="5368324170671202286"/>` |
+
+### What's the difference between SendPhoto and SendRichMessage for images?
+
+- **SendPhoto**: Sends a **standalone photo** with a caption below it. The image is the primary content; the caption is secondary text.
+- **SendRichMessage**: Embeds the image **inside formatted text** as a block. The image appears between paragraphs, alongside bold/italic/links.
+
+For a "Season Added" notification where the image is part of a richly formatted message, **SendRichMessage** with `<img src="..."/>` gives the best result.
+
+---
+
 ## Telemetry / Debugging
 
 ### How do I see the actual Telegram error?

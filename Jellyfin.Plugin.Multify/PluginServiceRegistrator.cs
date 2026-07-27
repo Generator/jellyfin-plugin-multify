@@ -71,9 +71,6 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // Register MDBList service
         serviceCollection.AddScoped<MdblistService>();
 
-        // Register TMDB image service
-        serviceCollection.AddScoped<TmdbService>();
-
         // Register Telegram message store
         serviceCollection.AddSingleton<TelegramMessageStore>();
 

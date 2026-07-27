@@ -13,6 +13,10 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Providers;
+using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Providers;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify;
@@ -29,7 +33,8 @@ public class MultifySender : IWebhookSender
     private readonly IWebhookClient<NtfyOption> _ntfyClient;
     private readonly IWebhookClient<GenericWebhookOption> _genericClient;
     private readonly MdblistService? _mdblistService;
-    private readonly TmdbService? _tmdbService;
+    private readonly ILibraryManager _libraryManager;
+    private readonly IProviderManager _providerManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MultifySender"/> class.
@@ -40,8 +45,9 @@ public class MultifySender : IWebhookSender
     /// <param name="gotifyClient">Instance of the <see cref="IWebhookClient{GotifyOption}"/>.</param>
     /// <param name="ntfyClient">Instance of the <see cref="IWebhookClient{NtfyOption}"/>.</param>
     /// <param name="genericClient">Instance of the <see cref="IWebhookClient{GenericWebhookOption}"/>.</param>
+    /// <param name="libraryManager">Instance of the <see cref="ILibraryManager"/>.</param>
+    /// <param name="providerManager">Instance of the <see cref="IProviderManager"/>.</param>
     /// <param name="mdblistService">Instance of the <see cref="MdblistService"/>.</param>
-    /// <param name="tmdbService">Instance of the <see cref="TmdbService"/>.</param>
     public MultifySender(
         ILogger<MultifySender> logger,
         PluginConfiguration configuration,
@@ -49,8 +55,9 @@ public class MultifySender : IWebhookSender
         IWebhookClient<GotifyOption> gotifyClient,
         IWebhookClient<NtfyOption> ntfyClient,
         IWebhookClient<GenericWebhookOption> genericClient,
-        MdblistService? mdblistService = null,
-        TmdbService? tmdbService = null)
+        ILibraryManager libraryManager,
+        IProviderManager providerManager,
+        MdblistService? mdblistService = null)
     {
         _logger = logger;
         _configuration = configuration;
@@ -58,8 +65,9 @@ public class MultifySender : IWebhookSender
         _gotifyClient = gotifyClient;
         _ntfyClient = ntfyClient;
         _genericClient = genericClient;
+        _libraryManager = libraryManager;
+        _providerManager = providerManager;
         _mdblistService = mdblistService;
-        _tmdbService = tmdbService;
     }
 
     /// <inheritdoc />
@@ -120,11 +128,8 @@ public class MultifySender : IWebhookSender
             EnrichWithItemUrl(itemData);
         }
 
-        // Enrich data with TMDB image URLs if TMDB API key is configured
-        if (_tmdbService != null && !string.IsNullOrEmpty(_configuration.TmdbApiKey))
-        {
-            await EnrichWithTmdbImages(itemData).ConfigureAwait(false);
-        }
+        // Enrich data with TMDB image URLs via Jellyfin's provider system
+        await EnrichWithTmdbImages(itemData).ConfigureAwait(false);
 
         var tasks = new List<Task>();
 
@@ -293,45 +298,74 @@ public class MultifySender : IWebhookSender
 
     private async Task EnrichWithTmdbImages(Dictionary<string, object> data)
     {
-        // Check for TmdbId in the data
-        if (!data.TryGetValue("TmdbId", out var tmdbIdObj) || tmdbIdObj is not string tmdbIdStr || !int.TryParse(tmdbIdStr, out var tmdbId))
+        // Need ItemId to look up the real item via ILibraryManager
+        if (!data.TryGetValue("ItemId", out var itemIdObj) || itemIdObj is not string itemIdStr || !Guid.TryParse(itemIdStr, out var itemId))
         {
+            _logger.LogTrace("No ItemId in data, skipping TMDB image enrichment");
             return;
         }
 
-        // Determine media type from ItemType
-        var isSeries = false;
-        if (data.TryGetValue("ItemType", out var itemTypeObj) && itemTypeObj is string itemType)
+        // Look up the actual BaseItem from the library
+        var item = _libraryManager.GetItemById(itemId);
+        if (item == null)
         {
-            isSeries = itemType.Contains("Series", StringComparison.OrdinalIgnoreCase)
-                || itemType.Contains("Season", StringComparison.OrdinalIgnoreCase)
-                || itemType.Contains("Episode", StringComparison.OrdinalIgnoreCase);
-        }
-
-        Dictionary<string, string>? imageUrls = null;
-
-        if (isSeries)
-        {
-            imageUrls = await _tmdbService!.FetchSeriesImageUrlsAsync(tmdbId).ConfigureAwait(false);
-        }
-        else
-        {
-            imageUrls = await _tmdbService!.FetchMovieImageUrlsAsync(tmdbId).ConfigureAwait(false);
-        }
-
-        if (imageUrls == null || imageUrls.Count == 0)
-        {
-            _logger.LogDebug("No TMDB image URLs found for {ItemType} {TmdbId}", isSeries ? "series" : "movie", tmdbId);
+            _logger.LogTrace("Item {ItemId} not found in library, skipping TMDB image enrichment", itemId);
             return;
         }
 
-        // Only overwrite if we got actual values
-        foreach (var kvp in imageUrls)
+        try
         {
-            data[kvp.Key] = kvp.Value;
-        }
+            // Query Jellyfin's provider system for TMDB remote images
+            var query = new RemoteImageQuery
+            {
+                ProviderName = "TheMovieDb",
+                IncludeAllLanguages = true,
+                IncludeDisabledProviders = false
+            };
 
-        _logger.LogDebug("Enriched TMDB image URLs for {ItemType} {TmdbId}: {Count} URLs", isSeries ? "series" : "movie", tmdbId, imageUrls.Count);
+            var remoteImages = await _providerManager
+                .GetAvailableRemoteImages(item, query, default)
+                .ConfigureAwait(false);
+
+            if (remoteImages == null)
+            {
+                _logger.LogDebug("No TMDB remote images available for item {ItemId}", itemId);
+                return;
+            }
+
+            // Map RemoteImageInfo results by Type into TMDB URL variables
+            foreach (var image in remoteImages)
+            {
+                if (string.IsNullOrEmpty(image.Url))
+                {
+                    continue;
+                }
+
+                switch (image.Type)
+                {
+                    case ImageType.Primary:
+                        data["TmdbPosterUrl"] = image.Url;
+                        data["TmdbProfileUrl"] = image.Url;
+                        break;
+                    case ImageType.Backdrop:
+                        data["TmdbBackdropUrl"] = image.Url;
+                        break;
+                    case ImageType.Logo:
+                        data["TmdbLogoUrl"] = image.Url;
+                        break;
+                    case ImageType.Thumb:
+                        data["TmdbStillUrl"] = image.Url;
+                        break;
+                }
+            }
+
+            var urlCount = remoteImages.Count(i => !string.IsNullOrEmpty(i.Url));
+            _logger.LogDebug("Enriched TMDB image URLs for item {ItemId}: {Count} URL(s)", itemId, urlCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error enriching data with TMDB image URLs for item {ItemId}", itemId);
+        }
     }
 
     private static string GetMediaType(Dictionary<string, object> data)
