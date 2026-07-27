@@ -16,6 +16,9 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Providers;
+using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Providers;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Services;
@@ -68,6 +71,7 @@ public class MultifyTestService : IMultifyTestService
 {
     private readonly ILogger<MultifyTestService> _logger;
     private readonly ILibraryManager _libraryManager;
+    private readonly IProviderManager _providerManager;
     private readonly IWebhookClient<TelegramOption> _telegramClient;
     private readonly IWebhookClient<GotifyOption> _gotifyClient;
     private readonly IWebhookClient<NtfyOption> _ntfyClient;
@@ -78,6 +82,7 @@ public class MultifyTestService : IMultifyTestService
     /// </summary>
     /// <param name="logger">Instance of the <see cref="ILogger{MultifyTestService}"/> interface.</param>
     /// <param name="libraryManager">Instance of the <see cref="ILibraryManager"/> interface for querying real library items.</param>
+    /// <param name="providerManager">Instance of the <see cref="IProviderManager"/> interface for remote image queries.</param>
     /// <param name="telegramClient">Instance of the <see cref="IWebhookClient{TelegramOption}"/>.</param>
     /// <param name="gotifyClient">Instance of the <see cref="IWebhookClient{GotifyOption}"/>.</param>
     /// <param name="ntfyClient">Instance of the <see cref="IWebhookClient{NtfyOption}"/>.</param>
@@ -85,6 +90,7 @@ public class MultifyTestService : IMultifyTestService
     public MultifyTestService(
         ILogger<MultifyTestService> logger,
         ILibraryManager libraryManager,
+        IProviderManager providerManager,
         IWebhookClient<TelegramOption> telegramClient,
         IWebhookClient<GotifyOption> gotifyClient,
         IWebhookClient<NtfyOption> ntfyClient,
@@ -92,6 +98,7 @@ public class MultifyTestService : IMultifyTestService
     {
         _logger = logger;
         _libraryManager = libraryManager;
+        _providerManager = providerManager;
         _telegramClient = telegramClient;
         _gotifyClient = gotifyClient;
         _ntfyClient = ntfyClient;
@@ -312,12 +319,15 @@ public class MultifyTestService : IMultifyTestService
                 data["LogoImageUrl"] = logoUrl;
                 data["BannerImageUrl"] = bannerUrl;
 
-                // TMDB → Jellyfin mapping
+                // Start with Jellyfin local URLs as fallback
                 data["TmdbPosterUrl"] = primaryUrl;
                 data["TmdbBackdropUrl"] = backdropUrl;
                 data["TmdbProfileUrl"] = primaryUrl;
                 data["TmdbStillUrl"] = thumbUrl;
                 data["TmdbLogoUrl"] = logoUrl;
+
+                // Now overwrite with real TMDB CDN URLs via provider system
+                await EnrichWithTmdbImages(data, item).ConfigureAwait(false);
             }
 
             return data;
@@ -333,6 +343,59 @@ public class MultifyTestService : IMultifyTestService
     /// Creates a default data dictionary where all possible template keys are present
     /// with "N/A" placeholder values. Used as the baseline for real-item test data.
     /// </summary>
+    private async Task EnrichWithTmdbImages(Dictionary<string, object> data, BaseItem item)
+    {
+        try
+        {
+            var query = new RemoteImageQuery("TheMovieDb")
+            {
+                IncludeAllLanguages = true,
+                IncludeDisabledProviders = false
+            };
+
+            var remoteImages = await _providerManager
+                .GetAvailableRemoteImages(item, query, default)
+                .ConfigureAwait(false);
+
+            if (remoteImages == null)
+            {
+                return;
+            }
+
+            foreach (var image in remoteImages)
+            {
+                if (string.IsNullOrEmpty(image.Url))
+                {
+                    continue;
+                }
+
+                switch (image.Type)
+                {
+                    case ImageType.Primary:
+                        data["TmdbPosterUrl"] = image.Url;
+                        data["TmdbProfileUrl"] = image.Url;
+                        break;
+                    case ImageType.Backdrop:
+                        data["TmdbBackdropUrl"] = image.Url;
+                        break;
+                    case ImageType.Logo:
+                        data["TmdbLogoUrl"] = image.Url;
+                        break;
+                    case ImageType.Thumb:
+                        data["TmdbStillUrl"] = image.Url;
+                        break;
+                }
+            }
+
+            var urlCount = remoteImages.Count(i => !string.IsNullOrEmpty(i.Url));
+            _logger.LogDebug("Enriched TMDB image URLs for test item: {Count} URL(s)", urlCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error enriching test data with TMDB image URLs");
+        }
+    }
+
     private static Dictionary<string, object> CreateDefaultTestData()
     {
         return new Dictionary<string, object>
