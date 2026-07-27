@@ -41,6 +41,15 @@ public class NtfyOption : BaseOption
     /// <summary>Gets or sets comma-separated tags (first tag used as emoji icon).</summary>
     [XmlElement("Tags")]
     public string? Tags { get; set; }
+
+    /// <summary>
+    /// Gets or sets the photo URL template for attaching images.
+    /// Supports template variables like <c>{{TmdbPosterUrl}}</c>, <c>{{PrimaryImageUrl}}</c>, etc.
+    /// When set, this URL is attached to the ntfy notification.
+    /// When empty, no image is attached (avoids duplication with inline images in the body).
+    /// </summary>
+    [XmlElement("PhotoUrlTemplate")]
+    public string? PhotoUrlTemplate { get; set; }
 }
 
 /// <summary>
@@ -118,22 +127,27 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
                 request.Headers.Add("Authorization", $"Bearer {option.AccessToken}");
             }
 
-            // Add attachment header if image URL is available
-            if (data.TryGetValue("PrimaryImageUrl", out var imageObj) && imageObj is string imageUrl && !string.IsNullOrEmpty(imageUrl))
+            // Attach image if PhotoUrlTemplate is configured (resolved with template variables).
+            // When no template is set, no image is attached — this lets users use inline
+            // images in the body via ![](url) without duplicating them as attachments.
+            if (!string.IsNullOrEmpty(option.PhotoUrlTemplate))
             {
-                // Append resize parameters only to local Jellyfin image URLs
-                var attachUrl = imageUrl;
-                if (attachUrl.Contains("/Items/", StringComparison.Ordinal) && !attachUrl.Contains('?', StringComparison.Ordinal))
+                var attachUrl = BaseOption.ReplacePlaceholders(option.PhotoUrlTemplate, data);
+                if (!string.IsNullOrEmpty(attachUrl))
                 {
-                    attachUrl += "?maxWidth=800&maxHeight=800";
-                }
-                else if (attachUrl.Contains("/Items/", StringComparison.Ordinal) && attachUrl.Contains('?', StringComparison.Ordinal))
-                {
-                    attachUrl += "&maxWidth=800&maxHeight=800";
-                }
+                    // Append resize parameters only to local Jellyfin image URLs
+                    if (attachUrl.Contains("/Items/", StringComparison.Ordinal) && !attachUrl.Contains('?', StringComparison.Ordinal))
+                    {
+                        attachUrl += "?maxWidth=800&maxHeight=800";
+                    }
+                    else if (attachUrl.Contains("/Items/", StringComparison.Ordinal) && attachUrl.Contains('?', StringComparison.Ordinal))
+                    {
+                        attachUrl += "&maxWidth=800&maxHeight=800";
+                    }
 
-                request.Headers.Add("Attach", attachUrl);
-                request.Headers.Add("Filename", "poster.jpg");
+                    request.Headers.Add("Attach", attachUrl);
+                    request.Headers.Add("Filename", "poster.jpg");
+                }
             }
 
             using var response = await _httpClientFactory

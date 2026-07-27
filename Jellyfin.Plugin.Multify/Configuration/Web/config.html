@@ -155,6 +155,10 @@
         <div class="inputContainer">
             <input is="emby-input" type="text" data-name="txtAccessToken" label="Access Token (optional):"/>
         </div>
+        <div class="inputContainer">
+            <input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/>
+            <span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImageUrl}}</code>. Leave empty for no image attachment (avoids duplication with inline images).</span>
+        </div>
     </template>
 
     <template id="template-generic-header">

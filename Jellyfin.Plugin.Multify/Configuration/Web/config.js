@@ -1021,7 +1021,8 @@ function multifyController(view) {
             <div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>
             <div class="inputContainer"><input is="emby-input" type="text" data-name="txtTags" label="Tags (optional):"/><span>Comma-separated tags. First tag is used as emoji icon. Example: movie,star</span></div>
             <div class="inputContainer"><label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableMarkdown"/><span>Enable Markdown</span></label></div>
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtAccessToken" label="Access Token (optional):"/></div>`, null);
+            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtAccessToken" label="Access Token (optional):"/></div>
+            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImageUrl}}</code>. Leave empty for no image attachment.</span></div>`, null);
 
         setTimeout(() => {
             const setVal = (n, v) => { const el = $("[data-name=" + n + "]", card); if (el) el.value = v || ""; };
@@ -1030,6 +1031,7 @@ function multifyController(view) {
             setVal("txtTitle", config.Title || "");
             setVal("txtTags", config.Tags || "");
             setVal("txtAccessToken", config.AccessToken);
+            setVal("txtPhotoUrlTemplate", config.PhotoUrlTemplate || "");
             const md = $("[data-name=chkEnableMarkdown]", card); if (md) md.checked = config.EnableMarkdown ?? true;
         }, 0);
 
@@ -1112,6 +1114,7 @@ function multifyController(view) {
                 specific.Tags = $("[data-name=txtTags]", card)?.value || "";
                 specific.EnableMarkdown = $("[data-name=chkEnableMarkdown]", card)?.checked;
                 specific.AccessToken = $("[data-name=txtAccessToken]", card)?.value || "";
+                specific.PhotoUrlTemplate = $("[data-name=txtPhotoUrlTemplate]", card)?.value || null;
             } else if (type === "generic") {
                 specific.Headers = [];
                 $$("[data-name=txtHeaderKey]", card).forEach((k, i) => {

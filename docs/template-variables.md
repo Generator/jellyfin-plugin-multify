@@ -212,14 +212,6 @@ URLs to TMDb-hosted images. Requires the item to have a `TmdbId` provider ID.
 
 ---
 
-## TVDB Images
-
-URLs to TVDB-hosted images. Requires the item to have a `TvdbId` provider ID.
-
-| Variable | Description | Example |
-|----------|-------------|---------|
----
-
 
 
 ## Ratings
@@ -332,7 +324,7 @@ Available for **plugin events** (`PluginInstalled`, `PluginUpdated`, `PluginUnin
 | Playback State | — | ✓ | — | — | — |
 | Playback Position | — | ✓ | — | — | — |
 | Jellyfin Images | ✓ | ✓ | — | — | — |
-| TMDb/TVDB Images | ✓ | ✓ | — | — | — |
+| TMDb Images | ✓ | ✓ | — | — | — |
 | Trailers | ✓ | ✓ | — | — | — |
 | Ratings | ✓ | ✓ | — | — | — |
 | Task | — | — | — | ✓ | — |
