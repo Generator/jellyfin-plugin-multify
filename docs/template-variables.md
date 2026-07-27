@@ -169,6 +169,8 @@ URLs to item images served by the Jellyfin server.
 | `{{ThumbImageUrl}}` | Thumbnail image | `https://jellyfin.example.com/Items/abc/Images/Thumbnail` |
 | `{{LogoImageUrl}}` | Logo image | `https://jellyfin.example.com/Items/abc/Images/Logo` |
 | `{{BannerImageUrl}}` | Banner image | `https://jellyfin.example.com/Items/abc/Images/Banner` |
+| `{{SeasonPrimaryImageUrl}}` | Season poster (empty for movies/series) | `https://jellyfin.example.com/Items/def/Images/Primary` |
+| `{{SeriesPrimaryImageUrl}}` | Series poster (empty for movies) | `https://jellyfin.example.com/Items/ghi/Images/Primary` |
 
 ### Per-destination behaviour
 
@@ -209,6 +211,17 @@ URLs to TMDb-hosted images. Requires the item to have a `TmdbId` provider ID.
 | `{{TmdbProfileUrl}}` | TMDb profile (w185) | `https://image.tmdb.org/t/p/w185/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
 | `{{TmdbStillUrl}}` | TMDb still (w300) | `https://image.tmdb.org/t/p/w300/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
 | `{{TmdbLogoUrl}}` | TMDb logo (w154) | `https://image.tmdb.org/t/p/w154/9gk7adSYeDvHkCSEhniJIsaVti8.jpg` |
+| `{{TmdbSeasonPosterUrl}}` | TMDb season poster (w500) | `https://image.tmdb.org/t/p/w500/abc.jpg` |
+| `{{TmdbSeriesPosterUrl}}` | TMDb series poster (w500) | `https://image.tmdb.org/t/p/w500/def.jpg` |
+
+### Variable behaviour by item type
+
+| Current Item | `{{PrimaryImageUrl}}` / `{{TmdbPosterUrl}}` | `{{SeasonPrimaryImageUrl}}` / `{{TmdbSeasonPosterUrl}}` | `{{SeriesPrimaryImageUrl}}` / `{{TmdbSeriesPosterUrl}}` |
+|---|---|---|---|
+| **Movie** | Movie poster | *(empty — no season parent)* | *(empty — no series parent)* |
+| **Series** | Series poster | *(empty — no season parent)* | Series poster |
+| **Season** | Season poster | Season poster | Series poster |
+| **Episode** | Episode thumb | Season poster | Series poster |
 
 ---
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Multify.Configuration;
@@ -368,10 +369,112 @@ public class MultifySender : IWebhookSender
 
             var urlCount = remoteImages.Count(i => !string.IsNullOrEmpty(i.Url));
             _logger.LogDebug("Enriched TMDB image URLs for item {ItemId}: {Count} URL(s)", itemId, urlCount);
+
+            // Enrich parent-level poster URLs (Season/Series) for hierarchical items.
+            // This allows users to reference {{TmdbSeasonPosterUrl}} or {{SeriesPrimaryImageUrl}}
+            // regardless of the current item type.
+            await EnrichParentPosterUrls(data, item).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error enriching data with TMDB image URLs for item {ItemId}", itemId);
+        }
+    }
+
+    /// <summary>
+    /// Enriches data with poster URLs for parent items (Season, Series) when the current item
+    /// is an Episode or Season. Sets both Jellyfin local URLs and TMDB CDN URLs.
+    /// </summary>
+    private async Task EnrichParentPosterUrls(Dictionary<string, object> data, BaseItem item)
+    {
+        var serverUrl = _configuration.ServerUrl?.TrimEnd('/');
+
+        if (item is Episode episode)
+        {
+            // Season poster
+            if (episode.SeasonId.HasValue)
+            {
+                var seasonItem = _libraryManager.GetItemById(episode.SeasonId.Value);
+                if (seasonItem != null)
+                {
+                    await EnrichSingleParentPoster(data, seasonItem, "Season", serverUrl).ConfigureAwait(false);
+                }
+            }
+
+            // Series poster
+            if (episode.SeriesId.HasValue)
+            {
+                var seriesItem = _libraryManager.GetItemById(episode.SeriesId.Value);
+                if (seriesItem != null)
+                {
+                    await EnrichSingleParentPoster(data, seriesItem, "Series", serverUrl).ConfigureAwait(false);
+                }
+            }
+        }
+        else if (item is Season season)
+        {
+            // Series poster (season poster is the current item, already enriched)
+            if (season.SeriesId.HasValue)
+            {
+                var seriesItem = _libraryManager.GetItemById(season.SeriesId.Value);
+                if (seriesItem != null)
+                {
+                    await EnrichSingleParentPoster(data, seriesItem, "Series", serverUrl).ConfigureAwait(false);
+                }
+            }
+        }
+        // For Movie and Series items, parent posters = current item poster (no separate parent)
+    }
+
+    /// <summary>
+    /// Enriches a single parent item's poster into the data dictionary with both Jellyfin
+    /// and TMDB URLs, keyed by the given <paramref name="prefix"/> (e.g. "Season", "Series").
+    /// </summary>
+    private async Task EnrichSingleParentPoster(Dictionary<string, object> data, BaseItem parentItem, string prefix, string? serverUrl)
+    {
+        var parentId = parentItem.Id;
+        var parentIdStr = parentId.ToString("N", CultureInfo.InvariantCulture);
+
+        // Set Jellyfin local URL as fallback
+        if (!string.IsNullOrEmpty(serverUrl))
+        {
+            data[$"{prefix}PrimaryImageUrl"] = $"{serverUrl}/Items/{parentIdStr}/Images/Primary";
+        }
+
+        // Query TMDB remote images for the parent item
+        try
+        {
+            var query = new RemoteImageQuery("TheMovieDb")
+            {
+                IncludeAllLanguages = true,
+                IncludeDisabledProviders = false
+            };
+
+            var remoteImages = await _providerManager
+                .GetAvailableRemoteImages(parentItem, query, default)
+                .ConfigureAwait(false);
+
+            if (remoteImages != null)
+            {
+                foreach (var image in remoteImages)
+                {
+                    if (string.IsNullOrEmpty(image.Url))
+                    {
+                        continue;
+                    }
+
+                    if (image.Type == ImageType.Primary)
+                    {
+                        data[$"Tmdb{prefix}PosterUrl"] = image.Url;
+                        // Overwrite Jellyfin URL with TMDB CDN URL for public access
+                        data[$"{prefix}PrimaryImageUrl"] = image.Url;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogTrace(ex, "Error enriching {Prefix} poster for parent item {ParentId}", prefix, parentId);
         }
     }
 

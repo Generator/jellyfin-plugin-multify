@@ -328,6 +328,12 @@ public class MultifyTestService : IMultifyTestService
 
                 // Now overwrite with real TMDB CDN URLs via provider system
                 await EnrichWithTmdbImages(data, item).ConfigureAwait(false);
+
+                // Enrich parent-level poster URLs (Season/Series) for hierarchical items
+                if (!string.IsNullOrEmpty(serverUrl))
+                {
+                    await EnrichParentPosterUrls(data, item, serverUrl).ConfigureAwait(false);
+                }
             }
 
             return data;
@@ -400,6 +406,93 @@ public class MultifyTestService : IMultifyTestService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error enriching test data with TMDB image URLs");
+        }
+    }
+
+    /// <summary>
+    /// Enriches data with poster URLs for parent items (Season, Series) when the current item
+    /// is an Episode or Season. Sets both Jellyfin local URLs and TMDB CDN URLs.
+    /// </summary>
+    private async Task EnrichParentPosterUrls(Dictionary<string, object> data, BaseItem item, string serverUrl)
+    {
+        if (item is Episode episode)
+        {
+            if (episode.SeasonId.HasValue)
+            {
+                var seasonItem = _libraryManager.GetItemById(episode.SeasonId.Value);
+                if (seasonItem != null)
+                {
+                    await EnrichSingleParentPosterTest(data, seasonItem, "Season", serverUrl).ConfigureAwait(false);
+                }
+            }
+
+            if (episode.SeriesId.HasValue)
+            {
+                var seriesItem = _libraryManager.GetItemById(episode.SeriesId.Value);
+                if (seriesItem != null)
+                {
+                    await EnrichSingleParentPosterTest(data, seriesItem, "Series", serverUrl).ConfigureAwait(false);
+                }
+            }
+        }
+        else if (item is Season season)
+        {
+            if (season.SeriesId.HasValue)
+            {
+                var seriesItem = _libraryManager.GetItemById(season.SeriesId.Value);
+                if (seriesItem != null)
+                {
+                    await EnrichSingleParentPosterTest(data, seriesItem, "Series", serverUrl).ConfigureAwait(false);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Enriches a single parent item's poster into the data dictionary with both Jellyfin
+    /// and TMDB URLs, keyed by the given <paramref name="prefix"/> (e.g. "Season", "Series").
+    /// </summary>
+    private async Task EnrichSingleParentPosterTest(Dictionary<string, object> data, BaseItem parentItem, string prefix, string serverUrl)
+    {
+        var parentId = parentItem.Id.ToString("N", CultureInfo.InvariantCulture);
+
+        // Set Jellyfin local URL as fallback
+        data[$"{prefix}PrimaryImageUrl"] = $"{serverUrl}/Items/{parentId}/Images/Primary";
+
+        // Query TMDB remote images for the parent item
+        try
+        {
+            var query = new RemoteImageQuery("TheMovieDb")
+            {
+                IncludeAllLanguages = true,
+                IncludeDisabledProviders = false
+            };
+
+            var remoteImages = await _providerManager
+                .GetAvailableRemoteImages(parentItem, query, default)
+                .ConfigureAwait(false);
+
+            if (remoteImages != null)
+            {
+                foreach (var image in remoteImages)
+                {
+                    if (string.IsNullOrEmpty(image.Url))
+                    {
+                        continue;
+                    }
+
+                    if (image.Type == ImageType.Primary)
+                    {
+                        data[$"Tmdb{prefix}PosterUrl"] = image.Url;
+                        // Overwrite Jellyfin URL with TMDB CDN URL for public access
+                        data[$"{prefix}PrimaryImageUrl"] = image.Url;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogTrace(ex, "Error enriching {Prefix} poster for parent item {ParentId}", prefix, parentId);
         }
     }
 
@@ -513,6 +606,12 @@ public class MultifyTestService : IMultifyTestService
             ["TmdbProfileUrl"] = "N/A",
             ["TmdbStillUrl"] = "N/A",
             ["TmdbLogoUrl"] = "N/A",
+            ["TmdbSeasonPosterUrl"] = "N/A",
+            ["TmdbSeriesPosterUrl"] = "N/A",
+
+            // Parent-level Jellyfin Images
+            ["SeasonPrimaryImageUrl"] = "N/A",
+            ["SeriesPrimaryImageUrl"] = "N/A",
 
             // Task
             ["TaskName"] = "N/A",
@@ -645,6 +744,12 @@ public class MultifyTestService : IMultifyTestService
             ["TmdbProfileUrl"] = "https://image.tmdb.org/t/p/w185/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
             ["TmdbStillUrl"] = "https://image.tmdb.org/t/p/w300/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
             ["TmdbLogoUrl"] = "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
+            ["TmdbSeasonPosterUrl"] = "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
+            ["TmdbSeriesPosterUrl"] = "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
+
+            // Parent-level Jellyfin Images
+            ["SeasonPrimaryImageUrl"] = "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
+            ["SeriesPrimaryImageUrl"] = "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
 
             // Task Variables
             ["TaskName"] = "Refresh Library",

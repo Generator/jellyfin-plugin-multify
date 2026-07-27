@@ -208,6 +208,12 @@ public static class DataObjectHelpers
         data["TmdbStillUrl"] = string.Empty;
         data["TmdbLogoUrl"] = string.Empty;
 
+        // Parent-level poster URLs (enriched separately from current item)
+        data["SeasonPrimaryImageUrl"] = string.Empty;
+        data["TmdbSeasonPosterUrl"] = string.Empty;
+        data["SeriesPrimaryImageUrl"] = string.Empty;
+        data["TmdbSeriesPosterUrl"] = string.Empty;
+
         // Add series-specific data
         if (item is MediaBrowser.Controller.Entities.TV.Series series)
         {
