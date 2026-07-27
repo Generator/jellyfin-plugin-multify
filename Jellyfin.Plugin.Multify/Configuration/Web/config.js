@@ -205,6 +205,32 @@ function multifyController(view) {
         const container = document.createElement("div");
         container.className = "multify-list-block";
 
+        // Select All / Select None buttons
+        const btnBar = document.createElement("div");
+        btnBar.style.cssText = "display:flex;gap:8px;margin-bottom:8px;";
+
+        const btnSelectAll = document.createElement("button");
+        btnSelectAll.type = "button";
+        btnSelectAll.className = "raised";
+        btnSelectAll.textContent = "Select All";
+        btnSelectAll.addEventListener("click", () => {
+            const cbs = container.querySelectorAll("input[type=checkbox][data-name]");
+            cbs.forEach(cb => { cb.checked = true; });
+        });
+
+        const btnSelectNone = document.createElement("button");
+        btnSelectNone.type = "button";
+        btnSelectNone.className = "raised";
+        btnSelectNone.textContent = "Select None";
+        btnSelectNone.addEventListener("click", () => {
+            const cbs = container.querySelectorAll("input[type=checkbox][data-name]");
+            cbs.forEach(cb => { cb.checked = false; });
+        });
+
+        btnBar.appendChild(btnSelectAll);
+        btnBar.appendChild(btnSelectNone);
+        container.appendChild(btnBar);
+
         // Check list container
         const checkList = document.createElement("div");
         checkList.className = "paperList checkboxList checkboxList-paperList multify-check-list";
