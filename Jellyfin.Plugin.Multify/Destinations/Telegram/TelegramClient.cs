@@ -202,7 +202,17 @@ public class TelegramOption : BaseOption
         {
             if (kvp.Value is string strValue)
             {
-                escaped[kvp.Key] = EscapeForParseMode(strValue, parseMode);
+                // Don't escape URL values — MarkdownV2 doesn't allow backslash-escaped
+                // characters inside URL portions of [text](url), ![alt](url), or <img src="url"/>
+                if (strValue.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                    strValue.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    escaped[kvp.Key] = strValue;
+                }
+                else
+                {
+                    escaped[kvp.Key] = EscapeForParseMode(strValue, parseMode);
+                }
             }
             else
             {
