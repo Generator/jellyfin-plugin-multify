@@ -33,8 +33,8 @@ public class GotifyOption : BaseOption
     /// <summary>
     /// Gets or sets the photo URL template for attaching images.
     /// Supports template variables like <c>{{TmdbPosterUrl}}</c>, <c>{{PrimaryImageUrl}}</c>, etc.
-    /// When set, the resolved URL is sent as <c>extras.client::notification.bigImageUrl</c>.
-    /// When empty, no image is sent (avoids duplication with inline images in the body).
+    /// When set, the resolved URL is prepended as an inline markdown image <c>![]({url})</c>
+    /// to the message body. When empty, no image is sent.
     /// </summary>
     [XmlElement("PhotoUrlTemplate")]
     public string? PhotoUrlTemplate { get; set; }
@@ -92,9 +92,8 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
                 ["client::display"] = new { contentType = "text/markdown" }
             };
 
-            // Add image URL to extras if PhotoUrlTemplate is configured.
-            // When no template is set, no image is sent — this lets users use inline
-            // images in the body without duplicating them as bigImageUrl.
+            // If PhotoUrlTemplate is configured, prepend the image as inline markdown
+            // to the message body (this works reliably across all Gotify clients).
             if (!string.IsNullOrEmpty(option.PhotoUrlTemplate))
             {
                 var imageUrl = BaseOption.ReplacePlaceholders(option.PhotoUrlTemplate, data);
@@ -106,7 +105,7 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
                         imageUrl = imageUrl.Replace("/original/", "/w500/", StringComparison.OrdinalIgnoreCase);
                     }
 
-                    extras["client::notification"] = new { bigImageUrl = imageUrl };
+                    body = $"![]({imageUrl})\n{body}";
                 }
             }
 
