@@ -58,7 +58,7 @@ public class TelegramOption : BaseOption
 
     /// <summary>
     /// Gets or sets the photo URL template for SendPhoto messages.
-    /// Supports template variables like <c>{{TmdbPosterUrl}}</c>, <c>{{PrimaryImageUrl}}</c>, etc.
+    /// Supports template variables like <c>{{TmdbPosterUrl}}</c>, <c>{{PrimaryImage}}</c>, etc.
     /// When set, this URL is used instead of the default lookup chain.
     /// </summary>
     [XmlElement("PhotoUrlTemplate")]
@@ -523,7 +523,7 @@ public class TelegramOption : BaseOption
     {
         // Photo URL lookup chain:
         //   1. PhotoUrlTemplate (resolved with template variables)
-        //   2. PrimaryImageUrl (Jellyfin primary image)
+        //   2. PrimaryImage (Jellyfin primary image)
         //   3. TmdbPosterUrl (TMDB CDN poster)
         //   4. PhotoUrl (legacy fallback)
         //   5. Fallback to text
@@ -538,7 +538,7 @@ public class TelegramOption : BaseOption
             }
         }
 
-        if (string.IsNullOrEmpty(photoUrl) && data.TryGetValue("PrimaryImageUrl", out var primaryObj) && primaryObj is string primaryUrl && !string.IsNullOrEmpty(primaryUrl))
+        if (string.IsNullOrEmpty(photoUrl) && data.TryGetValue("PrimaryImage", out var primaryObj) && primaryObj is string primaryUrl && !string.IsNullOrEmpty(primaryUrl))
         {
             photoUrl = primaryUrl;
         }

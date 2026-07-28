@@ -32,7 +32,7 @@ public class GotifyOption : BaseOption
 
     /// <summary>
     /// Gets or sets the photo URL template for attaching images.
-    /// Supports template variables like <c>{{TmdbPosterUrl}}</c>, <c>{{PrimaryImageUrl}}</c>, etc.
+    /// Supports template variables like <c>{{TmdbPosterUrl}}</c>, <c>{{PrimaryImage}}</c>, etc.
     /// When set, the resolved URL is prepended as an inline markdown image <c>![]({url})</c>
     /// to the message body. When empty, no image is sent.
     /// </summary>

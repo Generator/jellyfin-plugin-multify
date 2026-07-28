@@ -164,18 +164,18 @@ URLs to item images served by the Jellyfin server.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `{{PrimaryImageUrl}}` | Primary poster image | `https://jellyfin.example.com/Items/abc/Images/Primary` |
-| `{{BackdropImageUrl}}` | Backdrop image | `https://jellyfin.example.com/Items/abc/Images/Backdrop` |
-| `{{ThumbImageUrl}}` | Thumbnail image | `https://jellyfin.example.com/Items/abc/Images/Thumbnail` |
-| `{{LogoImageUrl}}` | Logo image | `https://jellyfin.example.com/Items/abc/Images/Logo` |
-| `{{BannerImageUrl}}` | Banner image | `https://jellyfin.example.com/Items/abc/Images/Banner` |
-| `{{SeasonPrimaryImageUrl}}` | Season poster (empty for movies/series) | `https://jellyfin.example.com/Items/def/Images/Primary` |
-| `{{SeriesPrimaryImageUrl}}` | Series poster (empty for movies) | `https://jellyfin.example.com/Items/ghi/Images/Primary` |
+| `{{PrimaryImage}}` | Primary poster image | `https://jellyfin.example.com/Items/abc/Images/Primary` |
+| `{{BackdropImage}}` | Backdrop image | `https://jellyfin.example.com/Items/abc/Images/Backdrop` |
+| `{{ThumbImage}}` | Thumbnail image | `https://jellyfin.example.com/Items/abc/Images/Thumbnail` |
+| `{{LogoImage}}` | Logo image | `https://jellyfin.example.com/Items/abc/Images/Logo` |
+| `{{BannerImage}}` | Banner image | `https://jellyfin.example.com/Items/abc/Images/Banner` |
+| `{{SeasonPoster}}` | Season poster (empty for movies/series) | `https://jellyfin.example.com/Items/def/Images/Primary` |
+| `{{SeriesPoster}}` | Series poster (empty for movies) | `https://jellyfin.example.com/Items/ghi/Images/Primary` |
 
 ### Per-destination behaviour
 
-- **Telegram**: With `MessageType = Photo`, the photo URL is taken from the data dictionary (`PhotoUrlTemplate` → `PrimaryImageUrl` → `TmdbPosterUrl`), **not** from the template body. The template body becomes the caption only — do not include image URLs in the caption.
-- **Gotify**: Image URL is automatically set as `extras.client::notification.bigImageUrl`.
+- **Telegram**: With `MessageType = Photo`, the photo URL is taken from the data dictionary (`PhotoUrlTemplate` → `PrimaryImage` → `TmdbPosterUrl`), **not** from the template body. The template body becomes the caption only — do not include image URLs in the caption.
+- **Gotify**: Image URL is prepended as an inline markdown image `![](url)` in the message body.
 - **ntfy**: Image URL is automatically attached via the `Attach` header.
 - **Generic Webhook**: Include image URLs in the JSON payload for custom processing.
 
@@ -216,7 +216,7 @@ URLs to TMDb-hosted images. Requires the item to have a `TmdbId` provider ID.
 
 ### Variable behaviour by item type
 
-| Current Item | `{{PrimaryImageUrl}}` / `{{TmdbPosterUrl}}` | `{{SeasonPrimaryImageUrl}}` / `{{TmdbSeasonPosterUrl}}` | `{{SeriesPrimaryImageUrl}}` / `{{TmdbSeriesPosterUrl}}` |
+| Current Item | `{{PrimaryImage}}` / `{{TmdbPosterUrl}}` | `{{SeasonPoster}}` / `{{TmdbSeasonPosterUrl}}` | `{{SeriesPoster}}` / `{{TmdbSeriesPosterUrl}}` |
 |---|---|---|---|
 | **Movie** | Movie poster | *(empty — no season parent)* | *(empty — no series parent)* |
 | **Series** | Series poster | *(empty — no season parent)* | Series poster |
@@ -363,7 +363,7 @@ Uses Telegram's MarkdownV2 parse mode. Characters `_ * [ ] ( ) ~ ` > # + - = | {
 
 ### Telegram — SendPhoto (MarkdownV2 caption)
 
-Sends a photo with a caption. The photo URL is taken from the data dictionary (`PrimaryImageUrl` → `TmdbPosterUrl`), **not** from the template body. The template body becomes the caption text only — do not include image URLs in the caption.
+Sends a photo with a caption. The photo URL is taken from the data dictionary (`PrimaryImage` → `TmdbPosterUrl`), **not** from the template body. The template body becomes the caption text only — do not include image URLs in the caption.
 
 ```
 **Movie:** {{ItemName}} \({{Year}}\)

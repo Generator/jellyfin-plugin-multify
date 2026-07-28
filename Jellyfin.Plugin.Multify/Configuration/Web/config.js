@@ -992,7 +992,7 @@ function multifyController(view) {
             </div>
             <div class="inputContainer"><input is="emby-input" type="number" data-name="txtTopicId" label="Forum Topic ID (optional):"/><span>For Telegram Forum Topics. Leave empty to send to the general topic.</span></div>
             <div class="inputContainer"><label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkDisableNotification"/><span>Disable Notification (silent message)</span></label><span>When enabled, the message will be sent without sound or vibration.</span></div>
-            <div class="inputContainer" data-name="photoUrlTemplateGroup" style="display:none"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImageUrl}}</code>. Leave empty to use the default lookup chain (PrimaryImageUrl → TmdbPosterUrl).</span></div>`, null, { showUrl: false });
+            <div class="inputContainer" data-name="photoUrlTemplateGroup" style="display:none"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImage}}</code>. Leave empty to use the default lookup chain (PrimaryImage → TmdbPosterUrl).</span></div>`, null, { showUrl: false });
 
         setTimeout(() => {
             const setVal = (n, v) => { const el = $("[data-name=" + n + "]", card); if (el) el.value = v != null ? String(v) : ""; };
@@ -1025,7 +1025,7 @@ function multifyController(view) {
             <div class="inputContainer"><input is="emby-input" type="text" data-name="txtToken" label="Token:"/></div>
             <div class="inputContainer"><input is="emby-input" type="number" data-name="txtPriority" label="Priority:"/></div>
             <div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImageUrl}}</code>. Leave empty for no image attachment.</span></div>`, null);
+            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImage}}</code>. Leave empty for no image attachment.</span></div>`, null);
 
         setTimeout(() => {
             const el = $("[data-name=txtToken]", card); if (el) el.value = config.Token || "";
@@ -1053,7 +1053,7 @@ function multifyController(view) {
             <div class="inputContainer"><input is="emby-input" type="text" data-name="txtTags" label="Tags (optional):"/><span>Comma-separated tags. First tag is used as emoji icon. Example: movie,star</span></div>
             <div class="inputContainer"><label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableMarkdown"/><span>Enable Markdown</span></label></div>
             <div class="inputContainer"><input is="emby-input" type="text" data-name="txtAccessToken" label="Access Token (optional):"/></div>
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImageUrl}}</code>. Leave empty for no image attachment.</span></div>`, null);
+            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImage}}</code>. Leave empty for no image attachment.</span></div>`, null);
 
         setTimeout(() => {
             const setVal = (n, v) => { const el = $("[data-name=" + n + "]", card); if (el) el.value = v || ""; };

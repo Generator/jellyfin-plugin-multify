@@ -44,7 +44,7 @@ public class NtfyOption : BaseOption
 
     /// <summary>
     /// Gets or sets the photo URL template for attaching images.
-    /// Supports template variables like <c>{{TmdbPosterUrl}}</c>, <c>{{PrimaryImageUrl}}</c>, etc.
+    /// Supports template variables like <c>{{TmdbPosterUrl}}</c>, <c>{{PrimaryImage}}</c>, etc.
     /// When set, this URL is attached to the ntfy notification.
     /// When empty, no image is attached (avoids duplication with inline images in the body).
     /// </summary>

@@ -313,11 +313,11 @@ public class MultifyTestService : IMultifyTestService
                 data["ItemShortId"] = shortId;
 
                 // Jellyfin image URLs
-                data["PrimaryImageUrl"] = primaryUrl;
-                data["BackdropImageUrl"] = backdropUrl;
-                data["ThumbImageUrl"] = thumbUrl;
-                data["LogoImageUrl"] = logoUrl;
-                data["BannerImageUrl"] = bannerUrl;
+                data["PrimaryImage"] = primaryUrl;
+                data["BackdropImage"] = backdropUrl;
+                data["ThumbImage"] = thumbUrl;
+                data["LogoImage"] = logoUrl;
+                data["BannerImage"] = bannerUrl;
 
                 // Start with Jellyfin local URLs as fallback
                 data["TmdbPosterUrl"] = primaryUrl;
@@ -380,22 +380,22 @@ public class MultifyTestService : IMultifyTestService
                     case ImageType.Primary:
                         data["TmdbPosterUrl"] = image.Url;
                         data["TmdbProfileUrl"] = image.Url;
-                        // Also update PrimaryImageUrl so {{PrimaryImageUrl}} resolves to a
+                        // Also update PrimaryImage so {{PrimaryImage}} resolves to a
                         // publicly accessible CDN URL (instead of a local Jellyfin URL that
                         // services like Telegram cannot fetch)
-                        data["PrimaryImageUrl"] = image.Url;
+                        data["PrimaryImage"] = image.Url;
                         break;
                     case ImageType.Backdrop:
                         data["TmdbBackdropUrl"] = image.Url;
-                        data["BackdropImageUrl"] = image.Url;
+                        data["BackdropImage"] = image.Url;
                         break;
                     case ImageType.Logo:
                         data["TmdbLogoUrl"] = image.Url;
-                        data["LogoImageUrl"] = image.Url;
+                        data["LogoImage"] = image.Url;
                         break;
                     case ImageType.Thumb:
                         data["TmdbStillUrl"] = image.Url;
-                        data["ThumbImageUrl"] = image.Url;
+                        data["ThumbImage"] = image.Url;
                         break;
                 }
             }
@@ -467,7 +467,7 @@ public class MultifyTestService : IMultifyTestService
         var parentId = parentItem.Id.ToString("N", CultureInfo.InvariantCulture);
 
         // Set Jellyfin local URL as fallback
-        data[$"{prefix}PrimaryImageUrl"] = $"{serverUrl}/Items/{parentId}/Images/Primary";
+        data[$"{prefix}Poster"] = $"{serverUrl}/Items/{parentId}/Images/Primary";
 
         // Query TMDB remote images for the parent item
         try
@@ -495,7 +495,7 @@ public class MultifyTestService : IMultifyTestService
                     {
                         data[$"Tmdb{prefix}PosterUrl"] = image.Url;
                         // Overwrite Jellyfin URL with TMDB CDN URL for public access
-                        data[$"{prefix}PrimaryImageUrl"] = image.Url;
+                        data[$"{prefix}Poster"] = image.Url;
                     }
                 }
             }
@@ -507,16 +507,16 @@ public class MultifyTestService : IMultifyTestService
     }
 
     /// <summary>
-    /// Copies the current item's poster URLs (PrimaryImageUrl, TmdbPosterUrl) into
+    /// Copies the current item's poster URLs (PrimaryImage, TmdbPosterUrl) into
     /// prefixed keys for the given <paramref name="prefix"/> (e.g. "Season", "Series").
     /// Used when the current item IS the parent (e.g. a Series item should have
-    /// SeriesPrimaryImageUrl = PrimaryImageUrl).
+    /// SeriesPoster = PrimaryImage).
     /// </summary>
     private static void CopySelfPosterToPrefixedTest(Dictionary<string, object> data, string prefix)
     {
-        if (data.TryGetValue("PrimaryImageUrl", out var primary) && primary is string primaryStr)
+        if (data.TryGetValue("PrimaryImage", out var primary) && primary is string primaryStr)
         {
-            data[$"{prefix}PrimaryImageUrl"] = primaryStr;
+            data[$"{prefix}Poster"] = primaryStr;
         }
 
         if (data.TryGetValue("TmdbPosterUrl", out var tmdb) && tmdb is string tmdbStr)
@@ -619,11 +619,11 @@ public class MultifyTestService : IMultifyTestService
             ["RogerEbertRating"] = "N/A",
 
             // Images
-            ["PrimaryImageUrl"] = "N/A",
-            ["BackdropImageUrl"] = "N/A",
-            ["ThumbImageUrl"] = "N/A",
-            ["LogoImageUrl"] = "N/A",
-            ["BannerImageUrl"] = "N/A",
+            ["PrimaryImage"] = "N/A",
+            ["BackdropImage"] = "N/A",
+            ["ThumbImage"] = "N/A",
+            ["LogoImage"] = "N/A",
+            ["BannerImage"] = "N/A",
 
             // Trailer
             ["TrailerUrl"] = "N/A",
@@ -639,8 +639,8 @@ public class MultifyTestService : IMultifyTestService
             ["TmdbSeriesPosterUrl"] = "N/A",
 
             // Parent-level Jellyfin Images
-            ["SeasonPrimaryImageUrl"] = "N/A",
-            ["SeriesPrimaryImageUrl"] = "N/A",
+            ["SeasonPoster"] = "N/A",
+            ["SeriesPoster"] = "N/A",
 
             // Task
             ["TaskName"] = "N/A",
@@ -757,11 +757,11 @@ public class MultifyTestService : IMultifyTestService
             ["RogerEbertRating"] = "4.0",
 
             // Jellyfin Image URLs
-            ["PrimaryImageUrl"] = "N/A",
-            ["BackdropImageUrl"] = "N/A",
-            ["ThumbImageUrl"] = "N/A",
-            ["LogoImageUrl"] = "N/A",
-            ["BannerImageUrl"] = "N/A",
+            ["PrimaryImage"] = "N/A",
+            ["BackdropImage"] = "N/A",
+            ["ThumbImage"] = "N/A",
+            ["LogoImage"] = "N/A",
+            ["BannerImage"] = "N/A",
 
             // Trailer Variables
             ["TrailerUrl"] = "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -777,8 +777,8 @@ public class MultifyTestService : IMultifyTestService
             ["TmdbSeriesPosterUrl"] = "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
 
             // Parent-level Jellyfin Images
-            ["SeasonPrimaryImageUrl"] = "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
-            ["SeriesPrimaryImageUrl"] = "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
+            ["SeasonPoster"] = "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
+            ["SeriesPoster"] = "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
 
             // Task Variables
             ["TaskName"] = "Refresh Library",

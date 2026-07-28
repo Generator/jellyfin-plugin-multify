@@ -164,11 +164,11 @@ public static class DataObjectHelpers
         data["DateCreated"] = item.DateCreated.ToString("O");
 
         // Add image URLs (will be enriched with server URL in MultifySender)
-        data["PrimaryImageUrl"] = string.Empty;
-        data["BackdropImageUrl"] = string.Empty;
-        data["ThumbImageUrl"] = string.Empty;
-        data["LogoImageUrl"] = string.Empty;
-        data["BannerImageUrl"] = string.Empty;
+        data["PrimaryImage"] = string.Empty;
+        data["BackdropImage"] = string.Empty;
+        data["ThumbImage"] = string.Empty;
+        data["LogoImage"] = string.Empty;
+        data["BannerImage"] = string.Empty;
 
         // Add trailer data
         if (item.RemoteTrailers is not null && item.RemoteTrailers.Count > 0)
@@ -209,9 +209,9 @@ public static class DataObjectHelpers
         data["TmdbLogoUrl"] = string.Empty;
 
         // Parent-level poster URLs (enriched separately from current item)
-        data["SeasonPrimaryImageUrl"] = string.Empty;
+        data["SeasonPoster"] = string.Empty;
         data["TmdbSeasonPosterUrl"] = string.Empty;
-        data["SeriesPrimaryImageUrl"] = string.Empty;
+        data["SeriesPoster"] = string.Empty;
         data["TmdbSeriesPosterUrl"] = string.Empty;
 
         // Add series-specific data

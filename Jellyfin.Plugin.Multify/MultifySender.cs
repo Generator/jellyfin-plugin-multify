@@ -230,70 +230,70 @@ public class MultifySender : IWebhookSender
     private static void EnrichImageUrls(Dictionary<string, object> data, string serverUrl, string itemId)
     {
         // Primary image URL
-        if (data.TryGetValue("PrimaryImageUrl", out var primaryObj) && primaryObj is string primaryUrl && !string.IsNullOrEmpty(primaryUrl))
+        if (data.TryGetValue("PrimaryImage", out var primaryObj) && primaryObj is string primaryUrl && !string.IsNullOrEmpty(primaryUrl))
         {
             // If it's already a full URL, use as-is; otherwise construct from server URL
             if (!primaryUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                data["PrimaryImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Primary";
+                data["PrimaryImage"] = $"{serverUrl}/Items/{itemId}/Images/Primary";
             }
         }
         else
         {
             // Construct default primary image URL
-            data["PrimaryImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Primary";
+            data["PrimaryImage"] = $"{serverUrl}/Items/{itemId}/Images/Primary";
         }
 
         // Backdrop image URL
-        if (data.TryGetValue("BackdropImageUrl", out var backdropObj) && backdropObj is string backdropUrl && !string.IsNullOrEmpty(backdropUrl))
+        if (data.TryGetValue("BackdropImage", out var backdropObj) && backdropObj is string backdropUrl && !string.IsNullOrEmpty(backdropUrl))
         {
             if (!backdropUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                data["BackdropImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Backdrop";
+                data["BackdropImage"] = $"{serverUrl}/Items/{itemId}/Images/Backdrop";
             }
         }
         else
         {
-            data["BackdropImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Backdrop";
+            data["BackdropImage"] = $"{serverUrl}/Items/{itemId}/Images/Backdrop";
         }
 
         // Thumbnail image URL
-        if (data.TryGetValue("ThumbImageUrl", out var thumbObj) && thumbObj is string thumbUrl && !string.IsNullOrEmpty(thumbUrl))
+        if (data.TryGetValue("ThumbImage", out var thumbObj) && thumbObj is string thumbUrl && !string.IsNullOrEmpty(thumbUrl))
         {
             if (!thumbUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                data["ThumbImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Thumbnail";
+                data["ThumbImage"] = $"{serverUrl}/Items/{itemId}/Images/Thumbnail";
             }
         }
         else
         {
-            data["ThumbImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Thumbnail";
+            data["ThumbImage"] = $"{serverUrl}/Items/{itemId}/Images/Thumbnail";
         }
 
         // Logo image URL
-        if (data.TryGetValue("LogoImageUrl", out var logoObj) && logoObj is string logoUrl && !string.IsNullOrEmpty(logoUrl))
+        if (data.TryGetValue("LogoImage", out var logoObj) && logoObj is string logoUrl && !string.IsNullOrEmpty(logoUrl))
         {
             if (!logoUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                data["LogoImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Logo";
+                data["LogoImage"] = $"{serverUrl}/Items/{itemId}/Images/Logo";
             }
         }
         else
         {
-            data["LogoImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Logo";
+            data["LogoImage"] = $"{serverUrl}/Items/{itemId}/Images/Logo";
         }
 
         // Banner image URL
-        if (data.TryGetValue("BannerImageUrl", out var bannerObj) && bannerObj is string bannerUrl && !string.IsNullOrEmpty(bannerUrl))
+        if (data.TryGetValue("BannerImage", out var bannerObj) && bannerObj is string bannerUrl && !string.IsNullOrEmpty(bannerUrl))
         {
             if (!bannerUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                data["BannerImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Banner";
+                data["BannerImage"] = $"{serverUrl}/Items/{itemId}/Images/Banner";
             }
         }
         else
         {
-            data["BannerImageUrl"] = $"{serverUrl}/Items/{itemId}/Images/Banner";
+            data["BannerImage"] = $"{serverUrl}/Items/{itemId}/Images/Banner";
         }
     }
 
@@ -346,23 +346,23 @@ public class MultifySender : IWebhookSender
                     case ImageType.Primary:
                         data["TmdbPosterUrl"] = image.Url;
                         data["TmdbProfileUrl"] = image.Url;
-                        // Also update PrimaryImageUrl so {{PrimaryImageUrl}} resolves to a
+                        // Also update PrimaryImage so {{PrimaryImage}} resolves to a
                         // publicly accessible CDN URL (instead of a local Jellyfin URL that
                         // services like Telegram cannot fetch)
-                        data["PrimaryImageUrl"] = image.Url;
+                        data["PrimaryImage"] = image.Url;
                         break;
                     case ImageType.Backdrop:
                         data["TmdbBackdropUrl"] = image.Url;
-                        // Also update BackdropImageUrl for the same reason
-                        data["BackdropImageUrl"] = image.Url;
+                        // Also update BackdropImage for the same reason
+                        data["BackdropImage"] = image.Url;
                         break;
                     case ImageType.Logo:
                         data["TmdbLogoUrl"] = image.Url;
-                        data["LogoImageUrl"] = image.Url;
+                        data["LogoImage"] = image.Url;
                         break;
                     case ImageType.Thumb:
                         data["TmdbStillUrl"] = image.Url;
-                        data["ThumbImageUrl"] = image.Url;
+                        data["ThumbImage"] = image.Url;
                         break;
                 }
             }
@@ -371,7 +371,7 @@ public class MultifySender : IWebhookSender
             _logger.LogDebug("Enriched TMDB image URLs for item {ItemId}: {Count} URL(s)", itemId, urlCount);
 
             // Enrich parent-level poster URLs (Season/Series) for hierarchical items.
-            // This allows users to reference {{TmdbSeasonPosterUrl}} or {{SeriesPrimaryImageUrl}}
+            // This allows users to reference {{TmdbSeasonPosterUrl}} or {{SeriesPoster}}
             // regardless of the current item type.
             await EnrichParentPosterUrls(data, item).ConfigureAwait(false);
         }
@@ -446,7 +446,7 @@ public class MultifySender : IWebhookSender
         // Set Jellyfin local URL as fallback
         if (!string.IsNullOrEmpty(serverUrl))
         {
-            data[$"{prefix}PrimaryImageUrl"] = $"{serverUrl}/Items/{parentIdStr}/Images/Primary";
+            data[$"{prefix}Poster"] = $"{serverUrl}/Items/{parentIdStr}/Images/Primary";
         }
 
         // Query TMDB remote images for the parent item
@@ -475,7 +475,7 @@ public class MultifySender : IWebhookSender
                     {
                         data[$"Tmdb{prefix}PosterUrl"] = image.Url;
                         // Overwrite Jellyfin URL with TMDB CDN URL for public access
-                        data[$"{prefix}PrimaryImageUrl"] = image.Url;
+                        data[$"{prefix}Poster"] = image.Url;
                     }
                 }
             }
@@ -487,16 +487,16 @@ public class MultifySender : IWebhookSender
     }
 
     /// <summary>
-    /// Copies the current item's poster URLs (PrimaryImageUrl, TmdbPosterUrl) into
+    /// Copies the current item's poster URLs (PrimaryImage, TmdbPosterUrl) into
     /// prefixed keys for the given <paramref name="prefix"/> (e.g. "Season", "Series").
     /// Used when the current item IS the parent (e.g. a Series item should have
-    /// SeriesPrimaryImageUrl = PrimaryImageUrl).
+    /// SeriesPoster = PrimaryImage).
     /// </summary>
     private static void CopySelfPosterToPrefixed(Dictionary<string, object> data, string prefix)
     {
-        if (data.TryGetValue("PrimaryImageUrl", out var primary) && primary is string primaryStr)
+        if (data.TryGetValue("PrimaryImage", out var primary) && primary is string primaryStr)
         {
-            data[$"{prefix}PrimaryImageUrl"] = primaryStr;
+            data[$"{prefix}Poster"] = primaryStr;
         }
 
         if (data.TryGetValue("TmdbPosterUrl", out var tmdb) && tmdb is string tmdbStr)
