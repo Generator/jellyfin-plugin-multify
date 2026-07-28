@@ -100,6 +100,12 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
                 var imageUrl = BaseOption.ReplacePlaceholders(option.PhotoUrlTemplate, data);
                 if (!string.IsNullOrEmpty(imageUrl))
                 {
+                    // Resize TMDB CDN URLs to w500 to keep image sizes reasonable
+                    if (imageUrl.Contains("image.tmdb.org", StringComparison.OrdinalIgnoreCase))
+                    {
+                        imageUrl = imageUrl.Replace("/original/", "/w500/", StringComparison.OrdinalIgnoreCase);
+                    }
+
                     extras["client::notification"] = new { bigImageUrl = imageUrl };
                 }
             }

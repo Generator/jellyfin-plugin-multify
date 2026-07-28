@@ -145,6 +145,12 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
                         attachUrl += "&maxWidth=800&maxHeight=800";
                     }
 
+                    // Resize TMDB CDN URLs to w500 (~100-300KB) to stay under ntfy.sh's 2MB attachment limit
+                    if (attachUrl.Contains("image.tmdb.org", StringComparison.OrdinalIgnoreCase))
+                    {
+                        attachUrl = attachUrl.Replace("/original/", "/w500/", StringComparison.OrdinalIgnoreCase);
+                    }
+
                     request.Headers.Add("Attach", attachUrl);
                     request.Headers.Add("Filename", "poster.jpg");
                 }
