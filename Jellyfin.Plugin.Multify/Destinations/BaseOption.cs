@@ -94,8 +94,7 @@ public class BaseOption
 
         if (string.IsNullOrEmpty(Template))
         {
-            // Fallback: serialize data as JSON when no template is configured
-            return System.Text.Json.JsonSerializer.Serialize(data);
+            throw new InvalidOperationException("Template is required but was empty or not configured.");
         }
 
         try
@@ -106,7 +105,7 @@ public class BaseOption
         }
         catch (FormatException)
         {
-            return System.Text.Json.JsonSerializer.Serialize(data);
+            throw new InvalidOperationException("Template is not valid base64.");
         }
     }
 

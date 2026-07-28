@@ -621,6 +621,7 @@ function multifyController(view) {
             specific.Token = $("[data-name=txtToken]", card)?.value || "";
             specific.Priority = parseInt($("[data-name=txtPriority]", card)?.value || "0", 10);
             specific.Title = $("[data-name=txtTitle]", card)?.value || "";
+            specific.PhotoUrlTemplate = $("[data-name=txtPhotoUrlTemplate]", card)?.value || null;
         } else if (type === "ntfy") {
             specific.Topic = $("[data-name=txtTopic]", card)?.value || "";
             specific.Priority = parseInt($("[data-name=ddlPriority]", card)?.value || "3", 10);
