@@ -491,6 +491,7 @@ public class MultifySender : IWebhookSender
 
     /// <summary>
     /// Formats video stream resolution to a human-readable string (e.g., "1080p", "4K", "720p").
+    /// Classifies by the larger dimension to handle letterboxed content (e.g. 1920×800 → "1080p").
     /// </summary>
     private static string FormatResolution(MediaStream videoStream)
     {
@@ -502,58 +503,59 @@ public class MultifySender : IWebhookSender
         var width = videoStream.Width.Value;
         var height = videoStream.Height.Value;
         var interlaced = videoStream.IsInterlaced ? "i" : "p";
+        var maxDim = Math.Max(width, height);
 
-        if (width <= 256 || height <= 144)
+        if (maxDim <= 256)
         {
             return $"144{interlaced}";
         }
 
-        if (width <= 426 || height <= 240)
+        if (maxDim <= 426)
         {
             return $"240{interlaced}";
         }
 
-        if (width <= 640 || height <= 360)
+        if (maxDim <= 640)
         {
             return $"360{interlaced}";
         }
 
-        if (width <= 720 || height <= 404)
+        if (maxDim <= 720)
         {
             return $"404{interlaced}";
         }
 
-        if (width <= 854 || height <= 480)
+        if (maxDim <= 854)
         {
             return $"480{interlaced}";
         }
 
-        if (width <= 960 || height <= 544)
+        if (maxDim <= 960)
         {
             return $"540{interlaced}";
         }
 
-        if (width <= 1024 || height <= 576)
+        if (maxDim <= 1024)
         {
             return $"576{interlaced}";
         }
 
-        if (width <= 1280 || height <= 962)
+        if (maxDim <= 1280)
         {
             return $"720{interlaced}";
         }
 
-        if (width <= 2560 || height <= 1440)
+        if (maxDim <= 1920)
         {
             return $"1080{interlaced}";
         }
 
-        if (width <= 4096 || height <= 3072)
+        if (maxDim <= 3840)
         {
             return "4K";
         }
 
-        if (width <= 8192 || height <= 6144)
+        if (maxDim <= 7680)
         {
             return "8K";
         }

@@ -1038,10 +1038,11 @@ function multifyController(view) {
     /*** Destination builders ***/
     function addTelegramDestination(config) {
         var card = wrapDestinationCard(config, "telegram", function (sections) {
-            // Connection: Bot Token + Chat ID (preserves base Name + Enable)
+            // Connection: Bot Token + Chat ID + Forum Topic ID (preserves base Name + Enable)
             sections.connection.insertAdjacentHTML('beforeend',
                 '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtBotToken" label="Bot Token:"></div>' +
-                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtChatId" label="Chat ID:"></div>');
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtChatId" label="Chat ID:"></div>' +
+                '<div class="inputContainer"><input is="emby-input" type="number" data-name="txtTopicId" label="Forum Topic ID (optional):"/><span>For Telegram Forum Topics. Leave empty to send to the general topic.</span></div>');
 
             // Formatting: Parse Mode + Message Type
             sections.formatting.innerHTML =
@@ -1068,12 +1069,8 @@ function multifyController(view) {
                     '<span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImage}}</code>. Leave empty to use the default lookup chain (PrimaryImage \u2192 TmdbPosterUrl).</span>' +
                 '</div>');
 
-            // Advanced: Forum Topic ID + Disable Notification (original order)
+            // Advanced: Disable Notification
             sections.advanced.innerHTML =
-                '<div class="inputContainer">' +
-                    '<input is="emby-input" type="number" data-name="txtTopicId" label="Forum Topic ID (optional):"/>' +
-                    '<span>For Telegram Forum Topics. Leave empty to send to the general topic.</span>' +
-                '</div>' +
                 '<div class="inputContainer">' +
                     '<label class="checkboxContainer">' +
                         '<input is="emby-checkbox" type="checkbox" data-name="chkDisableNotification"/>' +
@@ -1112,16 +1109,14 @@ function multifyController(view) {
 
     function addGotifyDestination(config) {
         var card = wrapDestinationCard(config, "gotify", function (sections) {
-            // Connection: Token (preserves base Name + URL + Enable)
+            // Connection: Token + Priority (preserves base Name + URL + Enable)
             sections.connection.insertAdjacentHTML('beforeend',
-                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtToken" label="Token:"></div>');
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtToken" label="Token:"></div>' +
+                '<div class="inputContainer"><input is="emby-input" type="number" data-name="txtPriority" label="Priority:"></div>');
 
-            // Formatting: Priority + Title
-            sections.formatting.innerHTML =
-                '<div class="inputContainer"><input is="emby-input" type="number" data-name="txtPriority" label="Priority:"></div>' +
-                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>';
-
-            // Content: Photo URL Template (preserves base Template textarea)
+            // Content: Title (before base Template) + Photo URL Template
+            sections.content.insertAdjacentHTML('afterbegin',
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>');
             sections.content.insertAdjacentHTML('beforeend',
                 '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImage}}</code>. Leave empty for no image attachment.</span></div>');
         });
@@ -1137,13 +1132,10 @@ function multifyController(view) {
 
     function addNtfyDestination(config) {
         var card = wrapDestinationCard(config, "ntfy", function (sections) {
-            // Connection: Topic + Access Token (preserves base Enable + Name + URL)
+            // Connection: Topic + Access Token + Priority + Tags + Enable Markdown (preserves base Enable + Name + URL)
             sections.connection.insertAdjacentHTML('beforeend',
                 '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtTopic" label="Topic:"></div>' +
-                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtAccessToken" label="Access Token (optional):"/><span>Required for private topics.</span></div>');
-
-            // Formatting: Priority + Title + Tags + Enable Markdown
-            sections.formatting.innerHTML =
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtAccessToken" label="Access Token (optional):"/><span>Required for private topics.</span></div>' +
                 '<div class="selectContainer">' +
                     '<select is="emby-select" data-name="ddlPriority" label="Priority:">' +
                         '<option value="1">Min</option>' +
@@ -1153,11 +1145,12 @@ function multifyController(view) {
                         '<option value="5">Max/Urgent</option>' +
                     '</select>' +
                 '</div>' +
-                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>' +
                 '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtTags" label="Tags (optional):"/><span>Comma-separated tags. First tag is used as emoji icon. Example: movie,star</span></div>' +
-                '<div class="inputContainer"><label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableMarkdown"/><span>Enable Markdown</span></label></div>';
+                '<div class="inputContainer"><label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableMarkdown"/><span>Enable Markdown</span></label></div>');
 
-            // Content: Photo URL Template (preserves base Template textarea)
+            // Content: Title (before base Template) + Photo URL Template
+            sections.content.insertAdjacentHTML('afterbegin',
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>');
             sections.content.insertAdjacentHTML('beforeend',
                 '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImage}}</code>. Leave empty for no image attachment.</span></div>');
         });
