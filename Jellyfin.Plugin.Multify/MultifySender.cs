@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Multify.Configuration;
 using Jellyfin.Plugin.Multify.Destinations;
 using Jellyfin.Plugin.Multify.Destinations.Generic;
@@ -425,7 +426,7 @@ public class MultifySender : IWebhookSender
                 data["VideoBitrate"] = videoStream.BitRate?.ToString(CultureInfo.InvariantCulture) ?? "0";
                 data["VideoBitrateText"] = DataObjectHelpers.FormatBitrate(videoStream.BitRate);
                 data["VideoResolution"] = FormatResolution(videoStream);
-                data["VideoRange"] = videoStream.VideoRangeType ?? videoStream.VideoRange ?? string.Empty;
+                data["VideoRange"] = (videoStream.VideoRangeType ?? videoStream.VideoRange)?.ToString() ?? string.Empty;
                 data["Framerate"] = (videoStream.RealFrameRate ?? videoStream.AverageFrameRate)?.ToString("F3", CultureInfo.InvariantCulture) ?? string.Empty;
             }
 

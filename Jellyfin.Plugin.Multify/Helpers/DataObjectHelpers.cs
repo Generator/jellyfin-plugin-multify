@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Web;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.Multify.Destinations;
@@ -186,7 +187,7 @@ public static class DataObjectHelpers
         // Video type (BluRay, DVD, Iso, VideoFile) — only applies to Video items
         if (item is Video videoItem)
         {
-            data["VideoType"] = videoItem.VideoType?.ToString() ?? "Unknown";
+            data["VideoType"] = videoItem.VideoType.ToString();
         }
         else
         {
