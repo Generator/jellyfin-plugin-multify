@@ -7,6 +7,7 @@ using Jellyfin.Plugin.Multify.Destinations;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
+using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Session;
 
 namespace Jellyfin.Plugin.Multify.Helpers;
@@ -163,6 +164,62 @@ public static class DataObjectHelpers
         // Add date created
         data["DateCreated"] = item.DateCreated.ToString("O");
 
+        // Media type (Video, Audio, Book, Photo)
+        data["MediaType"] = item.MediaType.ToString();
+
+        // Video resolution (0 if not applicable)
+        data["Width"] = item.Width.ToString(CultureInfo.InvariantCulture);
+        data["Height"] = item.Height.ToString(CultureInfo.InvariantCulture);
+
+        // IsHD (width ≥ 1280)
+        data["IsHD"] = (item.Width >= 1280).ToString(CultureInfo.InvariantCulture);
+
+        // Sort name
+        data["SortName"] = item.SortName ?? string.Empty;
+
+        // Parent ID (direct parent GUID)
+        data["ParentId"] = item.ParentId.ToString("N", CultureInfo.InvariantCulture);
+
+        // Location type (virtual vs physical)
+        data["LocationType"] = item.IsVirtualItem ? "Virtual" : "FileSystem";
+
+        // Video type (BluRay, DVD, Iso, VideoFile) — only applies to Video items
+        if (item is Video videoItem)
+        {
+            data["VideoType"] = videoItem.VideoType?.ToString() ?? "Unknown";
+        }
+        else
+        {
+            data["VideoType"] = string.Empty;
+        }
+
+        // HasSubtitles — available on Video items and their subclasses
+        if (item is Video videoWithSubtitles)
+        {
+            data["HasSubtitles"] = videoWithSubtitles.HasSubtitles.ToString(CultureInfo.InvariantCulture);
+        }
+        else
+        {
+            data["HasSubtitles"] = "False";
+        }
+
+        // User data (PlayCount, IsFavorite, Played, UserRating) from UserData collection
+        var userData = item.UserData?.FirstOrDefault();
+        if (userData is not null)
+        {
+            data["PlayCount"] = userData.PlayCount.ToString(CultureInfo.InvariantCulture);
+            data["IsFavorite"] = userData.IsFavorite.ToString(CultureInfo.InvariantCulture);
+            data["Played"] = userData.Played.ToString(CultureInfo.InvariantCulture);
+            data["UserRating"] = userData.Rating?.ToString(CultureInfo.InvariantCulture) ?? "Unknown";
+        }
+        else
+        {
+            data["PlayCount"] = "0";
+            data["IsFavorite"] = "False";
+            data["Played"] = "False";
+            data["UserRating"] = "Unknown";
+        }
+
         // Add image URLs (will be enriched with server URL in MultifySender)
         data["PrimaryImage"] = string.Empty;
         data["BackdropImage"] = string.Empty;
@@ -314,6 +371,14 @@ public static class DataObjectHelpers
             data["PlaybackOrder"] = session.PlayState.PlaybackOrder.ToString() ?? "Unknown";
             data["MediaSourceId"] = session.PlayState.MediaSourceId ?? "Unknown";
             data["LiveStreamId"] = session.PlayState.LiveStreamId ?? "Unknown";
+
+            // Add transcode bitrate when available (populated during transcoding sessions)
+            if (session.TranscodingInfo?.Bitrate.HasValue == true)
+            {
+                var bitrate = session.TranscodingInfo.Bitrate.Value;
+                data["PlaybackBitrate"] = bitrate;
+                data["PlaybackBitrateText"] = FormatBitrate(bitrate);
+            }
         }
 
         return data;
@@ -362,5 +427,31 @@ public static class DataObjectHelpers
         data["PlaySessionId"] = eventArgs.PlaySessionId ?? "Unknown";
 
         return data;
+    }
+
+    /// <summary>
+    /// Formats a bitrate value in bits per second to a human-readable string with SI suffix.
+    /// </summary>
+    /// <param name="bitrate">The bitrate in bits per second. Example: 2176878 → "2.2Mbps".</param>
+    /// <returns>Formatted string like "2.2Mbps", "850Kbps", or "Unknown" if null or zero.</returns>
+    public static string FormatBitrate(int? bitrate)
+    {
+        if (!bitrate.HasValue || bitrate.Value <= 0)
+        {
+            return "Unknown";
+        }
+
+        var bps = bitrate.Value;
+        if (bps >= 1_000_000)
+        {
+            return $"{(bps / 1_000_000.0):F1}Mbps";
+        }
+
+        if (bps >= 1_000)
+        {
+            return $"{(bps / 1_000.0):F0}Kbps";
+        }
+
+        return $"{bps}bps";
     }
 }

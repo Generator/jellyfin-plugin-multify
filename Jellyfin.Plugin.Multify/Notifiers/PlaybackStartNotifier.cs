@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.Multify.Configuration;
@@ -18,6 +21,7 @@ public class PlaybackStartNotifier : IEventConsumer<PlaybackStartEventArgs>
     private readonly ILogger<PlaybackStartNotifier> _logger;
     private readonly IWebhookSender _webhookSender;
     private readonly DashboardAlertService _dashboardAlert;
+    private readonly IMediaSourceManager _mediaSourceManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlaybackStartNotifier"/> class.
@@ -25,11 +29,17 @@ public class PlaybackStartNotifier : IEventConsumer<PlaybackStartEventArgs>
     /// <param name="logger">Instance of the <see cref="ILogger{PlaybackStartNotifier}"/> interface.</param>
     /// <param name="webhookSender">Instance of the <see cref="IWebhookSender"/> interface.</param>
     /// <param name="dashboardAlert">Instance of the <see cref="DashboardAlertService"/>.</param>
-    public PlaybackStartNotifier(ILogger<PlaybackStartNotifier> logger, IWebhookSender webhookSender, DashboardAlertService dashboardAlert)
+    /// <param name="mediaSourceManager">Instance of the <see cref="IMediaSourceManager"/> interface for querying source bitrate.</param>
+    public PlaybackStartNotifier(
+        ILogger<PlaybackStartNotifier> logger,
+        IWebhookSender webhookSender,
+        DashboardAlertService dashboardAlert,
+        IMediaSourceManager mediaSourceManager)
     {
         _logger = logger;
         _webhookSender = webhookSender;
         _dashboardAlert = dashboardAlert;
+        _mediaSourceManager = mediaSourceManager;
     }
 
     /// <inheritdoc />
@@ -59,6 +69,13 @@ public class PlaybackStartNotifier : IEventConsumer<PlaybackStartEventArgs>
             data.AddSessionInfo(eventArgs.Session);
         }
 
+        // Populate source bitrate for DirectPlay/DirectStream (transcode bitrate is
+        // already populated by AddSessionInfo from Session.TranscodingInfo.Bitrate)
+        if (eventArgs.Users.Count > 0 && !data.ContainsKey("PlaybackBitrate"))
+        {
+            await AddSourceBitrateAsync(data, eventArgs.Item, eventArgs.Users[0]).ConfigureAwait(false);
+        }
+
         foreach (var user in eventArgs.Users)
         {
             var userData = new Dictionary<string, object>(data)
@@ -80,5 +97,32 @@ public class PlaybackStartNotifier : IEventConsumer<PlaybackStartEventArgs>
             $"Playback started: {eventArgs.Item.Name}",
             "MultifyPlaybackStart",
             $"User(s): {string.Join(", ", eventArgs.Users.ConvertAll(u => u.Username ?? "Unknown"))}").ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Queries the source media bitrate via <see cref="IMediaSourceManager"/> for
+    /// DirectPlay/DirectStream sessions (transcode bitrate is already handled by
+    /// <see cref="DataObjectHelpers.AddSessionInfo"/>).
+    /// </summary>
+    private async Task AddSourceBitrateAsync(Dictionary<string, object> data, BaseItem item, User user)
+    {
+        try
+        {
+            var sources = await _mediaSourceManager
+                .GetPlaybackMediaSources(item, user, false, false, CancellationToken.None)
+                .ConfigureAwait(false);
+
+            var source = sources?.FirstOrDefault(s => s.Bitrate.HasValue && s.Bitrate.Value > 0);
+            if (source?.Bitrate.HasValue == true)
+            {
+                var bitrate = source.Bitrate.Value;
+                data["PlaybackBitrate"] = bitrate;
+                data["PlaybackBitrateText"] = DataObjectHelpers.FormatBitrate(bitrate);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error querying source bitrate for {ItemName}", item.Name);
+        }
     }
 }

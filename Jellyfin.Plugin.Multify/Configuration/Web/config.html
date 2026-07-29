@@ -343,6 +343,58 @@
         .multify-destination-card.collapsed .multify-destination-content {
             display: none;
         }
+
+        /* Section-based layout within cards */
+        .multify-section {
+            border-bottom: 1px solid var(--multify-border);
+        }
+        .multify-section:last-child {
+            border-bottom: none;
+        }
+        .multify-section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 0;
+            cursor: pointer;
+            user-select: none;
+        }
+        .multify-section-header:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .multify-section-toggle {
+            background: none;
+            border: none;
+            color: var(--multify-text-muted);
+            cursor: pointer;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            opacity: 0.7;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .multify-section-toggle:hover {
+            opacity: 1;
+        }
+        .multify-section-toggle .material-icons {
+            font-size: 18px;
+            transition: transform 0.2s ease;
+        }
+        .multify-section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: var(--multify-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .multify-section-content {
+            padding: 0 0 12px 26px;
+        }
+        .multify-section.collapsed .multify-section-content {
+            display: none;
+        }
         
         .multify-trash-icon {
             background: none;

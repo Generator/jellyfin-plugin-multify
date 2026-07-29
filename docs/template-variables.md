@@ -47,6 +47,23 @@ Available in **library events** (`ItemAdded`, `ItemDeleted`) and **playback even
 | `{{Path}}` | File path on server | `/media/movies/Inception.mkv` |
 | `{{Container}}` | File container format | `mkv` |
 | `{{DateCreated}}` | Date added to library (ISO 8601) | `2024-01-15T10:30:00.000Z` |
+| `{{MediaType}}` | Basic media classification | `Video`, `Audio`, `Book`, `Photo` |
+| `{{Width}}` | Video width in pixels | `1920` |
+| `{{Height}}` | Video height in pixels | `800` |
+| `{{IsHD}}` | Whether video is ≥720p (`Width >= 1280`) | `True`, `False` |
+| `{{HasSubtitles}}` | Whether item has subtitle streams (Video only) | `True`, `False` |
+| `{{VideoType}}` | Video disc/file type | `VideoFile`, `BluRay`, `DVD`, `Iso` |
+| `{{LocationType}}` | Whether item is stored locally or virtual | `FileSystem`, `Virtual` |
+| `{{SortName}}` | Sort/filename used in library listing | `Inception (2010)` |
+| `{{ParentId}}` | Parent folder/item GUID | `a1b2c3d4e5f6...` |
+| `{{PlayCount}}` | Number of plays by the current user | `3` |
+| `{{IsFavorite}}` | Whether item is favorited by the user | `True`, `False` |
+| `{{Played}}` | Whether item was fully played | `True`, `False` |
+| `{{UserRating}}` | User's personal rating | `4.5` |
+| `{{Director}}` | First director name | `Christopher Nolan` |
+| `{{Writers}}` | Comma-separated writer names | `Jonathan Nolan, Christopher Nolan` |
+| `{{CastList}}` | Top 5 cast member names (comma-separated, by sort order) | `Leonardo DiCaprio, Joseph Gordon-Levitt, Elliot Page` |
+| `{{CastJson}}` | JSON array of cast with `name` and `role` fields | `[{"name":"...","role":"..."}]` |
 
 ### Movie-only
 
@@ -139,6 +156,34 @@ Available in **playback events** (`PlaybackStart`, `PlaybackStop`, `PlaybackProg
 | `{{PlaybackOrder}}` | Queue playback order | `Default`, `Shuffle` |
 | `{{MediaSourceId}}` | Media source identifier | `source123` |
 | `{{LiveStreamId}}` | Live stream identifier (live TV only) | `live123` |
+| `{{PlaybackBitrate}}` | Current playback bitrate in bps (raw value) | `2176878` |
+| `{{PlaybackBitrateText}}` | Formatted playback bitrate with SI suffix | `2.2Mbps`, `850Kbps` |
+
+**Bitrate logic:**
+- **Transcode**: Uses `Session.TranscodingInfo.Bitrate` (reported by the transcoding process)
+- **DirectPlay / DirectStream**: Queries the media source bitrate from the library item
+
+---
+
+## Media Stream Info
+
+Available in **all item events** (ItemAdded, ItemUpdated, ItemDeleted, playback events, etc.). Populated from the item's probed media streams via `IMediaSourceManager`. Values are empty/zero for non-video items.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{VideoCodec}}` | First video stream codec | `hevc`, `h264` |
+| `{{VideoProfile}}` | Video stream profile | `Main 10`, `High` |
+| `{{VideoBitrate}}` | First video stream bitrate (raw bps) | `15200000` |
+| `{{VideoBitrateText}}` | First video stream bitrate (formatted) | `15.2Mbps`, `2.1Mbps` |
+| `{{VideoResolution}}` | Formatted video resolution | `1080p`, `4K`, `720p` |
+| `{{VideoRange}}` | HDR type | `SDR`, `HDR10`, `DolbyVision`, `HLG` |
+| `{{Framerate}}` | Video framerate | `23.976`, `60.000` |
+| `{{AudioCodec}}` | First audio stream codec | `aac`, `ac3`, `dts` |
+| `{{AudioChannels}}` | Audio channel configuration | `5.1`, `2.0`, `7.1`, `stereo` |
+| `{{AudioLanguage}}` | First audio stream language code | `eng`, `por`, `spa` |
+| `{{AudioBitrate}}` | First audio stream bitrate (raw bps) | `384000` |
+| `{{AudioBitrateText}}` | First audio stream bitrate (formatted) | `384Kbps` |
+| `{{SubtitleLanguages}}` | Comma-separated subtitle language codes | `eng, por, spa` |
 
 ---
 

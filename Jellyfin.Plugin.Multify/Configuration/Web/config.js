@@ -38,6 +38,54 @@ function multifyController(view) {
         return tpl.cloneNode(true).content;
     }
 
+    function createSection(title) {
+        const section = document.createElement("div");
+        section.className = "multify-section";
+
+        const header = document.createElement("div");
+        header.className = "multify-section-header";
+
+        const toggle = document.createElement("button");
+        toggle.className = "multify-section-toggle";
+        toggle.setAttribute("aria-label", "Toggle " + title + " section");
+        toggle.innerHTML = '<span class="material-icons">expand_more</span>';
+
+        const titleEl = document.createElement("span");
+        titleEl.className = "multify-section-title";
+        titleEl.textContent = title;
+
+        header.appendChild(toggle);
+        header.appendChild(titleEl);
+
+        const content = document.createElement("div");
+        content.className = "multify-section-content";
+
+        section.appendChild(header);
+        section.appendChild(content);
+
+        function setCollapsed(collapsed) {
+            section.classList.toggle("collapsed", collapsed);
+            toggle.setAttribute("aria-expanded", !collapsed);
+            toggle.innerHTML = collapsed
+                ? '<span class="material-icons">chevron_right</span>'
+                : '<span class="material-icons">expand_more</span>';
+        }
+
+        // Toggle on header click (unless focusing an interactive child)
+        header.addEventListener("click", function (e) {
+            if (e.target.closest("input, select, button, label, a, textarea, .multify-section-toggle")) return;
+            setCollapsed(!section.classList.contains("collapsed"));
+        });
+
+        // Toggle on icon button click (stop propagation so header handler doesn't double-fire)
+        toggle.addEventListener("click", function (e) {
+            e.stopPropagation();
+            setCollapsed(!section.classList.contains("collapsed"));
+        });
+
+        return { section: section, content: content, toggle: toggle, setCollapsed: setCollapsed };
+    }
+
     function buildNotificationTypeCheckboxes(selected = []) {
         const container = document.createElement("div");
         container.className = "multify-list-block";
@@ -360,47 +408,42 @@ function multifyController(view) {
     }
 
     /*** Base destination config (shared by all types) ***/
-    function buildBaseSection(config, showUrl = true) {
-        const frag = document.createDocumentFragment();
+    function buildBaseSection(config, sections, options) {
+        var showUrl = (options && options.showUrl !== false);
 
-        // Name
-        const nameDiv = document.createElement("div");
+        // ── Connection section: Enable + Name + URL ──
+        var enableDiv = document.createElement("div");
+        enableDiv.innerHTML = '<label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableWebhook"><span>Enable</span></label>';
+        enableDiv.querySelector("input").checked = config.EnableWebhook !== false;
+        sections.connection.appendChild(enableDiv);
+
+        var nameDiv = document.createElement("div");
         nameDiv.className = "inputContainer";
-        nameDiv.innerHTML = `<input is="emby-input" type="text" data-name="txtWebhookName" label="Name:"/><span>The webhook name (for display only)</span>`;
-        $("input", nameDiv).value = config.WebhookName || "";
-        frag.appendChild(nameDiv);
+        nameDiv.innerHTML = '<input is="emby-input" type="text" data-name="txtWebhookName" label="Name:"><span>The webhook name (for display only)</span>';
+        nameDiv.querySelector("input").value = config.WebhookName || "";
+        sections.connection.appendChild(nameDiv);
 
-        // URI (only show for services that need it)
         if (showUrl) {
-            const uriDiv = document.createElement("div");
+            var uriDiv = document.createElement("div");
             uriDiv.className = "inputContainer";
-            uriDiv.innerHTML = `<input is="emby-input" type="text" data-name="txtWebhookUri" label="URL:"/><span>The webhook destination url</span>`;
-            $("input", uriDiv).value = config.WebhookUri || "";
-            frag.appendChild(uriDiv);
+            uriDiv.innerHTML = '<input is="emby-input" type="text" data-name="txtWebhookUri" label="URL:"><span>The webhook destination url</span>';
+            uriDiv.querySelector("input").value = config.WebhookUri || "";
+            sections.connection.appendChild(uriDiv);
         }
 
-        // Enable
-        const enableDiv = document.createElement("div");
-        enableDiv.className = "inputContainer";
-        enableDiv.innerHTML = `<label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableWebhook"/><span>Enable</span></label>`;
-        $("input", enableDiv).checked = config.EnableWebhook ?? true;
-        frag.appendChild(enableDiv);
+        // ── Filters section: Notification Types + User Filter + Item Types + Library Filter ──
+        var ntDiv = document.createElement("div");
+        ntDiv.innerHTML = '<label>Notification Type:</label><span style="font-size:0.85em;opacity:0.7;margin-left:8px;">(only one can be selected)</span><div data-name="notificationTypeContainer"></div>';
+        ntDiv.querySelector("[data-name=notificationTypeContainer]").appendChild(buildNotificationTypeCheckboxes(config.NotificationTypes));
+        sections.filters.appendChild(ntDiv);
 
-        // Notification types
-        const ntDiv = document.createElement("div");
-        ntDiv.innerHTML = `<label>Notification Type:</label><span style="font-size:0.85em;opacity:0.7;margin-left:8px;">(only one can be selected)</span><div data-name="notificationTypeContainer"></div>`;
-        $("[data-name=notificationTypeContainer]", ntDiv).appendChild(buildNotificationTypeCheckboxes(config.NotificationTypes));
-        frag.appendChild(ntDiv);
+        var ufDiv = document.createElement("div");
+        ufDiv.innerHTML = '<label>User Filter:</label><div data-name="userFilterContainer"></div>';
+        ufDiv.querySelector("[data-name=userFilterContainer]").appendChild(buildUserFilterCheckboxes(config.UserFilter, config.UserFilterMode));
+        sections.filters.appendChild(ufDiv);
 
-        // User filter
-        const ufDiv = document.createElement("div");
-        ufDiv.innerHTML = `<label>User Filter:</label><div data-name="userFilterContainer"></div>`;
-        $("[data-name=userFilterContainer]", ufDiv).appendChild(buildUserFilterCheckboxes(config.UserFilter, config.UserFilterMode));
-        frag.appendChild(ufDiv);
-
-        // Item types
-        const itDiv = document.createElement("div");
-        const itLabel = document.createElement("label");
+        var itDiv = document.createElement("div");
+        var itLabel = document.createElement("label");
         itLabel.textContent = "Item Type:";
         itDiv.appendChild(itLabel);
         itDiv.appendChild(buildItemTypeCheckboxes({
@@ -412,23 +455,19 @@ function multifyController(view) {
             EnableSongs: config.EnableSongs,
             EnableVideos: config.EnableVideos
         }));
-        frag.appendChild(itDiv);
+        sections.filters.appendChild(itDiv);
 
-        // Library filter
-        frag.appendChild(buildLibraryFilter({
+        sections.filters.appendChild(buildLibraryFilter({
             LibraryFilterMode: config.LibraryFilterMode || "OnlySelected",
             LibraryFilter: config.LibraryFilter || []
         }));
 
-        // Template
-        const tplDiv = document.createElement("div");
+        // ── Content section: Template ──
+        var tplDiv = document.createElement("div");
         tplDiv.className = "inputContainer multify-template-section";
-        tplDiv.style.marginTop = "12px";
-        tplDiv.innerHTML = `<label>Template:</label><div><textarea data-name="txtTemplate" style="width: 100%; height: 400px"></textarea></div>`;
-        $("textarea", tplDiv).value = atou(config.Template || "");
-        frag.appendChild(tplDiv);
-
-        return frag;
+        tplDiv.innerHTML = '<label>Template:</label><div><textarea data-name="txtTemplate" style="width: 100%; height: 400px"></textarea></div>';
+        tplDiv.querySelector("textarea").value = atou(config.Template || "");
+        sections.content.appendChild(tplDiv);
     }
 
     function readBaseSection(container) {
@@ -463,53 +502,54 @@ function multifyController(view) {
     }
 
     /*** Destination card wrapper ***/
-    function wrapDestinationCard(config, type, serviceConfigHtml, onRemove, options = {}) {
-        const card = document.createElement("div");
+    function wrapDestinationCard(config, type, populateSections, options) {
+        options = options || {};
+        var card = document.createElement("div");
         card.className = "multify-destination-card collapsed";
         card.dataset.type = type;
 
         // Header
-        const header = document.createElement("div");
+        var header = document.createElement("div");
         header.className = "card-header";
         
         // Collapse toggle button
-        const toggleBtn = document.createElement("button");
+        var toggleBtn = document.createElement("button");
         toggleBtn.className = "multify-collapse-toggle";
         toggleBtn.setAttribute("aria-expanded", "false");
         toggleBtn.setAttribute("aria-controls", "destination-content");
         toggleBtn.innerHTML = '<span class="material-icons">expand_more</span>';
-        toggleBtn.addEventListener("click", (e) => {
+        toggleBtn.addEventListener("click", function (e) {
             e.stopPropagation();
             card.classList.toggle("collapsed");
-            const isExpanded = !card.classList.contains("collapsed");
+            var isExpanded = !card.classList.contains("collapsed");
             toggleBtn.setAttribute("aria-expanded", isExpanded);
             toggleBtn.innerHTML = isExpanded ? '<span class="material-icons">expand_less</span>' : '<span class="material-icons">expand_more</span>';
         });
         header.appendChild(toggleBtn);
 
         // Title
-        const title = document.createElement("strong");
+        var title = document.createElement("strong");
         title.className = "multify-destination-title";
         title.textContent = config.WebhookName || "Webhook Name";
-        title.addEventListener("click", (e) => {
+        title.addEventListener("click", function (e) {
             e.stopPropagation();
             card.classList.toggle("collapsed");
-            const isExpanded = !card.classList.contains("collapsed");
+            var isExpanded = !card.classList.contains("collapsed");
             toggleBtn.setAttribute("aria-expanded", isExpanded);
             toggleBtn.innerHTML = isExpanded ? '<span class="material-icons">expand_less</span>' : '<span class="material-icons">expand_more</span>';
         });
         header.appendChild(title);
 
         // Action buttons container
-        const actionsContainer = document.createElement("div");
+        var actionsContainer = document.createElement("div");
         actionsContainer.className = "multify-destination-actions";
 
         // Remove button (trash icon)
-        const removeBtn = document.createElement("button");
+        var removeBtn = document.createElement("button");
         removeBtn.className = "multify-trash-icon";
         removeBtn.setAttribute("aria-label", "Delete destination");
         removeBtn.innerHTML = '<span class="material-icons">delete</span>';
-        removeBtn.addEventListener("click", (e) => {
+        removeBtn.addEventListener("click", function (e) {
             e.stopPropagation();
             card.remove();
         });
@@ -519,28 +559,52 @@ function multifyController(view) {
         card.appendChild(header);
 
         // Content container (collapsible)
-        const contentContainer = document.createElement("div");
+        var contentContainer = document.createElement("div");
         contentContainer.className = "multify-destination-content";
 
-        // Base config
-        contentContainer.appendChild(buildBaseSection(config, options.showUrl !== false));
+        // Create 5 collapsible sections
+        var conn = createSection("Connection");
+        var formatting = createSection("Formatting");
+        var contentSec = createSection("Content");   // note: "content" would shadow outer var
+        var filters = createSection("Filters");
+        var advanced = createSection("Advanced");
 
-        // Service-specific
-        const svcDiv = document.createElement("div");
-        svcDiv.innerHTML = serviceConfigHtml;
-        contentContainer.appendChild(svcDiv);
+        // Populate base sections
+        buildBaseSection(config, {
+            connection: conn.content,
+            filters: filters.content,
+            content: contentSec.content
+        }, options);
+
+        // Populate service-specific sections
+        if (populateSections) {
+            populateSections({
+                connection: conn.content,
+                formatting: formatting.content,
+                content: contentSec.content,
+                advanced: advanced.content
+            });
+        }
+
+        // Append sections in order (skip empty sections so empty headers don't show)
+        function appendIfNotEmpty(container, sec) { if (sec.content.children.length > 0) container.appendChild(sec.section); }
+        appendIfNotEmpty(contentContainer, conn);
+        appendIfNotEmpty(contentContainer, formatting);
+        appendIfNotEmpty(contentContainer, contentSec);
+        appendIfNotEmpty(contentContainer, filters);
+        appendIfNotEmpty(contentContainer, advanced);
 
         // Test notification button at bottom
-        const testBtnContainer = document.createElement("div");
+        var testBtnContainer = document.createElement("div");
         testBtnContainer.style.marginTop = "16px";
         testBtnContainer.style.paddingTop = "12px";
         testBtnContainer.style.borderTop = "1px solid var(--multify-border-muted)";
         
-        const testBtn = document.createElement("button");
+        var testBtn = document.createElement("button");
         testBtn.className = "raised";
         testBtn.style.cssText = "background: var(--multify-accent); color: var(--multify-on-accent); border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; width: 100%;";
-        testBtn.innerHTML = "Test notification 🔔";
-        testBtn.addEventListener("click", async (e) => {
+        testBtn.innerHTML = "Test notification \u{1F514}";
+        testBtn.addEventListener("click", async function (e) {
             e.stopPropagation();
             await handleTestNotification(card, type, testBtn);
         });
@@ -973,147 +1037,198 @@ function multifyController(view) {
 
     /*** Destination builders ***/
     function addTelegramDestination(config) {
-        const card = wrapDestinationCard(config, "telegram", `
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtBotToken" label="Bot Token:"/></div>
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtChatId" label="Chat ID:"/></div>
-            <div class="selectContainer">
-                <select is="emby-select" data-name="ddlParseMode" label="Parse Mode:">
-                    <option value="HTML">HTML</option>
-                    <option value="Markdown">Markdown</option>
-                    <option value="MarkdownV2">MarkdownV2</option>
-                </select>
-            </div>
-            <div class="selectContainer">
-                <select is="emby-select" data-name="ddlMessageType" label="Message Type:">
-                    <option value="SendText">Text (sendMessage)</option>
-                    <option value="SendPhoto">Photo (sendPhoto)</option>
-                    <option value="SendRichMessage">Rich Message (sendRichMessage)</option>
-                </select>
-            </div>
-            <div class="inputContainer"><input is="emby-input" type="number" data-name="txtTopicId" label="Forum Topic ID (optional):"/><span>For Telegram Forum Topics. Leave empty to send to the general topic.</span></div>
-            <div class="inputContainer"><label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkDisableNotification"/><span>Disable Notification (silent message)</span></label><span>When enabled, the message will be sent without sound or vibration.</span></div>
-            <div class="inputContainer" data-name="photoUrlTemplateGroup" style="display:none"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImage}}</code>. Leave empty to use the default lookup chain (PrimaryImage → TmdbPosterUrl).</span></div>`, null, { showUrl: false });
+        var card = wrapDestinationCard(config, "telegram", function (sections) {
+            // Connection: Bot Token + Chat ID (preserves base Name + Enable)
+            sections.connection.insertAdjacentHTML('beforeend',
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtBotToken" label="Bot Token:"></div>' +
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtChatId" label="Chat ID:"></div>');
 
-        setTimeout(() => {
-            const setVal = (n, v) => { const el = $("[data-name=" + n + "]", card); if (el) el.value = v != null ? String(v) : ""; };
-            const togglePhotoUrlField = (messageType) => {
-                const group = $("[data-name=photoUrlTemplateGroup]", card);
-                if (group) group.style.display = messageType === "SendPhoto" ? "" : "none";
-            };
-            setVal("txtBotToken", config.BotToken);
-            setVal("txtChatId", config.ChatId);
-            setVal("ddlParseMode", config.ParseMode || "HTML");
-            setVal("ddlMessageType", config.MessageType ?? "SendText");
-            setVal("txtTopicId", config.MessageThreadId);
-            setVal("txtPhotoUrlTemplate", config.PhotoUrlTemplate);
-            // Toggle photo URL field visibility based on current message type
-            togglePhotoUrlField(config.MessageType ?? "SendText");
-            // Listen for changes on the message type dropdown
-            const msgTypeEl = $("[data-name=ddlMessageType]", card);
-            if (msgTypeEl) {
-                msgTypeEl.addEventListener("change", function () {
-                    togglePhotoUrlField(this.value);
-                });
-            }
-        }, 0);
+            // Formatting: Parse Mode + Message Type
+            sections.formatting.innerHTML =
+                '<div class="selectContainer">' +
+                    '<select is="emby-select" data-name="ddlParseMode" label="Parse Mode:">' +
+                        '<option value="HTML">HTML</option>' +
+                        '<option value="Markdown">Markdown</option>' +
+                        '<option value="MarkdownV2">MarkdownV2</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="selectContainer">' +
+                    '<select is="emby-select" data-name="ddlMessageType" label="Message Type:">' +
+                        '<option value="SendText">Text (sendMessage)</option>' +
+                        '<option value="SendPhoto">Photo (sendPhoto)</option>' +
+                        '<option value="SendRichMessage">Rich Message (sendRichMessage)</option>' +
+                    '</select>' +
+                '</div>';
+
+            // Content: Photo URL Template (hidden by default, shown when SendPhoto selected)
+            // Use insertAdjacentHTML so the base Template textarea is preserved
+            sections.content.insertAdjacentHTML('beforeend',
+                '<div class="inputContainer" data-name="photoUrlTemplateGroup" style="display:none">' +
+                    '<input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/>' +
+                    '<span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImage}}</code>. Leave empty to use the default lookup chain (PrimaryImage \u2192 TmdbPosterUrl).</span>' +
+                '</div>');
+
+            // Advanced: Forum Topic ID + Disable Notification (original order)
+            sections.advanced.innerHTML =
+                '<div class="inputContainer">' +
+                    '<input is="emby-input" type="number" data-name="txtTopicId" label="Forum Topic ID (optional):"/>' +
+                    '<span>For Telegram Forum Topics. Leave empty to send to the general topic.</span>' +
+                '</div>' +
+                '<div class="inputContainer">' +
+                    '<label class="checkboxContainer">' +
+                        '<input is="emby-checkbox" type="checkbox" data-name="chkDisableNotification"/>' +
+                        '<span>Disable Notification (silent message)</span>' +
+                    '</label>' +
+                    '<span>When enabled, the message will be sent without sound or vibration.</span>' +
+                '</div>';
+        }, { showUrl: false });
+
+        // Set values (synchronous now since sections are in the DOM)
+        var setVal = function (n, v) { var el = $("[data-name=" + n + "]", card); if (el) el.value = v != null ? String(v) : ""; };
+        setVal("txtBotToken", config.BotToken);
+        setVal("txtChatId", config.ChatId);
+        setVal("ddlParseMode", config.ParseMode || "HTML");
+        setVal("ddlMessageType", config.MessageType ?? "SendText");
+        setVal("txtTopicId", config.MessageThreadId);
+        setVal("txtPhotoUrlTemplate", config.PhotoUrlTemplate);
+
+        // Toggle photo URL field visibility based on current message type
+        var togglePhotoUrlField = function (messageType) {
+            var group = $("[data-name=photoUrlTemplateGroup]", card);
+            if (group) group.style.display = messageType === "SendPhoto" ? "" : "none";
+        };
+        togglePhotoUrlField(config.MessageType ?? "SendText");
+
+        // Listen for changes on the message type dropdown
+        var msgTypeEl = $("[data-name=ddlMessageType]", card);
+        if (msgTypeEl) {
+            msgTypeEl.addEventListener("change", function () {
+                togglePhotoUrlField(this.value);
+            });
+        }
 
         return card;
     }
 
     function addGotifyDestination(config) {
-        const card = wrapDestinationCard(config, "gotify", `
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtToken" label="Token:"/></div>
-            <div class="inputContainer"><input is="emby-input" type="number" data-name="txtPriority" label="Priority:"/></div>
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImage}}</code>. Leave empty for no image attachment.</span></div>`, null);
+        var card = wrapDestinationCard(config, "gotify", function (sections) {
+            // Connection: Token (preserves base Name + URL + Enable)
+            sections.connection.insertAdjacentHTML('beforeend',
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtToken" label="Token:"></div>');
 
-        setTimeout(() => {
-            const el = $("[data-name=txtToken]", card); if (el) el.value = config.Token || "";
-            const pr = $("[data-name=txtPriority]", card); if (pr) pr.value = config.Priority || 0;
-            const ti = $("[data-name=txtTitle]", card); if (ti) ti.value = config.Title || "";
-            const pu = $("[data-name=txtPhotoUrlTemplate]", card); if (pu) pu.value = config.PhotoUrlTemplate || "";
-        }, 0);
+            // Formatting: Priority + Title
+            sections.formatting.innerHTML =
+                '<div class="inputContainer"><input is="emby-input" type="number" data-name="txtPriority" label="Priority:"></div>' +
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>';
+
+            // Content: Photo URL Template (preserves base Template textarea)
+            sections.content.insertAdjacentHTML('beforeend',
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImage}}</code>. Leave empty for no image attachment.</span></div>');
+        });
+
+        // Set values
+        var el = $("[data-name=txtToken]", card); if (el) el.value = config.Token || "";
+        var pr = $("[data-name=txtPriority]", card); if (pr) pr.value = config.Priority || 0;
+        var ti = $("[data-name=txtTitle]", card); if (ti) ti.value = config.Title || "";
+        var pu = $("[data-name=txtPhotoUrlTemplate]", card); if (pu) pu.value = config.PhotoUrlTemplate || "";
 
         return card;
     }
 
     function addNtfyDestination(config) {
-        const card = wrapDestinationCard(config, "ntfy", `
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtTopic" label="Topic:"/></div>
-            <div class="selectContainer">
-                <select is="emby-select" data-name="ddlPriority" label="Priority:">
-                    <option value="1">Min</option>
-                    <option value="2">Low</option>
-                    <option value="3" selected>Default</option>
-                    <option value="4">High</option>
-                    <option value="5">Max/Urgent</option>
-                </select>
-            </div>
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtTags" label="Tags (optional):"/><span>Comma-separated tags. First tag is used as emoji icon. Example: movie,star</span></div>
-            <div class="inputContainer"><label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableMarkdown"/><span>Enable Markdown</span></label></div>
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtAccessToken" label="Access Token (optional):"/></div>
-            <div class="inputContainer"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImage}}</code>. Leave empty for no image attachment.</span></div>`, null);
+        var card = wrapDestinationCard(config, "ntfy", function (sections) {
+            // Connection: Topic + Access Token (preserves base Enable + Name + URL)
+            sections.connection.insertAdjacentHTML('beforeend',
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtTopic" label="Topic:"></div>' +
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtAccessToken" label="Access Token (optional):"/><span>Required for private topics.</span></div>');
 
-        setTimeout(() => {
-            const setVal = (n, v) => { const el = $("[data-name=" + n + "]", card); if (el) el.value = v || ""; };
-            setVal("txtTopic", config.Topic);
-            setVal("ddlPriority", config.Priority || "3");
-            setVal("txtTitle", config.Title || "");
-            setVal("txtTags", config.Tags || "");
-            setVal("txtAccessToken", config.AccessToken);
-            setVal("txtPhotoUrlTemplate", config.PhotoUrlTemplate || "");
-            const md = $("[data-name=chkEnableMarkdown]", card); if (md) md.checked = config.EnableMarkdown ?? true;
-        }, 0);
+            // Formatting: Priority + Title + Tags + Enable Markdown
+            sections.formatting.innerHTML =
+                '<div class="selectContainer">' +
+                    '<select is="emby-select" data-name="ddlPriority" label="Priority:">' +
+                        '<option value="1">Min</option>' +
+                        '<option value="2">Low</option>' +
+                        '<option value="3" selected>Default</option>' +
+                        '<option value="4">High</option>' +
+                        '<option value="5">Max/Urgent</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtTitle" label="Title (optional):"/><span>Notification title. Leave empty for default.</span></div>' +
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtTags" label="Tags (optional):"/><span>Comma-separated tags. First tag is used as emoji icon. Example: movie,star</span></div>' +
+                '<div class="inputContainer"><label class="checkboxContainer"><input is="emby-checkbox" type="checkbox" data-name="chkEnableMarkdown"/><span>Enable Markdown</span></label></div>';
+
+            // Content: Photo URL Template (preserves base Template textarea)
+            sections.content.insertAdjacentHTML('beforeend',
+                '<div class="inputContainer"><input is="emby-input" type="text" data-name="txtPhotoUrlTemplate" label="Photo URL Template (optional):"/><span>Supports template variables like <code>{{TmdbPosterUrl}}</code>, <code>{{PrimaryImage}}</code>. Leave empty for no image attachment.</span></div>');
+        });
+
+        // Set values
+        var setValFn = function (n, v) { var el = $("[data-name=" + n + "]", card); if (el) el.value = v || ""; };
+        setValFn("txtTopic", config.Topic);
+        setValFn("ddlPriority", config.Priority || "3");
+        setValFn("txtTitle", config.Title || "");
+        setValFn("txtTags", config.Tags || "");
+        setValFn("txtAccessToken", config.AccessToken);
+        setValFn("txtPhotoUrlTemplate", config.PhotoUrlTemplate || "");
+        var mdCb = $("[data-name=chkEnableMarkdown]", card); if (mdCb) mdCb.checked = config.EnableMarkdown !== false;
 
         return card;
     }
 
     function addGenericDestination(config) {
-        const card = wrapDestinationCard(config, "generic", `
-            <div class="inputContainer">
-                <label>Custom Headers:</label>
-                <div data-name="headersContainer"></div>
-                <button is="emby-button" type="button" class="raised btnAddHeader"><span>Add Header</span></button>
-            </div>
-            <div class="inputContainer">
-                <label>Custom Fields (merged into notification data):</label>
-                <div data-name="fieldsContainer"></div>
-                <button is="emby-button" type="button" class="raised btnAddField"><span>Add Field</span></button>
-            </div>`, null);
+        var card = wrapDestinationCard(config, "generic", function (sections) {
+            // The generic destination has no special auth — URL is in Connection (from base).
+            // Custom Headers and Fields go in Advanced section.
+            sections.advanced.innerHTML =
+                '<div class="inputContainer">' +
+                    '<label>Custom Headers:</label>' +
+                    '<div data-name="headersContainer"></div>' +
+                    '<button is="emby-button" type="button" class="raised btnAddHeader"><span>Add Header</span></button>' +
+                '</div>' +
+                '<div class="inputContainer">' +
+                    '<label>Custom Fields (merged into notification data):</label>' +
+                    '<div data-name="fieldsContainer"></div>' +
+                    '<button is="emby-button" type="button" class="raised btnAddField"><span>Add Field</span></button>' +
+                '</div>';
+        });
 
-        setTimeout(() => {
-            const headersContainer = $("[data-name=headersContainer]", card);
-            const fieldsContainer = $("[data-name=fieldsContainer]", card);
+        // Set up header/field rows
+        var headersContainer = $("[data-name=headersContainer]", card);
+        var fieldsContainer = $("[data-name=fieldsContainer]", card);
 
-            function addHeaderRow(key = "", value = "") {
-                const row = cloneTemplate("template-generic-header");
-                const k = $("[data-name=txtHeaderKey]", row);
-                const v = $("[data-name=txtHeaderValue]", row);
-                if (k) k.value = key;
-                if (v) v.value = value;
-                const rm = $(".btnRemoveHeader", row);
-                if (rm) rm.addEventListener("click", () => row.remove());
-                headersContainer.appendChild(row);
-            }
+        function addHeaderRow(key, value) {
+            if (key === undefined) key = "";
+            if (value === undefined) value = "";
+            var row = cloneTemplate("template-generic-header");
+            var k = $("[data-name=txtHeaderKey]", row);
+            var v = $("[data-name=txtHeaderValue]", row);
+            if (k) k.value = key;
+            if (v) v.value = value;
+            var rm = $(".btnRemoveHeader", row);
+            if (rm) rm.addEventListener("click", function () { row.remove(); });
+            headersContainer.appendChild(row);
+        }
 
-            function addFieldRow(key = "", value = "") {
-                const row = cloneTemplate("template-generic-field");
-                const k = $("[data-name=txtFieldKey]", row);
-                const v = $("[data-name=txtFieldValue]", row);
-                if (k) k.value = key;
-                if (v) v.value = value;
-                const rm = $(".btnRemoveField", row);
-                if (rm) rm.addEventListener("click", () => row.remove());
-                fieldsContainer.appendChild(row);
-            }
+        function addFieldRow(key, value) {
+            if (key === undefined) key = "";
+            if (value === undefined) value = "";
+            var row = cloneTemplate("template-generic-field");
+            var k = $("[data-name=txtFieldKey]", row);
+            var v = $("[data-name=txtFieldValue]", row);
+            if (k) k.value = key;
+            if (v) v.value = value;
+            var rm = $(".btnRemoveField", row);
+            if (rm) rm.addEventListener("click", function () { row.remove(); });
+            fieldsContainer.appendChild(row);
+        }
 
-            for (const h of config.Headers || []) addHeaderRow(h.Key, h.Value);
-            for (const f of config.Fields || []) addFieldRow(f.Key, f.Value);
+        for (var hi = 0; hi < (config.Headers || []).length; hi++) addHeaderRow(config.Headers[hi].Key, config.Headers[hi].Value);
+        for (var fi = 0; fi < (config.Fields || []).length; fi++) addFieldRow(config.Fields[fi].Key, config.Fields[fi].Value);
 
-            $(".btnAddHeader", card)?.addEventListener("click", () => addHeaderRow());
-            $(".btnAddField", card)?.addEventListener("click", () => addFieldRow());
-        }, 0);
+        var addHdrBtn = $(".btnAddHeader", card);
+        if (addHdrBtn) addHdrBtn.addEventListener("click", function () { addHeaderRow(); });
+        var addFldBtn = $(".btnAddField", card);
+        if (addFldBtn) addFldBtn.addEventListener("click", function () { addFieldRow(); });
 
         return card;
     }

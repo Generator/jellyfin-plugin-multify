@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Multify.Configuration;
 using Jellyfin.Plugin.Multify.Destinations;
@@ -36,6 +37,7 @@ public class MultifySender : IWebhookSender
     private readonly MdblistService? _mdblistService;
     private readonly ILibraryManager _libraryManager;
     private readonly IProviderManager _providerManager;
+    private readonly IMediaSourceManager _mediaSourceManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MultifySender"/> class.
@@ -48,6 +50,7 @@ public class MultifySender : IWebhookSender
     /// <param name="genericClient">Instance of the <see cref="IWebhookClient{GenericWebhookOption}"/>.</param>
     /// <param name="libraryManager">Instance of the <see cref="ILibraryManager"/>.</param>
     /// <param name="providerManager">Instance of the <see cref="IProviderManager"/>.</param>
+    /// <param name="mediaSourceManager">Instance of the <see cref="IMediaSourceManager"/> for querying media streams.</param>
     /// <param name="mdblistService">Instance of the <see cref="MdblistService"/>.</param>
     public MultifySender(
         ILogger<MultifySender> logger,
@@ -58,6 +61,7 @@ public class MultifySender : IWebhookSender
         IWebhookClient<GenericWebhookOption> genericClient,
         ILibraryManager libraryManager,
         IProviderManager providerManager,
+        IMediaSourceManager mediaSourceManager,
         MdblistService? mdblistService = null)
     {
         _logger = logger;
@@ -68,6 +72,7 @@ public class MultifySender : IWebhookSender
         _genericClient = genericClient;
         _libraryManager = libraryManager;
         _providerManager = providerManager;
+        _mediaSourceManager = mediaSourceManager;
         _mdblistService = mdblistService;
     }
 
@@ -131,6 +136,12 @@ public class MultifySender : IWebhookSender
 
         // Enrich data with TMDB image URLs via Jellyfin's provider system
         await EnrichWithTmdbImages(itemData).ConfigureAwait(false);
+
+        // Enrich data with media stream info (codec, resolution, framerate, etc.)
+        EnrichWithMediaStreams(itemData);
+
+        // Enrich data with people info (Director, Writers, CastList, CastJson)
+        await EnrichWithPeople(itemData).ConfigureAwait(false);
 
         var tasks = new List<Task>();
 
@@ -378,6 +389,192 @@ public class MultifySender : IWebhookSender
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error enriching data with TMDB image URLs for item {ItemId}", itemId);
+        }
+    }
+
+    /// <summary>
+    /// Enriches data with media stream information (codec, resolution, framerate, audio channels, etc.)
+    /// by querying <see cref="IMediaSourceManager.GetMediaStreams"/>.
+    /// </summary>
+    private void EnrichWithMediaStreams(Dictionary<string, object> data)
+    {
+        if (!data.TryGetValue("ItemId", out var itemIdObj) || itemIdObj is not string itemIdStr || string.IsNullOrEmpty(itemIdStr))
+        {
+            return;
+        }
+
+        if (!Guid.TryParse(itemIdStr, out var itemId))
+        {
+            return;
+        }
+
+        try
+        {
+            var streams = _mediaSourceManager.GetMediaStreams(itemId);
+            if (streams is null || streams.Count == 0)
+            {
+                return;
+            }
+
+            // Process first video stream
+            var videoStream = streams.FirstOrDefault(s => s.Type == MediaStreamType.Video);
+            if (videoStream is not null)
+            {
+                data["VideoCodec"] = videoStream.Codec ?? string.Empty;
+                data["VideoProfile"] = videoStream.Profile ?? string.Empty;
+                data["VideoBitrate"] = videoStream.BitRate?.ToString(CultureInfo.InvariantCulture) ?? "0";
+                data["VideoBitrateText"] = DataObjectHelpers.FormatBitrate(videoStream.BitRate);
+                data["VideoResolution"] = FormatResolution(videoStream);
+                data["VideoRange"] = videoStream.VideoRangeType ?? videoStream.VideoRange ?? string.Empty;
+                data["Framerate"] = (videoStream.RealFrameRate ?? videoStream.AverageFrameRate)?.ToString("F3", CultureInfo.InvariantCulture) ?? string.Empty;
+            }
+
+            // Process first audio stream
+            var audioStream = streams.FirstOrDefault(s => s.Type == MediaStreamType.Audio);
+            if (audioStream is not null)
+            {
+                data["AudioCodec"] = audioStream.Codec ?? string.Empty;
+                data["AudioChannels"] = !string.IsNullOrEmpty(audioStream.ChannelLayout)
+                    ? audioStream.ChannelLayout
+                    : FormatChannels(audioStream.Channels);
+                data["AudioLanguage"] = audioStream.Language ?? string.Empty;
+                data["AudioBitrate"] = audioStream.BitRate?.ToString(CultureInfo.InvariantCulture) ?? "0";
+                data["AudioBitrateText"] = DataObjectHelpers.FormatBitrate(audioStream.BitRate);
+            }
+
+            // Process subtitle languages
+            var subtitleLanguages = streams
+                .Where(s => s.Type == MediaStreamType.Subtitle && !string.IsNullOrEmpty(s.Language))
+                .Select(s => s.Language)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            data["SubtitleLanguages"] = subtitleLanguages.Count > 0
+                ? string.Join(", ", subtitleLanguages)
+                : string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error enriching media stream info for item {ItemId}", itemIdStr);
+        }
+    }
+
+    /// <summary>
+    /// Formats a channel count to a human-readable string (e.g., 6 → "5.1", 2 → "2.0").
+    /// </summary>
+    private static string FormatChannels(int? channels)
+    {
+        if (!channels.HasValue || channels.Value <= 0)
+        {
+            return string.Empty;
+        }
+
+        return channels.Value switch
+        {
+            1 => "1.0",
+            2 => "2.0",
+            3 => "2.1",
+            4 => "4.0",
+            5 => "5.0",
+            6 => "5.1",
+            7 => "6.1",
+            8 => "7.1",
+            _ => $"{channels}.0"
+        };
+    }
+
+    /// <summary>
+    /// Formats video stream resolution to a human-readable string (e.g., "1080p", "4K", "720p").
+    /// </summary>
+    private static string FormatResolution(MediaStream videoStream)
+    {
+        if (!videoStream.Width.HasValue || !videoStream.Height.HasValue)
+        {
+            return string.Empty;
+        }
+
+        var width = videoStream.Width.Value;
+        var height = videoStream.Height.Value;
+        var interlaced = videoStream.IsInterlaced ? "i" : "p";
+
+        if (width <= 256 || height <= 144) return $"144{interlaced}";
+        if (width <= 426 || height <= 240) return $"240{interlaced}";
+        if (width <= 640 || height <= 360) return $"360{interlaced}";
+        if (width <= 720 || height <= 404) return $"404{interlaced}";
+        if (width <= 854 || height <= 480) return $"480{interlaced}";
+        if (width <= 960 || height <= 544) return $"540{interlaced}";
+        if (width <= 1024 || height <= 576) return $"576{interlaced}";
+        if (width <= 1280 || height <= 962) return $"720{interlaced}";
+        if (width <= 2560 || height <= 1440) return $"1080{interlaced}";
+        if (width <= 4096 || height <= 3072) return "4K";
+        if (width <= 8192 || height <= 6144) return "8K";
+
+        return $"{height}p";
+    }
+
+    /// <summary>
+    /// Enriches data with people info (Director, Writers, CastList, CastJson) by querying
+    /// <see cref="ILibraryManager.GetPeople"/>.
+    /// </summary>
+    private async Task EnrichWithPeople(Dictionary<string, object> data)
+    {
+        if (!data.TryGetValue("ItemId", out var itemIdObj) || itemIdObj is not string itemIdStr || string.IsNullOrEmpty(itemIdStr))
+        {
+            return;
+        }
+
+        if (!Guid.TryParse(itemIdStr, out var itemId))
+        {
+            return;
+        }
+
+        try
+        {
+            var item = _libraryManager.GetItemById(itemId);
+            if (item is null)
+            {
+                return;
+            }
+
+            var people = _libraryManager.GetPeople(item);
+            if (people is null || people.Count == 0)
+            {
+                return;
+            }
+
+            // Director — first person of type Director
+            var director = people.FirstOrDefault(p => p.Type == PersonKind.Director);
+            data["Director"] = director?.Name ?? string.Empty;
+
+            // Writers — all persons of type Writer
+            var writers = people.Where(p => p.Type == PersonKind.Writer).Select(p => p.Name).Where(n => !string.IsNullOrEmpty(n)).ToList();
+            data["Writers"] = writers.Count > 0 ? string.Join(", ", writers) : string.Empty;
+
+            // CastList — top N actors (default 5), comma-separated
+            var castLimit = 5;
+            var castMembers = people
+                .Where(p => p.Type == PersonKind.Actor && !string.IsNullOrEmpty(p.Name))
+                .OrderBy(p => p.SortOrder ?? int.MaxValue)
+                .Take(castLimit)
+                .Select(p => p.Name)
+                .ToList();
+
+            data["CastList"] = castMembers.Count > 0 ? string.Join(", ", castMembers) : string.Empty;
+
+            // CastJson — structured JSON array of all cast members
+            var castJsonList = people
+                .Where(p => p.Type == PersonKind.Actor && !string.IsNullOrEmpty(p.Name))
+                .OrderBy(p => p.SortOrder ?? int.MaxValue)
+                .Select(p => new { name = p.Name, role = p.Role ?? string.Empty })
+                .ToList();
+
+            data["CastJson"] = castJsonList.Count > 0
+                ? JsonSerializer.Serialize(castJsonList)
+                : "[]";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error enriching people data for item {ItemId}", itemIdStr);
         }
     }
 
