@@ -427,7 +427,11 @@ public class MultifySender : IWebhookSender
                 data["VideoBitrate"] = videoStream.BitRate?.ToString(CultureInfo.InvariantCulture) ?? "0";
                 data["VideoBitrateText"] = DataObjectHelpers.FormatBitrate(videoStream.BitRate);
                 data["VideoResolution"] = FormatResolution(videoStream);
-                data["VideoRange"] = videoStream.VideoRangeType?.ToString() ?? videoStream.VideoRange?.ToString() ?? string.Empty;
+                data["VideoRange"] = videoStream.VideoRangeType != VideoRangeType.Unknown
+                    ? videoStream.VideoRangeType.ToString()
+                    : videoStream.VideoRange != VideoRange.Unknown
+                        ? videoStream.VideoRange.ToString()
+                        : string.Empty;
                 data["Framerate"] = (videoStream.RealFrameRate ?? videoStream.AverageFrameRate)?.ToString("F3", CultureInfo.InvariantCulture) ?? string.Empty;
             }
 
@@ -499,17 +503,60 @@ public class MultifySender : IWebhookSender
         var height = videoStream.Height.Value;
         var interlaced = videoStream.IsInterlaced ? "i" : "p";
 
-        if (width <= 256 || height <= 144) { return $"144{interlaced}"; }
-        if (width <= 426 || height <= 240) { return $"240{interlaced}"; }
-        if (width <= 640 || height <= 360) { return $"360{interlaced}"; }
-        if (width <= 720 || height <= 404) { return $"404{interlaced}"; }
-        if (width <= 854 || height <= 480) return $"480{interlaced}";
-        if (width <= 960 || height <= 544) return $"540{interlaced}";
-        if (width <= 1024 || height <= 576) return $"576{interlaced}";
-        if (width <= 1280 || height <= 962) return $"720{interlaced}";
-        if (width <= 2560 || height <= 1440) return $"1080{interlaced}";
-        if (width <= 4096 || height <= 3072) return "4K";
-        if (width <= 8192 || height <= 6144) return "8K";
+        if (width <= 256 || height <= 144)
+        {
+            return $"144{interlaced}";
+        }
+
+        if (width <= 426 || height <= 240)
+        {
+            return $"240{interlaced}";
+        }
+
+        if (width <= 640 || height <= 360)
+        {
+            return $"360{interlaced}";
+        }
+
+        if (width <= 720 || height <= 404)
+        {
+            return $"404{interlaced}";
+        }
+
+        if (width <= 854 || height <= 480)
+        {
+            return $"480{interlaced}";
+        }
+
+        if (width <= 960 || height <= 544)
+        {
+            return $"540{interlaced}";
+        }
+
+        if (width <= 1024 || height <= 576)
+        {
+            return $"576{interlaced}";
+        }
+
+        if (width <= 1280 || height <= 962)
+        {
+            return $"720{interlaced}";
+        }
+
+        if (width <= 2560 || height <= 1440)
+        {
+            return $"1080{interlaced}";
+        }
+
+        if (width <= 4096 || height <= 3072)
+        {
+            return "4K";
+        }
+
+        if (width <= 8192 || height <= 6144)
+        {
+            return "8K";
+        }
 
         return $"{height}p";
     }
