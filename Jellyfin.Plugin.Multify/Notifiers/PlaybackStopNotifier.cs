@@ -9,7 +9,6 @@ using Jellyfin.Plugin.Multify.Destinations;
 using Jellyfin.Plugin.Multify.Helpers;
 using MediaBrowser.Controller.Events;
 using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Users;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 
