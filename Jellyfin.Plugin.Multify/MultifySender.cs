@@ -396,7 +396,7 @@ public class MultifySender : IWebhookSender
 
     /// <summary>
     /// Enriches data with media stream information (codec, resolution, framerate, audio channels, etc.)
-    /// by querying <see cref="IMediaSourceManager.GetMediaStreams"/>.
+    /// by querying <see cref="IMediaSourceManager.GetMediaStreams(System.Guid)"/>.
     /// </summary>
     private void EnrichWithMediaStreams(Dictionary<string, object> data)
     {
@@ -563,7 +563,7 @@ public class MultifySender : IWebhookSender
 
     /// <summary>
     /// Enriches data with people info (Director, Writers, CastList, CastJson) by querying
-    /// <see cref="ILibraryManager.GetPeople"/>.
+    /// <see cref="ILibraryManager.GetPeople(MediaBrowser.Controller.Entities.BaseItem)"/>.
     /// </summary>
     private async Task EnrichWithPeople(Dictionary<string, object> data)
     {
