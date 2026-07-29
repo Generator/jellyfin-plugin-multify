@@ -445,12 +445,12 @@ public static class DataObjectHelpers
         var bps = bitrate.Value;
         if (bps >= 1_000_000)
         {
-            return $"{(bps / 1_000_000.0):F1}Mbps";
+            return $"{bps / 1_000_000.0:F1}Mbps";
         }
 
         if (bps >= 1_000)
         {
-            return $"{(bps / 1_000.0):F0}Kbps";
+            return $"{bps / 1_000.0:F0}Kbps";
         }
 
         return $"{bps}bps";
