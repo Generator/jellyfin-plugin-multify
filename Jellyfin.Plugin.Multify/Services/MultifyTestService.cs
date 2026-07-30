@@ -296,6 +296,7 @@ public class MultifyTestService : IMultifyTestService
             if (!string.IsNullOrEmpty(serverUrl) && data.TryGetValue("ItemId", out var itemIdObj) && itemIdObj is string itemId && !string.IsNullOrEmpty(itemId))
             {
                 serverUrl = serverUrl.TrimEnd('/');
+                data["ServerUrl"] = serverUrl;
                 var primaryUrl = $"{serverUrl}/Items/{itemId}/Images/Primary";
                 var backdropUrl = $"{serverUrl}/Items/{itemId}/Images/Backdrop";
                 var thumbUrl = $"{serverUrl}/Items/{itemId}/Images/Thumbnail";

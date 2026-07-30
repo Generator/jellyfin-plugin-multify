@@ -213,6 +213,7 @@ public class MultifySender : IWebhookSender
         }
 
         var serverUrl = _configuration.ServerUrl.TrimEnd('/');
+        data["ServerUrl"] = serverUrl;
         var itemUrl = $"{serverUrl}/web/#/details?id={itemId}";
         data["ItemUrl"] = itemUrl;
 
