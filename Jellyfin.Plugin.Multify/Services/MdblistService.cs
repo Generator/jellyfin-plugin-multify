@@ -114,9 +114,8 @@ public class MdblistService
         {
             try
             {
-                var uri = uriFactory();
+                var uri = new Uri(uriFactory().AbsoluteUri + $"?apikey={apiKey}");
                 var request = new HttpRequestMessage(HttpMethod.Get, uri);
-                request.Headers.Add("Authorization", $"Bearer {apiKey}");
 
                 using var client = _httpClientFactory.CreateClient(NamedClient.Default);
                 client.Timeout = timeout;
