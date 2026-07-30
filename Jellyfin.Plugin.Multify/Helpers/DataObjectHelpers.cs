@@ -437,9 +437,14 @@ public static class DataObjectHelpers
     /// <returns>Formatted string like "2.2Mbps", "850Kbps", or "Unknown" if null or zero.</returns>
     public static string FormatBitrate(int? bitrate)
     {
-        if (!bitrate.HasValue || bitrate.Value <= 0)
+        if (!bitrate.HasValue || bitrate.Value < 0)
         {
             return "Unknown";
+        }
+
+        if (bitrate.Value == 0)
+        {
+            return "0 bps";
         }
 
         var bps = bitrate.Value;

@@ -26,16 +26,6 @@ Multify supports the following notification events from Jellyfin. Each event can
 - **Event Type**: `SessionStarted`
 - **Available Data**: User info, session info (client, device, IP)
 
-### Session Ended
-- **Trigger**: When a user session ends (logout)
-- **Event Type**: `SessionEnded`
-- **Available Data**: User info, session info
-
-### Session Activity
-- **Trigger**: When a user performs an activity in their session
-- **Event Type**: `SessionActivity`
-- **Available Data**: User info, session info
-
 ## User Events
 
 ### User Authentication

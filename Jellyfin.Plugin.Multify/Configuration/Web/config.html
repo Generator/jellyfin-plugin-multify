@@ -166,7 +166,7 @@
     </template>
 
     <template id="template-generic-header">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+        <div data-name="headerRow" style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
             <input is="emby-input" type="text" data-name="txtHeaderKey" label="Header Name:" style="flex:1;"/>
             <input is="emby-input" type="text" data-name="txtHeaderValue" label="Header Value:" style="flex:1;"/>
             <button is="emby-button" type="button" class="raised button-warning btnRemoveHeader" style="flex-shrink:0;">
@@ -176,7 +176,7 @@
     </template>
 
     <template id="template-generic-field">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+        <div data-name="fieldRow" style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
             <input is="emby-input" type="text" data-name="txtFieldKey" label="Field Name:" style="flex:1;"/>
             <input is="emby-input" type="text" data-name="txtFieldValue" label="Field Value:" style="flex:1;"/>
             <button is="emby-button" type="button" class="raised button-warning btnRemoveField" style="flex-shrink:0;">
@@ -584,12 +584,6 @@
             white-space: nowrap;
         }
 
-        /* Disabled block — used for reactive visibility */
-        .multify-disabled-block {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-        
         /* Save footer */
         .multify-save-footer {
             position: sticky;

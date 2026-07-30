@@ -8,14 +8,13 @@ function multifyController(view) {
     const notificationTypes = {
         "ItemAdded": "Item Added",
         "ItemDeleted": "Item Deleted",
+        "ItemUpdated": "Item Updated",
         "PlaybackStart": "Playback Start",
         "PlaybackProgress": "Playback Progress",
         "PlaybackStop": "Playback Stop",
-        "SubtitleDownloadFailure": "Subtitle Download Failure",
         "AuthenticationFailure": "Authentication Failure",
         "AuthenticationSuccess": "Authentication Success",
         "SessionStart": "Session Start",
-        "PendingRestart": "Pending Restart",
         "TaskCompleted": "Task Completed",
         "PluginInstalled": "Plugin Installed",
         "PluginUninstalled": "Plugin Uninstalled",
@@ -24,8 +23,7 @@ function multifyController(view) {
         "UserDeleted": "User Deleted",
         "UserLockedOut": "User Locked Out",
         "UserPasswordChanged": "User Password Changed",
-        "UserUpdated": "User Updated",
-        "UserDataSaved": "User Data Saved"
+        "UserUpdated": "User Updated"
     };
 
     const atou = (b64) => decodeURIComponent(escape(atob(b64)));
@@ -125,26 +123,6 @@ function multifyController(view) {
             const span = document.createElement("span");
             span.className = "checkboxLabel";
             span.textContent = notificationTypes[key];
-            
-            cb.addEventListener("change", (e) => {
-                if (e.target.checked) {
-                    // Disable all other checkboxes
-                    const allCbs = $$(".multify-notification-type-cb", container);
-                    allCbs.forEach(otherCb => {
-                        if (otherCb !== e.target) {
-                            otherCb.disabled = true;
-                            otherCb.closest(".checkboxContainer")?.classList.add("multify-disabled-block");
-                        }
-                    });
-                } else {
-                    // Re-enable all checkboxes when unchecked
-                    const allCbs = $$(".multify-notification-type-cb", container);
-                    allCbs.forEach(otherCb => {
-                        otherCb.disabled = false;
-                        otherCb.closest(".checkboxContainer")?.classList.remove("multify-disabled-block");
-                    });
-                }
-            });
             
             item.appendChild(cb);
             item.appendChild(span);
@@ -377,9 +355,18 @@ function multifyController(view) {
 
         const checkList = document.createElement("div");
         checkList.className = "paperList checkboxList checkboxList-paperList multify-check-list";
+        checkList.textContent = "Loading libraries...";
 
         // Load libraries asynchronously, then populate the list
         loadLibraries().then(libraries => {
+            checkList.textContent = ""; // Clear loading placeholder
+
+            if (libraries.length === 0)
+            {
+                checkList.textContent = "No libraries found";
+                return;
+            }
+
             for (const lib of libraries) {
                 const item = document.createElement("label");
                 item.className = "multify-check-list-item";
@@ -695,14 +682,16 @@ function multifyController(view) {
             specific.AccessToken = $("[data-name=txtAccessToken]", card)?.value || "";
         } else if (type === "generic") {
             specific.Headers = [];
-            $$("[data-name=txtHeaderKey]", card).forEach((k, i) => {
-                const v = $$("[data-name=txtHeaderValue]", card)[i];
-                if (k.value) specific.Headers.push({ Key: k.value, Value: v?.value || "" });
+            $$("[data-name=headerRow]", card).forEach(row => {
+                const k = $("[data-name=txtHeaderKey]", row)?.value;
+                const v = $("[data-name=txtHeaderValue]", row)?.value;
+                if (k) specific.Headers.push({ Key: k, Value: v || "" });
             });
             specific.Fields = [];
-            $$("[data-name=txtFieldKey]", card).forEach((k, i) => {
-                const v = $$("[data-name=txtFieldValue]", card)[i];
-                if (k.value) specific.Fields.push({ Key: k.value, Value: v?.value || "" });
+            $$("[data-name=fieldRow]", card).forEach(row => {
+                const k = $("[data-name=txtFieldKey]", row)?.value;
+                const v = $("[data-name=txtFieldValue]", row)?.value;
+                if (k) specific.Fields.push({ Key: k, Value: v || "" });
             });
         }
 
@@ -929,108 +918,106 @@ function multifyController(view) {
                 container.appendChild(importExportDiv);
 
                 // Set current values
-                setTimeout(() => {
-                    const chk = document.getElementById("chkEnableDashboardAlerts");
-                    if (chk) chk.checked = currentConfig.AdvancedSettings?.EnableDashboardAlerts ?? false;
-                    const delayInput = document.getElementById("txtDelaySeconds");
-                    if (delayInput) delayInput.value = currentConfig.AdvancedSettings?.DelaySeconds ?? 2;
+                const chk = document.getElementById("chkEnableDashboardAlerts");
+                if (chk) chk.checked = currentConfig.AdvancedSettings?.EnableDashboardAlerts ?? false;
+                const delayInput = document.getElementById("txtDelaySeconds");
+                if (delayInput) delayInput.value = currentConfig.AdvancedSettings?.DelaySeconds ?? 2;
 
-                    // Export Settings handler
-                    const exportBtn = document.getElementById("btnExportSettings");
-                    if (exportBtn) {
-                        exportBtn.addEventListener("click", () => {
-                            try {
-                                // Snapshot current tab first to ensure all data is captured
-                                snapshotCurrentTab();
-                                
-                                const configToExport = {
-                                    ServerUrl: currentConfig.ServerUrl || "",
-                                    MdblistApiKey: currentConfig.MdblistApiKey || "",
-                                    TelegramOptions: currentConfig.TelegramOptions || [],
-                                    GotifyOptions: currentConfig.GotifyOptions || [],
-                                    NtfyOptions: currentConfig.NtfyOptions || [],
-                                    GenericWebhookOptions: currentConfig.GenericWebhookOptions || [],
-                                    AdvancedSettings: currentConfig.AdvancedSettings || {
-                                        EnableDashboardAlerts: false
-                                    }
-                                };
-                                
-                                const jsonStr = JSON.stringify(configToExport, null, 2);
-                                const blob = new Blob([jsonStr], { type: "application/json" });
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement("a");
-                                a.href = url;
-                                a.download = "multify-settings-" + new Date().toISOString().slice(0, 10) + ".json";
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                                URL.revokeObjectURL(url);
-                                
-                                Dashboard.alert("Settings exported successfully!");
-                            } catch (e) {
-                                console.error("Multify: Export failed", e);
-                                Dashboard.alert("Export failed: " + e.message);
-                            }
-                        });
-                    }
+                // Export Settings handler
+                const exportBtn = document.getElementById("btnExportSettings");
+                if (exportBtn) {
+                    exportBtn.addEventListener("click", () => {
+                        try {
+                            // Snapshot current tab first to ensure all data is captured
+                            snapshotCurrentTab();
 
-                    // Import Settings handler
-                    const importBtn = document.getElementById("btnImportSettings");
-                    const fileInput = document.getElementById("importFileInput");
-                    if (importBtn && fileInput) {
-                        importBtn.addEventListener("click", () => {
-                            fileInput.click();
-                        });
-                        
-                        fileInput.addEventListener("change", async (e) => {
-                            const file = e.target.files[0];
-                            if (!file) return;
-                            
-                            try {
-                                const text = await file.text();
-                                const importedConfig = JSON.parse(text);
-                                
-                                // Validate required fields
-                                if (typeof importedConfig !== "object" || importedConfig === null) {
-                                    throw new Error("Invalid configuration file format");
-                                }
-                                
-                                // Confirm before overwriting
-                                const confirmed = await showConfirmDialog(
-                                    "Import Settings",
-                                    "This will overwrite your current settings. Do you want to continue?"
-                                );
-                                
-                                if (!confirmed) {
-                                    fileInput.value = "";
-                                    return;
-                                }
-                                
-                                // Apply imported settings
-                                currentConfig.ServerUrl = importedConfig.ServerUrl || "";
-                                currentConfig.MdblistApiKey = importedConfig.MdblistApiKey || "";
-                                currentConfig.TelegramOptions = importedConfig.TelegramOptions || [];
-                                currentConfig.GotifyOptions = importedConfig.GotifyOptions || [];
-                                currentConfig.NtfyOptions = importedConfig.NtfyOptions || [];
-                                currentConfig.GenericWebhookOptions = importedConfig.GenericWebhookOptions || [];
-                                currentConfig.AdvancedSettings = importedConfig.AdvancedSettings || {
+                            const configToExport = {
+                                ServerUrl: currentConfig.ServerUrl || "",
+                                MdblistApiKey: currentConfig.MdblistApiKey || "",
+                                TelegramOptions: currentConfig.TelegramOptions || [],
+                                GotifyOptions: currentConfig.GotifyOptions || [],
+                                NtfyOptions: currentConfig.NtfyOptions || [],
+                                GenericWebhookOptions: currentConfig.GenericWebhookOptions || [],
+                                AdvancedSettings: currentConfig.AdvancedSettings || {
                                     EnableDashboardAlerts: false
-                                };
-                                
-                                // Re-render current tab to reflect imported settings
-                                switchTab(activeTabId);
-                                takeSnapshot();
-                                
-                                Dashboard.alert("Settings imported successfully! Click Save to apply changes.");
-                            } catch (err) {
-                                console.error("Multify: Import failed", err);
-                                Dashboard.alert("Import failed: " + err.message);
-                            } finally {
-                                fileInput.value = "";
+                                }
+                            };
+
+                            const jsonStr = JSON.stringify(configToExport, null, 2);
+                            const blob = new Blob([jsonStr], { type: "application/json" });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = "multify-settings-" + new Date().toISOString().slice(0, 10) + ".json";
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+
+                            Dashboard.alert("Settings exported successfully!");
+                        } catch (e) {
+                            console.error("Multify: Export failed", e);
+                            Dashboard.alert("Export failed: " + e.message);
+                        }
+                    });
+                }
+
+                // Import Settings handler
+                const importBtn = document.getElementById("btnImportSettings");
+                const fileInput = document.getElementById("importFileInput");
+                if (importBtn && fileInput) {
+                    importBtn.addEventListener("click", () => {
+                        fileInput.click();
+                    });
+
+                    fileInput.addEventListener("change", async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+
+                        try {
+                            const text = await file.text();
+                            const importedConfig = JSON.parse(text);
+
+                            // Validate required fields
+                            if (typeof importedConfig !== "object" || importedConfig === null) {
+                                throw new Error("Invalid configuration file format");
                             }
-                        });
-                    }
-                }, 0);
+
+                            // Confirm before overwriting
+                            const confirmed = await showConfirmDialog(
+                                "Import Settings",
+                                "This will overwrite your current settings. Do you want to continue?"
+                            );
+
+                            if (!confirmed) {
+                                fileInput.value = "";
+                                return;
+                            }
+
+                            // Apply imported settings
+                            currentConfig.ServerUrl = importedConfig.ServerUrl || "";
+                            currentConfig.MdblistApiKey = importedConfig.MdblistApiKey || "";
+                            currentConfig.TelegramOptions = importedConfig.TelegramOptions || [];
+                            currentConfig.GotifyOptions = importedConfig.GotifyOptions || [];
+                            currentConfig.NtfyOptions = importedConfig.NtfyOptions || [];
+                            currentConfig.GenericWebhookOptions = importedConfig.GenericWebhookOptions || [];
+                            currentConfig.AdvancedSettings = importedConfig.AdvancedSettings || {
+                                EnableDashboardAlerts: false
+                            };
+
+                            // Re-render current tab to reflect imported settings
+                            switchTab(activeTabId);
+                            takeSnapshot();
+
+                            Dashboard.alert("Settings imported successfully! Click Save to apply changes.");
+                        } catch (err) {
+                            console.error("Multify: Import failed", err);
+                            Dashboard.alert("Import failed: " + err.message);
+                        } finally {
+                            fileInput.value = "";
+                        }
+                    });
+                }
             }
         }
     ];
@@ -1088,6 +1075,8 @@ function multifyController(view) {
         setVal("ddlMessageType", config.MessageType ?? "SendText");
         setVal("txtTopicId", config.MessageThreadId);
         setVal("txtPhotoUrlTemplate", config.PhotoUrlTemplate);
+
+        var dnCb = $("[data-name=chkDisableNotification]", card); if (dnCb) dnCb.checked = config.DisableNotification || false;
 
         // Toggle photo URL field visibility based on current message type
         var togglePhotoUrlField = function (messageType) {
@@ -1257,14 +1246,16 @@ function multifyController(view) {
                 specific.PhotoUrlTemplate = $("[data-name=txtPhotoUrlTemplate]", card)?.value || null;
             } else if (type === "generic") {
                 specific.Headers = [];
-                $$("[data-name=txtHeaderKey]", card).forEach((k, i) => {
-                    const v = $$("[data-name=txtHeaderValue]", card)[i];
-                    if (k.value) specific.Headers.push({ Key: k.value, Value: v?.value || "" });
+                $$("[data-name=headerRow]", card).forEach(row => {
+                    const k = $("[data-name=txtHeaderKey]", row)?.value;
+                    const v = $("[data-name=txtHeaderValue]", row)?.value;
+                    if (k) specific.Headers.push({ Key: k, Value: v || "" });
                 });
                 specific.Fields = [];
-                $$("[data-name=txtFieldKey]", card).forEach((k, i) => {
-                    const v = $$("[data-name=txtFieldValue]", card)[i];
-                    if (k.value) specific.Fields.push({ Key: k.value, Value: v?.value || "" });
+                $$("[data-name=fieldRow]", card).forEach(row => {
+                    const k = $("[data-name=txtFieldKey]", row)?.value;
+                    const v = $("[data-name=txtFieldValue]", row)?.value;
+                    if (k) specific.Fields.push({ Key: k, Value: v || "" });
                 });
             }
 

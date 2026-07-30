@@ -1,7 +1,9 @@
 namespace Jellyfin.Plugin.Multify.Destinations;
 
 /// <summary>
-/// Notification type enum.
+/// Notification type enum. Values are inherited from the Jellyfin webhook plugin spec;
+/// numeric gaps (12, 13, 15) correspond to notification types defined in the original
+/// plugin that are not implemented in Multify and are intentionally omitted.
 /// </summary>
 public enum NotificationType
 {
@@ -11,7 +13,7 @@ public enum NotificationType
     /// <summary>Item added to library.</summary>
     ItemAdded = 1,
 
-    /// <summary>Generic webhook notification.</summary>
+    /// <summary>Generic webhook notification (reserved — no notifier implemented).</summary>
     Generic = 2,
 
     /// <summary>Playback started.</summary>
@@ -23,7 +25,7 @@ public enum NotificationType
     /// <summary>Playback stopped.</summary>
     PlaybackStop = 5,
 
-    /// <summary>Subtitle download failure.</summary>
+    /// <summary>Subtitle download failure (reserved — no notifier implemented).</summary>
     SubtitleDownloadFailure = 6,
 
     /// <summary>Authentication failure.</summary>
@@ -35,7 +37,7 @@ public enum NotificationType
     /// <summary>Session start.</summary>
     SessionStart = 9,
 
-    /// <summary>Pending restart.</summary>
+    /// <summary>Pending restart (reserved — no notifier implemented).</summary>
     PendingRestart = 10,
 
     /// <summary>Task completed.</summary>
@@ -65,9 +67,12 @@ public enum NotificationType
     /// <summary>User updated.</summary>
     UserUpdated = 22,
 
-    /// <summary>User data saved.</summary>
+    /// <summary>User data saved (reserved — no notifier implemented).</summary>
     UserDataSaved = 23,
 
     /// <summary>Item deleted.</summary>
-    ItemDeleted = 24
+    ItemDeleted = 24,
+
+    /// <summary>Item updated.</summary>
+    ItemUpdated = 25
 }

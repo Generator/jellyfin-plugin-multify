@@ -29,7 +29,30 @@ public sealed class TelegramMessageStore : IDisposable
     {
         _logger = logger;
         _storePath = Path.Combine(applicationPaths.DataPath, "multify-telegram-messages.json");
-        _ = LoadStoreAsync();
+        LoadStoreSync();
+    }
+
+    private void LoadStoreSync()
+    {
+        try
+        {
+            if (File.Exists(_storePath))
+            {
+                var json = File.ReadAllText(_storePath);
+                var data = JsonSerializer.Deserialize<ConcurrentDictionary<string, long>>(json);
+                if (data != null)
+                {
+                    foreach (var kvp in data)
+                    {
+                        _messageStore[kvp.Key] = kvp.Value;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load Telegram message store");
+        }
     }
 
     /// <summary>
@@ -52,31 +75,18 @@ public sealed class TelegramMessageStore : IDisposable
     /// <param name="messageThreadId">The forum topic thread ID.</param>
     /// <param name="tmdbId">The TMDB ID of the item.</param>
     /// <param name="messageId">The message ID.</param>
-    public void StoreMessageId(string chatId, int? messageThreadId, string tmdbId, long messageId)
+    public async Task StoreMessageIdAsync(string chatId, int? messageThreadId, string tmdbId, long messageId)
     {
         var key = GetKey(chatId, messageThreadId, tmdbId);
         _messageStore[key] = messageId;
-        _ = SaveStoreAsync();
-    }
-
-    /// <summary>
-    /// Removes the message ID for a chat, thread, and TMDB item.
-    /// </summary>
-    /// <param name="chatId">The chat ID.</param>
-    /// <param name="messageThreadId">The forum topic thread ID.</param>
-    /// <param name="tmdbId">The TMDB ID of the item.</param>
-    public void RemoveMessageId(string chatId, int? messageThreadId, string tmdbId)
-    {
-        var key = GetKey(chatId, messageThreadId, tmdbId);
-        _messageStore.TryRemove(key, out _);
-        _ = SaveStoreAsync();
+        await SaveStoreAsync().ConfigureAwait(false);
     }
 
     /// <summary>
     /// Clears all entries from the store. Useful for periodic cleanup since
     /// Telegram message edits expire after 48 hours anyway.
     /// </summary>
-    public void CleanupStaleEntries()
+    public async Task CleanupStaleEntriesAsync()
     {
         var count = _messageStore.Count;
         if (count == 0)
@@ -86,7 +96,7 @@ public sealed class TelegramMessageStore : IDisposable
         }
 
         _messageStore.Clear();
-        _ = SaveStoreAsync();
+        await SaveStoreAsync().ConfigureAwait(false);
         _logger.LogInformation("Cleared {Count} entries from Telegram message store", count);
     }
 
@@ -94,34 +104,6 @@ public sealed class TelegramMessageStore : IDisposable
     {
         var threadId = messageThreadId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "0";
         return $"{chatId}:{threadId}:{tmdbId}";
-    }
-
-    private async Task LoadStoreAsync()
-    {
-        await _fileLock.WaitAsync().ConfigureAwait(false);
-        try
-        {
-            if (File.Exists(_storePath))
-            {
-                var json = await File.ReadAllTextAsync(_storePath).ConfigureAwait(false);
-                var data = JsonSerializer.Deserialize<ConcurrentDictionary<string, long>>(json);
-                if (data != null)
-                {
-                    foreach (var kvp in data)
-                    {
-                        _messageStore[kvp.Key] = kvp.Value;
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to load Telegram message store");
-        }
-        finally
-        {
-            _fileLock.Release();
-        }
     }
 
     private async Task SaveStoreAsync()

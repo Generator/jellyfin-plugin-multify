@@ -53,11 +53,10 @@ public class CleanupTelegramStoreTask : IScheduledTask
     }
 
     /// <inheritdoc />
-    public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
+    public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Cleaning up stale Telegram message store entries");
-        _store.CleanupStaleEntries();
+        await _store.CleanupStaleEntriesAsync().ConfigureAwait(false);
         _logger.LogInformation("Telegram message store cleanup complete");
-        return Task.CompletedTask;
     }
 }

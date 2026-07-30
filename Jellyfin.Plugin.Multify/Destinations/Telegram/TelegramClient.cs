@@ -63,6 +63,14 @@ public class TelegramOption : BaseOption
     /// </summary>
     [XmlElement("PhotoUrlTemplate")]
     public string? PhotoUrlTemplate { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to send the message silently (no sound/vibration).
+    /// When enabled, the Telegram client will not play a sound or vibrate on receiving the message.
+    /// Maps to the <c>disable_notification</c> parameter in the Telegram Bot API.
+    /// </summary>
+    [XmlElement("DisableNotification")]
+    public bool DisableNotification { get; set; }
 }
 
 /// <summary>
@@ -262,6 +270,11 @@ public class TelegramOption : BaseOption
             payload["message_thread_id"] = option.MessageThreadId.Value;
         }
 
+        if (option.DisableNotification)
+        {
+            payload["disable_notification"] = true;
+        }
+
         return payload;
     }
 
@@ -333,7 +346,7 @@ public class TelegramOption : BaseOption
             // Store the message ID for future edits (only for ItemAdded/ItemUpdated with TmdbId)
             if (isEditEvent && !string.IsNullOrEmpty(tmdbId) && _messageStore != null && newMessageId.HasValue)
             {
-                _messageStore.StoreMessageId(option.ChatId, option.MessageThreadId, tmdbId, newMessageId.Value);
+                await _messageStore.StoreMessageIdAsync(option.ChatId, option.MessageThreadId, tmdbId, newMessageId.Value).ConfigureAwait(false);
             }
         }
         catch (HttpRequestException e)
@@ -386,7 +399,7 @@ public class TelegramOption : BaseOption
             if (_messageStore != null && newMessageId.HasValue
                 && data.TryGetValue("TmdbId", out var tmdbIdObj) && tmdbIdObj is string tmdbId && !string.IsNullOrEmpty(tmdbId))
             {
-                _messageStore.StoreMessageId(option.ChatId, option.MessageThreadId, tmdbId, newMessageId.Value);
+                await _messageStore.StoreMessageIdAsync(option.ChatId, option.MessageThreadId, tmdbId, newMessageId.Value).ConfigureAwait(false);
             }
         }
     }

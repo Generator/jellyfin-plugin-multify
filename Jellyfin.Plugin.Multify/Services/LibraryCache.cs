@@ -34,8 +34,8 @@ public sealed class LibraryCache : IHostedService, IDisposable
     /// <inheritdoc />
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _cleanupTimer = new Timer(CleanupExpiredEntries, null, _cleanupInterval, _cleanupInterval);
         _logger.LogInformation("Library cache started with periodic cleanup every {Interval} minutes", _cleanupInterval.TotalMinutes);
+        _cleanupTimer = new Timer(CleanupExpiredEntries, null, _cleanupInterval, _cleanupInterval);
         return Task.CompletedTask;
     }
 
@@ -113,32 +113,6 @@ public sealed class LibraryCache : IHostedService, IDisposable
     {
         _cache.TryRemove(libraryId, out _);
         _logger.LogDebug("Invalidated cache for library {LibraryId}", libraryId);
-    }
-
-    /// <summary>
-    /// Gets cache statistics.
-    /// </summary>
-    /// <returns>A tuple with hit count, miss count, and total entries.</returns>
-    public (long Hits, long Misses, int EntryCount) GetStats()
-    {
-        return (Interlocked.Read(ref _hitCount), Interlocked.Read(ref _missCount), _cache.Count);
-    }
-
-    /// <summary>
-    /// Logs cache statistics.
-    /// </summary>
-    public void LogStats()
-    {
-        var (hits, misses, count) = GetStats();
-        var total = hits + misses;
-        var hitRate = total > 0 ? (double)hits / total * 100 : 0;
-
-        _logger.LogInformation(
-            "Library cache stats: {Hits} hits, {Misses} misses ({HitRate:F1}% hit rate), {Count} entries",
-            hits,
-            misses,
-            hitRate,
-            count);
     }
 
     /// <summary>

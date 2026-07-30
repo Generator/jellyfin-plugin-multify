@@ -253,24 +253,6 @@ public class MdblistService
         return ratings;
     }
 
-    /// <summary>
-    /// Clears the MDBList cache.
-    /// </summary>
-    public void ClearCache()
-    {
-        _cache.Clear();
-        _logger.LogInformation("MDBList cache cleared");
-    }
-
-    /// <summary>
-    /// Gets cache statistics.
-    /// </summary>
-    /// <returns>Number of cached entries.</returns>
-    public int GetCacheCount()
-    {
-        return _cache.Count;
-    }
-
     private sealed class CacheEntry
     {
         public Dictionary<string, object> Ratings { get; set; } = new();

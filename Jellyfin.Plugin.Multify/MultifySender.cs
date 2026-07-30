@@ -18,9 +18,6 @@ using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Providers;
-using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Providers;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify;
@@ -30,6 +27,12 @@ namespace Jellyfin.Plugin.Multify;
 /// </summary>
 public class MultifySender : IWebhookSender
 {
+    /// <summary>
+    /// Default delay in seconds between sequential notifications of the same service type.
+    /// Used when AdvancedSettings.DelaySeconds is not configured.
+    /// </summary>
+    private const int DefaultDelaySeconds = 2;
+
     private readonly ILogger<MultifySender> _logger;
     private readonly PluginConfiguration _configuration;
     private readonly IWebhookClient<TelegramOption> _telegramClient;
@@ -38,8 +41,8 @@ public class MultifySender : IWebhookSender
     private readonly IWebhookClient<GenericWebhookOption> _genericClient;
     private readonly MdblistService? _mdblistService;
     private readonly ILibraryManager _libraryManager;
-    private readonly IProviderManager _providerManager;
     private readonly IMediaSourceManager _mediaSourceManager;
+    private readonly ImageEnrichmentService _imageEnrichmentService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MultifySender"/> class.
@@ -51,8 +54,8 @@ public class MultifySender : IWebhookSender
     /// <param name="ntfyClient">Instance of the <see cref="IWebhookClient{NtfyOption}"/>.</param>
     /// <param name="genericClient">Instance of the <see cref="IWebhookClient{GenericWebhookOption}"/>.</param>
     /// <param name="libraryManager">Instance of the <see cref="ILibraryManager"/>.</param>
-    /// <param name="providerManager">Instance of the <see cref="IProviderManager"/>.</param>
     /// <param name="mediaSourceManager">Instance of the <see cref="IMediaSourceManager"/> for querying media streams.</param>
+    /// <param name="imageEnrichmentService">Instance of the <see cref="ImageEnrichmentService"/> for image enrichment.</param>
     /// <param name="mdblistService">Instance of the <see cref="MdblistService"/>.</param>
     public MultifySender(
         ILogger<MultifySender> logger,
@@ -62,8 +65,8 @@ public class MultifySender : IWebhookSender
         IWebhookClient<NtfyOption> ntfyClient,
         IWebhookClient<GenericWebhookOption> genericClient,
         ILibraryManager libraryManager,
-        IProviderManager providerManager,
         IMediaSourceManager mediaSourceManager,
+        ImageEnrichmentService imageEnrichmentService,
         MdblistService? mdblistService = null)
     {
         _logger = logger;
@@ -73,8 +76,8 @@ public class MultifySender : IWebhookSender
         _ntfyClient = ntfyClient;
         _genericClient = genericClient;
         _libraryManager = libraryManager;
-        _providerManager = providerManager;
         _mediaSourceManager = mediaSourceManager;
+        _imageEnrichmentService = imageEnrichmentService;
         _mdblistService = mdblistService;
     }
 
@@ -83,46 +86,21 @@ public class MultifySender : IWebhookSender
     {
         _logger.LogDebug("SendNotification called for {NotificationType}, ItemType={ItemType}", notificationType, itemType?.Name ?? "null");
 
-        // Debug: Log loaded notification types
-        foreach (var opt in _configuration.NtfyOptions)
-        {
-            var types = string.Join(",", opt.NotificationTypes);
-            _logger.LogDebug(
-                "Loaded ntfy option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
-                opt.WebhookName,
-                types,
-                opt.EnableWebhook);
-        }
+        // Debug: Log loaded destination counts
+        var telegramCount = _configuration.TelegramOptions.Length;
+        var gotifyCount = _configuration.GotifyOptions.Length;
+        var ntfyCount = _configuration.NtfyOptions.Length;
+        var genericCount = _configuration.GenericWebhookOptions.Length;
+        var configuredTotal = telegramCount + gotifyCount + ntfyCount + genericCount;
 
-        foreach (var opt in _configuration.TelegramOptions)
-        {
-            var types = string.Join(",", opt.NotificationTypes);
-            _logger.LogDebug(
-                "Loaded telegram option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
-                opt.WebhookName,
-                types,
-                opt.EnableWebhook);
-        }
-
-        foreach (var opt in _configuration.GotifyOptions)
-        {
-            var types = string.Join(",", opt.NotificationTypes);
-            _logger.LogDebug(
-                "Loaded gotify option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
-                opt.WebhookName,
-                types,
-                opt.EnableWebhook);
-        }
-
-        foreach (var opt in _configuration.GenericWebhookOptions)
-        {
-            var types = string.Join(",", opt.NotificationTypes);
-            _logger.LogDebug(
-                "Loaded generic option: {WebhookName}, NotificationTypes=[{Types}], EnableWebhook={EnableWebhook}",
-                opt.WebhookName,
-                types,
-                opt.EnableWebhook);
-        }
+        _logger.LogDebug(
+            "Sending {NotificationType}: {Total} configured destinations ({Telegram} telegram, {Gotify} gotify, {Ntfy} ntfy, {Generic} generic)",
+            notificationType,
+            configuredTotal,
+            telegramCount,
+            gotifyCount,
+            ntfyCount,
+            genericCount);
 
         // Enrich data with MDBList ratings if configured
         if (_mdblistService != null && !string.IsNullOrEmpty(_configuration.MdblistApiKey))
@@ -136,14 +114,35 @@ public class MultifySender : IWebhookSender
             EnrichWithItemUrl(itemData);
         }
 
+        // Single item lookup shared across enrichment methods to avoid redundant DB queries.
+        BaseItem? item = null;
+        string? itemIdStr = null;
+        if (itemData.TryGetValue("ItemId", out var itemIdObj) && itemIdObj is string idStr && Guid.TryParse(idStr, out var itemIdGuid))
+        {
+            itemIdStr = idStr;
+            item = _libraryManager.GetItemById(itemIdGuid);
+        }
+
         // Enrich data with TMDB image URLs via Jellyfin's provider system
-        await EnrichWithTmdbImages(itemData).ConfigureAwait(false);
+        if (item != null)
+        {
+            await _imageEnrichmentService.EnrichWithTmdbImages(itemData, item, itemIdStr).ConfigureAwait(false);
+
+            // Enrich parent-level poster URLs (Season/Series) for hierarchical items.
+            // This allows users to reference {{TmdbSeasonPosterUrl}} or {{SeriesPoster}}
+            // regardless of the current item type.
+            await _imageEnrichmentService.EnrichParentPosterUrls(itemData, item, _configuration.ServerUrl).ConfigureAwait(false);
+        }
+        else
+        {
+            _logger.LogTrace("No ItemId in data, skipping TMDB image enrichment");
+        }
 
         // Enrich data with media stream info (codec, resolution, framerate, etc.)
         EnrichWithMediaStreams(itemData);
 
-        // Enrich data with people info (Director, Writers, CastList, CastJson)
-        await EnrichWithPeople(itemData).ConfigureAwait(false);
+        // Enrich data with people info (Director, Writers, CastList, CastJson) — reuses item from above
+        await EnrichWithPeople(itemData, item).ConfigureAwait(false);
 
         var tasks = new List<Task>();
 
@@ -160,7 +159,7 @@ public class MultifySender : IWebhookSender
             genericCount);
 
         // Get delay from advanced settings (convert seconds to milliseconds)
-        var delayMs = Math.Max(0, (_configuration.AdvancedSettings?.DelaySeconds ?? 2) * 1000);
+        var delayMs = Math.Max(0, (_configuration.AdvancedSettings?.DelaySeconds ?? DefaultDelaySeconds) * 1000);
 
         // Send notifications sequentially within each service type, with delay between them
         // Different service types still run in parallel
@@ -233,7 +232,8 @@ public class MultifySender : IWebhookSender
         data["ItemUrl"] = itemUrl;
 
         // Generate short ID (first 10 chars of GUID without dashes)
-        var shortId = itemId.Replace("-", string.Empty, StringComparison.Ordinal)[..10];
+        var noDash = itemId.Replace("-", string.Empty, StringComparison.Ordinal);
+        var shortId = noDash.Length > 10 ? noDash[..10] : noDash;
         data["ItemShortId"] = shortId;
 
         // Enrich image URLs with full server paths
@@ -307,90 +307,6 @@ public class MultifySender : IWebhookSender
         else
         {
             data["BannerImage"] = $"{serverUrl}/Items/{itemId}/Images/Banner";
-        }
-    }
-
-    private async Task EnrichWithTmdbImages(Dictionary<string, object> data)
-    {
-        // Need ItemId to look up the real item via ILibraryManager
-        if (!data.TryGetValue("ItemId", out var itemIdObj) || itemIdObj is not string itemIdStr || !Guid.TryParse(itemIdStr, out var itemId))
-        {
-            _logger.LogTrace("No ItemId in data, skipping TMDB image enrichment");
-            return;
-        }
-
-        // Look up the actual BaseItem from the library
-        var item = _libraryManager.GetItemById(itemId);
-        if (item == null)
-        {
-            _logger.LogTrace("Item {ItemId} not found in library, skipping TMDB image enrichment", itemId);
-            return;
-        }
-
-        try
-        {
-            // Query Jellyfin's provider system for TMDB remote images
-            var query = new RemoteImageQuery("TheMovieDb")
-            {
-                IncludeAllLanguages = true,
-                IncludeDisabledProviders = false
-            };
-
-            var remoteImages = await _providerManager
-                .GetAvailableRemoteImages(item, query, default)
-                .ConfigureAwait(false);
-
-            if (remoteImages == null)
-            {
-                _logger.LogDebug("No TMDB remote images available for item {ItemId}", itemId);
-                return;
-            }
-
-            // Map RemoteImageInfo results by Type into TMDB URL variables
-            foreach (var image in remoteImages)
-            {
-                if (string.IsNullOrEmpty(image.Url))
-                {
-                    continue;
-                }
-
-                switch (image.Type)
-                {
-                    case ImageType.Primary:
-                        data["TmdbPosterUrl"] = image.Url;
-                        data["TmdbProfileUrl"] = image.Url;
-                        // Also update PrimaryImage so {{PrimaryImage}} resolves to a
-                        // publicly accessible CDN URL (instead of a local Jellyfin URL that
-                        // services like Telegram cannot fetch)
-                        data["PrimaryImage"] = image.Url;
-                        break;
-                    case ImageType.Backdrop:
-                        data["TmdbBackdropUrl"] = image.Url;
-                        // Also update BackdropImage for the same reason
-                        data["BackdropImage"] = image.Url;
-                        break;
-                    case ImageType.Logo:
-                        data["TmdbLogoUrl"] = image.Url;
-                        data["LogoImage"] = image.Url;
-                        break;
-                    case ImageType.Thumb:
-                        data["TmdbStillUrl"] = image.Url;
-                        data["ThumbImage"] = image.Url;
-                        break;
-                }
-            }
-
-            var urlCount = remoteImages.Count(i => !string.IsNullOrEmpty(i.Url));
-            _logger.LogDebug("Enriched TMDB image URLs for item {ItemId}: {Count} URL(s)", itemId, urlCount);
-
-            // Enrich parent-level poster URLs (Season/Series) for hierarchical items.
-            // This allows users to reference {{TmdbSeasonPosterUrl}} or {{SeriesPoster}}
-            // regardless of the current item type.
-            await EnrichParentPosterUrls(data, item).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error enriching data with TMDB image URLs for item {ItemId}", itemId);
         }
     }
 
@@ -567,26 +483,38 @@ public class MultifySender : IWebhookSender
     /// Enriches data with people info (Director, Writers, CastList, CastJson) by querying
     /// <see cref="ILibraryManager.GetPeople(MediaBrowser.Controller.Entities.BaseItem)"/>.
     /// </summary>
-    private async Task EnrichWithPeople(Dictionary<string, object> data)
+    private async Task EnrichWithPeople(Dictionary<string, object> data, BaseItem? item = null)
     {
-        if (!data.TryGetValue("ItemId", out var itemIdObj) || itemIdObj is not string itemIdStr || string.IsNullOrEmpty(itemIdStr))
+        if (item == null)
         {
-            return;
+            if (!data.TryGetValue("ItemId", out var itemIdObj) || itemIdObj is not string itemIdStr || string.IsNullOrEmpty(itemIdStr))
+            {
+                return;
+            }
+
+            if (!Guid.TryParse(itemIdStr, out var itemId))
+            {
+                return;
+            }
+
+            try
+            {
+                item = _libraryManager.GetItemById(itemId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error looking up item for people enrichment");
+                return;
+            }
         }
 
-        if (!Guid.TryParse(itemIdStr, out var itemId))
+        if (item is null)
         {
             return;
         }
 
         try
         {
-            var item = _libraryManager.GetItemById(itemId);
-            if (item is null)
-            {
-                return;
-            }
-
             var people = _libraryManager.GetPeople(item);
             if (people is null || people.Count == 0)
             {
@@ -625,131 +553,7 @@ public class MultifySender : IWebhookSender
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error enriching people data for item {ItemId}", itemIdStr);
-        }
-    }
-
-    /// <summary>
-    /// Enriches data with poster URLs for parent items (Season, Series) when the current item
-    /// is an Episode or Season. Sets both Jellyfin local URLs and TMDB CDN URLs.
-    /// </summary>
-    private async Task EnrichParentPosterUrls(Dictionary<string, object> data, BaseItem item)
-    {
-        var serverUrl = _configuration.ServerUrl?.TrimEnd('/');
-
-        if (item is Episode episode)
-        {
-            // Season poster
-            if (episode.SeasonId != Guid.Empty)
-            {
-                var seasonItem = _libraryManager.GetItemById(episode.SeasonId);
-                if (seasonItem != null)
-                {
-                    await EnrichSingleParentPoster(data, seasonItem, "Season", serverUrl).ConfigureAwait(false);
-                }
-            }
-
-            // Series poster
-            if (episode.SeriesId != Guid.Empty)
-            {
-                var seriesItem = _libraryManager.GetItemById(episode.SeriesId);
-                if (seriesItem != null)
-                {
-                    await EnrichSingleParentPoster(data, seriesItem, "Series", serverUrl).ConfigureAwait(false);
-                }
-            }
-        }
-        else if (item is Season season)
-        {
-            // Current item IS the Season — copy poster URLs to Season-prefixed keys
-            CopySelfPosterToPrefixed(data, "Season");
-
-            // Series poster (parent)
-            if (season.SeriesId != Guid.Empty)
-            {
-                var seriesItem = _libraryManager.GetItemById(season.SeriesId);
-                if (seriesItem != null)
-                {
-                    await EnrichSingleParentPoster(data, seriesItem, "Series", serverUrl).ConfigureAwait(false);
-                }
-            }
-        }
-        else if (item is Series)
-        {
-            // Current item IS the Series — copy poster URLs to Series-prefixed keys
-            CopySelfPosterToPrefixed(data, "Series");
-        }
-        // For Movie items, parent posters remain empty (no season/series concept)
-    }
-
-    /// <summary>
-    /// Enriches a single parent item's poster into the data dictionary with both Jellyfin
-    /// and TMDB URLs, keyed by the given <paramref name="prefix"/> (e.g. "Season", "Series").
-    /// </summary>
-    private async Task EnrichSingleParentPoster(Dictionary<string, object> data, BaseItem parentItem, string prefix, string? serverUrl)
-    {
-        var parentId = parentItem.Id;
-        var parentIdStr = parentId.ToString("N", CultureInfo.InvariantCulture);
-
-        // Set Jellyfin local URL as fallback
-        if (!string.IsNullOrEmpty(serverUrl))
-        {
-            data[$"{prefix}Poster"] = $"{serverUrl}/Items/{parentIdStr}/Images/Primary";
-        }
-
-        // Query TMDB remote images for the parent item
-        try
-        {
-            var query = new RemoteImageQuery("TheMovieDb")
-            {
-                IncludeAllLanguages = true,
-                IncludeDisabledProviders = false
-            };
-
-            var remoteImages = await _providerManager
-                .GetAvailableRemoteImages(parentItem, query, default)
-                .ConfigureAwait(false);
-
-            if (remoteImages != null)
-            {
-                foreach (var image in remoteImages)
-                {
-                    if (string.IsNullOrEmpty(image.Url))
-                    {
-                        continue;
-                    }
-
-                    if (image.Type == ImageType.Primary)
-                    {
-                        data[$"Tmdb{prefix}PosterUrl"] = image.Url;
-                        // Overwrite Jellyfin URL with TMDB CDN URL for public access
-                        data[$"{prefix}Poster"] = image.Url;
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogTrace(ex, "Error enriching {Prefix} poster for parent item {ParentId}", prefix, parentId);
-        }
-    }
-
-    /// <summary>
-    /// Copies the current item's poster URLs (PrimaryImage, TmdbPosterUrl) into
-    /// prefixed keys for the given <paramref name="prefix"/> (e.g. "Season", "Series").
-    /// Used when the current item IS the parent (e.g. a Series item should have
-    /// SeriesPoster = PrimaryImage).
-    /// </summary>
-    private static void CopySelfPosterToPrefixed(Dictionary<string, object> data, string prefix)
-    {
-        if (data.TryGetValue("PrimaryImage", out var primary) && primary is string primaryStr)
-        {
-            data[$"{prefix}Poster"] = primaryStr;
-        }
-
-        if (data.TryGetValue("TmdbPosterUrl", out var tmdb) && tmdb is string tmdbStr)
-        {
-            data[$"Tmdb{prefix}PosterUrl"] = tmdbStr;
+            _logger.LogWarning(ex, "Error enriching people data");
         }
     }
 
@@ -868,6 +672,10 @@ public class MultifySender : IWebhookSender
             }
             else if (kvp.Value is System.Collections.IList list)
             {
+                // Shallow copy: the list is new, but elements are shared by reference.
+                // This is safe for current usage (all list values are strings/value types).
+                // If nested dictionaries are added to lists in the future, this will need
+                // recursive deep copying.
                 var listCopy = new List<object>(list.Count);
                 foreach (var item in list)
                 {

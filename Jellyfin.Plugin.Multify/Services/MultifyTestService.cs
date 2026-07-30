@@ -16,9 +16,6 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Providers;
-using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Providers;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Services;
@@ -71,38 +68,38 @@ public class MultifyTestService : IMultifyTestService
 {
     private readonly ILogger<MultifyTestService> _logger;
     private readonly ILibraryManager _libraryManager;
-    private readonly IProviderManager _providerManager;
     private readonly IWebhookClient<TelegramOption> _telegramClient;
     private readonly IWebhookClient<GotifyOption> _gotifyClient;
     private readonly IWebhookClient<NtfyOption> _ntfyClient;
     private readonly IWebhookClient<GenericWebhookOption> _genericClient;
+    private readonly ImageEnrichmentService _imageEnrichmentService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MultifyTestService"/> class.
     /// </summary>
     /// <param name="logger">Instance of the <see cref="ILogger{MultifyTestService}"/> interface.</param>
     /// <param name="libraryManager">Instance of the <see cref="ILibraryManager"/> interface for querying real library items.</param>
-    /// <param name="providerManager">Instance of the <see cref="IProviderManager"/> interface for remote image queries.</param>
     /// <param name="telegramClient">Instance of the <see cref="IWebhookClient{TelegramOption}"/>.</param>
     /// <param name="gotifyClient">Instance of the <see cref="IWebhookClient{GotifyOption}"/>.</param>
     /// <param name="ntfyClient">Instance of the <see cref="IWebhookClient{NtfyOption}"/>.</param>
     /// <param name="genericClient">Instance of the <see cref="IWebhookClient{GenericWebhookOption}"/>.</param>
+    /// <param name="imageEnrichmentService">Instance of the <see cref="ImageEnrichmentService"/> for image enrichment.</param>
     public MultifyTestService(
         ILogger<MultifyTestService> logger,
         ILibraryManager libraryManager,
-        IProviderManager providerManager,
         IWebhookClient<TelegramOption> telegramClient,
         IWebhookClient<GotifyOption> gotifyClient,
         IWebhookClient<NtfyOption> ntfyClient,
-        IWebhookClient<GenericWebhookOption> genericClient)
+        IWebhookClient<GenericWebhookOption> genericClient,
+        ImageEnrichmentService imageEnrichmentService)
     {
         _logger = logger;
         _libraryManager = libraryManager;
-        _providerManager = providerManager;
         _telegramClient = telegramClient;
         _gotifyClient = gotifyClient;
         _ntfyClient = ntfyClient;
         _genericClient = genericClient;
+        _imageEnrichmentService = imageEnrichmentService;
     }
 
     /// <inheritdoc />
@@ -327,12 +324,12 @@ public class MultifyTestService : IMultifyTestService
                 data["TmdbLogoUrl"] = logoUrl;
 
                 // Now overwrite with real TMDB CDN URLs via provider system
-                await EnrichWithTmdbImages(data, item).ConfigureAwait(false);
+                await _imageEnrichmentService.EnrichWithTmdbImages(data, item).ConfigureAwait(false);
 
                 // Enrich parent-level poster URLs (Season/Series) for hierarchical items
                 if (!string.IsNullOrEmpty(serverUrl))
                 {
-                    await EnrichParentPosterUrls(data, item, serverUrl).ConfigureAwait(false);
+                    await _imageEnrichmentService.EnrichParentPosterUrls(data, item, serverUrl).ConfigureAwait(false);
                 }
             }
 
@@ -342,186 +339,6 @@ public class MultifyTestService : IMultifyTestService
         {
             _logger.LogWarning(ex, "Error fetching real item for test notification, falling back to hardcoded data");
             return null;
-        }
-    }
-
-    /// <summary>
-    /// Creates a default data dictionary where all possible template keys are present
-    /// with "N/A" placeholder values. Used as the baseline for real-item test data.
-    /// </summary>
-    private async Task EnrichWithTmdbImages(Dictionary<string, object> data, BaseItem item)
-    {
-        try
-        {
-            var query = new RemoteImageQuery("TheMovieDb")
-            {
-                IncludeAllLanguages = true,
-                IncludeDisabledProviders = false
-            };
-
-            var remoteImages = await _providerManager
-                .GetAvailableRemoteImages(item, query, default)
-                .ConfigureAwait(false);
-
-            if (remoteImages == null)
-            {
-                return;
-            }
-
-            foreach (var image in remoteImages)
-            {
-                if (string.IsNullOrEmpty(image.Url))
-                {
-                    continue;
-                }
-
-                switch (image.Type)
-                {
-                    case ImageType.Primary:
-                        data["TmdbPosterUrl"] = image.Url;
-                        data["TmdbProfileUrl"] = image.Url;
-                        // Also update PrimaryImage so {{PrimaryImage}} resolves to a
-                        // publicly accessible CDN URL (instead of a local Jellyfin URL that
-                        // services like Telegram cannot fetch)
-                        data["PrimaryImage"] = image.Url;
-                        break;
-                    case ImageType.Backdrop:
-                        data["TmdbBackdropUrl"] = image.Url;
-                        data["BackdropImage"] = image.Url;
-                        break;
-                    case ImageType.Logo:
-                        data["TmdbLogoUrl"] = image.Url;
-                        data["LogoImage"] = image.Url;
-                        break;
-                    case ImageType.Thumb:
-                        data["TmdbStillUrl"] = image.Url;
-                        data["ThumbImage"] = image.Url;
-                        break;
-                }
-            }
-
-            var urlCount = remoteImages.Count(i => !string.IsNullOrEmpty(i.Url));
-            _logger.LogDebug("Enriched TMDB image URLs for test item: {Count} URL(s)", urlCount);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error enriching test data with TMDB image URLs");
-        }
-    }
-
-    /// <summary>
-    /// Enriches data with poster URLs for parent items (Season, Series) when the current item
-    /// is an Episode or Season. Sets both Jellyfin local URLs and TMDB CDN URLs.
-    /// </summary>
-    private async Task EnrichParentPosterUrls(Dictionary<string, object> data, BaseItem item, string serverUrl)
-    {
-        if (item is Episode episode)
-        {
-            if (episode.SeasonId != Guid.Empty)
-            {
-                var seasonItem = _libraryManager.GetItemById(episode.SeasonId);
-                if (seasonItem != null)
-                {
-                    await EnrichSingleParentPosterTest(data, seasonItem, "Season", serverUrl).ConfigureAwait(false);
-                }
-            }
-
-            if (episode.SeriesId != Guid.Empty)
-            {
-                var seriesItem = _libraryManager.GetItemById(episode.SeriesId);
-                if (seriesItem != null)
-                {
-                    await EnrichSingleParentPosterTest(data, seriesItem, "Series", serverUrl).ConfigureAwait(false);
-                }
-            }
-        }
-        else if (item is Season season)
-        {
-            // Current item IS the Season — copy poster URLs to Season-prefixed keys
-            CopySelfPosterToPrefixedTest(data, "Season");
-
-            // Series poster (parent)
-            if (season.SeriesId != Guid.Empty)
-            {
-                var seriesItem = _libraryManager.GetItemById(season.SeriesId);
-                if (seriesItem != null)
-                {
-                    await EnrichSingleParentPosterTest(data, seriesItem, "Series", serverUrl).ConfigureAwait(false);
-                }
-            }
-        }
-        else if (item is Series series)
-        {
-            // Current item IS the Series — copy poster URLs to Series-prefixed keys
-            CopySelfPosterToPrefixedTest(data, "Series");
-        }
-        // For Movie items, parent posters remain empty (no season/series concept)
-    }
-
-    /// <summary>
-    /// Enriches a single parent item's poster into the data dictionary with both Jellyfin
-    /// and TMDB URLs, keyed by the given <paramref name="prefix"/> (e.g. "Season", "Series").
-    /// </summary>
-    private async Task EnrichSingleParentPosterTest(Dictionary<string, object> data, BaseItem parentItem, string prefix, string serverUrl)
-    {
-        var parentId = parentItem.Id.ToString("N", CultureInfo.InvariantCulture);
-
-        // Set Jellyfin local URL as fallback
-        data[$"{prefix}Poster"] = $"{serverUrl}/Items/{parentId}/Images/Primary";
-
-        // Query TMDB remote images for the parent item
-        try
-        {
-            var query = new RemoteImageQuery("TheMovieDb")
-            {
-                IncludeAllLanguages = true,
-                IncludeDisabledProviders = false
-            };
-
-            var remoteImages = await _providerManager
-                .GetAvailableRemoteImages(parentItem, query, default)
-                .ConfigureAwait(false);
-
-            if (remoteImages != null)
-            {
-                foreach (var image in remoteImages)
-                {
-                    if (string.IsNullOrEmpty(image.Url))
-                    {
-                        continue;
-                    }
-
-                    if (image.Type == ImageType.Primary)
-                    {
-                        data[$"Tmdb{prefix}PosterUrl"] = image.Url;
-                        // Overwrite Jellyfin URL with TMDB CDN URL for public access
-                        data[$"{prefix}Poster"] = image.Url;
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogTrace(ex, "Error enriching {Prefix} poster for parent item {ParentId}", prefix, parentId);
-        }
-    }
-
-    /// <summary>
-    /// Copies the current item's poster URLs (PrimaryImage, TmdbPosterUrl) into
-    /// prefixed keys for the given <paramref name="prefix"/> (e.g. "Season", "Series").
-    /// Used when the current item IS the parent (e.g. a Series item should have
-    /// SeriesPoster = PrimaryImage).
-    /// </summary>
-    private static void CopySelfPosterToPrefixedTest(Dictionary<string, object> data, string prefix)
-    {
-        if (data.TryGetValue("PrimaryImage", out var primary) && primary is string primaryStr)
-        {
-            data[$"{prefix}Poster"] = primaryStr;
-        }
-
-        if (data.TryGetValue("TmdbPosterUrl", out var tmdb) && tmdb is string tmdbStr)
-        {
-            data[$"Tmdb{prefix}PosterUrl"] = tmdbStr;
         }
     }
 
@@ -798,14 +615,23 @@ public class MultifyTestService : IMultifyTestService
         };
     }
 
+    /// <summary>
+    /// Creates a <see cref="JsonSerializerOptions"/> configured for test notification deserialization.
+    /// Uses PascalCase enum naming to match the frontend convention (e.g., <c>"SendText"</c> rather
+    /// than <c>"sendText"</c>). Both string and integer enum values are accepted.
+    /// </summary>
+    private static JsonSerializerOptions CreateTestNotificationOptions()
+    {
+        return new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: true) }
+        };
+    }
+
     private BaseOption? ParseOption(TestNotificationRequest request)
     {
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        };
-        options.Converters.Add(new JsonStringEnumConverter());
-
+        var options = CreateTestNotificationOptions();
         return request.DestinationType.ToLowerInvariant() switch
         {
             "telegram" => request.Config.Deserialize<TelegramOption>(options),

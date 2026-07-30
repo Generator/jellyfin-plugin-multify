@@ -52,9 +52,8 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // Register dashboard alert service
         serviceCollection.AddScoped<DashboardAlertService>();
 
-        // Register filter services
+        // Register filter service
         serviceCollection.AddSingleton<FilterService>();
-        serviceCollection.AddSingleton<FilterValidator>();
 
         // Register LibraryCache as hosted service (with periodic cleanup)
         serviceCollection.AddHostedService<LibraryCache>();
@@ -67,6 +66,12 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
 
         // Register sender
         serviceCollection.AddScoped<IWebhookSender, MultifySender>();
+
+        // Register playback bitrate service (shared across playback notifiers)
+        serviceCollection.AddScoped<PlaybackBitrateService>();
+
+        // Register image enrichment service (shared across MultifySender and MultifyTestService)
+        serviceCollection.AddScoped<ImageEnrichmentService>();
 
         // Register MDBList service
         serviceCollection.AddScoped<MdblistService>();

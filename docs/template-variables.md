@@ -471,6 +471,10 @@ Sends a JSON payload. The template is rendered as a string and sent as the reque
 
 ---
 
+## Privacy Notes
+
+- **`{{Path}}`** exposes the server's local filesystem path (e.g., `/mnt/media/Movies/Inception.mkv`) to external notification services (Telegram, Gotify, ntfy, webhooks). Only use this variable if you trust the destination endpoint, as it reveals internal server filesystem layout.
+
 ## Notes
 
 - Variables return an empty string when their data is not available for the current event.

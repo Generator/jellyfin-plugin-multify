@@ -121,11 +121,11 @@ public class LibraryEventHostedService : IHostedService
 
             _logger.LogDebug("Item updated event received: {ItemName} ({ItemType})", e.Item.Name, e.Item.GetType().Name);
 
-            var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.ItemAdded);
+            var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.ItemUpdated);
             data.AddItemData(e.Item);
 
             await _webhookSender.SendNotification(
-                NotificationType.ItemAdded,
+                NotificationType.ItemUpdated,
                 data,
                 e.Item.GetType()).ConfigureAwait(false);
 
