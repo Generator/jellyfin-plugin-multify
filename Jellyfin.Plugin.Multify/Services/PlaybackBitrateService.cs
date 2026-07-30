@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.Multify.Helpers;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
