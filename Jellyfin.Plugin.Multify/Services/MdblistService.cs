@@ -206,8 +206,8 @@ public class MdblistService
     {
         var ratings = new Dictionary<string, object>();
 
-        // Add MDBList score (allow zero scores)
-        if (result.TryGetProperty("score", out var scoreElement))
+        // Add MDBList score (allow zero scores; skip null)
+        if (result.TryGetProperty("score", out var scoreElement) && scoreElement.ValueKind != JsonValueKind.Null)
         {
             var score = scoreElement.GetDouble();
             // Include zero scores as they may be valid
@@ -219,11 +219,12 @@ public class MdblistService
         {
             foreach (var rating in ratingsElement.EnumerateArray())
             {
-                if (rating.TryGetProperty("source", out var sourceElement) &&
-                    rating.TryGetProperty("score", out var ratingScoreElement))
-                {
-                    var source = sourceElement.GetString();
-                    var ratingScore = ratingScoreElement.GetDouble();
+                    if (rating.TryGetProperty("source", out var sourceElement) &&
+                        rating.TryGetProperty("score", out var ratingScoreElement) &&
+                        ratingScoreElement.ValueKind != JsonValueKind.Null)
+                    {
+                        var source = sourceElement.GetString();
+                        var ratingScore = ratingScoreElement.GetDouble();
 
                     if (!string.IsNullOrEmpty(source))
                     {
