@@ -8,6 +8,7 @@ using Jellyfin.Plugin.Multify.Helpers;
 using Jellyfin.Plugin.Multify.Services;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Events;
+using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Notifiers;
