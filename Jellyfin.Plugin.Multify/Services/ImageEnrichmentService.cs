@@ -49,6 +49,7 @@ public class ImageEnrichmentService
     /// <param name="data">The data dictionary to populate with image URLs.</param>
     /// <param name="item">The media item to query remote images for.</param>
     /// <param name="logItemId">Optional item identifier for logging (e.g., a GUID string).</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task EnrichWithTmdbImages(Dictionary<string, object> data, BaseItem item, string? logItemId = null)
     {
         try
@@ -122,6 +123,7 @@ public class ImageEnrichmentService
     /// <param name="data">The data dictionary to populate with poster URLs.</param>
     /// <param name="item">The current media item (Episode, Season, Series, or Movie).</param>
     /// <param name="serverUrl">The server base URL for constructing Jellyfin image URLs. May be null.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task EnrichParentPosterUrls(Dictionary<string, object> data, BaseItem item, string? serverUrl)
     {
         serverUrl = serverUrl?.TrimEnd('/');

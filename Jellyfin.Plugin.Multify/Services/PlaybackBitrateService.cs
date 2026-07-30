@@ -41,6 +41,7 @@ public class PlaybackBitrateService
     /// <param name="data">The data dictionary to populate with bitrate info.</param>
     /// <param name="item">The media item being played.</param>
     /// <param name="user">The user playing the item.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task AddSourceBitrateAsync(Dictionary<string, object> data, BaseItem item, User user)
     {
         try

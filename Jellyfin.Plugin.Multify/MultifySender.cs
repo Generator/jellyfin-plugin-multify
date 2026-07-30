@@ -87,22 +87,6 @@ public class MultifySender : IWebhookSender
     {
         _logger.LogDebug("SendNotification called for {NotificationType}, ItemType={ItemType}", notificationType, itemType?.Name ?? "null");
 
-        // Debug: Log loaded destination counts
-        var telegramCount = _configuration.TelegramOptions.Length;
-        var gotifyCount = _configuration.GotifyOptions.Length;
-        var ntfyCount = _configuration.NtfyOptions.Length;
-        var genericCount = _configuration.GenericWebhookOptions.Length;
-        var configuredTotal = telegramCount + gotifyCount + ntfyCount + genericCount;
-
-        _logger.LogDebug(
-            "Sending {NotificationType}: {Total} configured destinations ({Telegram} telegram, {Gotify} gotify, {Ntfy} ntfy, {Generic} generic)",
-            notificationType,
-            configuredTotal,
-            telegramCount,
-            gotifyCount,
-            ntfyCount,
-            genericCount);
-
         // Enrich data with MDBList ratings if configured
         if (_mdblistService != null && !string.IsNullOrEmpty(_configuration.MdblistApiKey))
         {

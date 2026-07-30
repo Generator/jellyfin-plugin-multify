@@ -75,6 +75,7 @@ public sealed class TelegramMessageStore : IDisposable
     /// <param name="messageThreadId">The forum topic thread ID.</param>
     /// <param name="tmdbId">The TMDB ID of the item.</param>
     /// <param name="messageId">The message ID.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task StoreMessageIdAsync(string chatId, int? messageThreadId, string tmdbId, long messageId)
     {
         var key = GetKey(chatId, messageThreadId, tmdbId);
@@ -86,6 +87,7 @@ public sealed class TelegramMessageStore : IDisposable
     /// Clears all entries from the store. Useful for periodic cleanup since
     /// Telegram message edits expire after 48 hours anyway.
     /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task CleanupStaleEntriesAsync()
     {
         var count = _messageStore.Count;
