@@ -83,10 +83,23 @@ def build_jellyfin_zip(
     return zip_path
 
 
+def _pre_key(pre_id: str) -> tuple:
+    """Encodes prerelease identifiers like 'rc.2' into a type-safe, orderable tuple.
+
+    Numeric identifiers become (0, <int>) and nonnumeric identifiers become (1, <str>),
+    so identifiers compare numerically when numeric ('rc.10' sorts after 'rc.2') and
+    never raise TypeError when a manifest mixes numeric and nonnumeric identifiers.
+    """
+    return tuple(
+        (0, int(ident)) if ident.isdigit() else (1, ident)
+        for ident in pre_id.split(".")
+    )
+
+
 def version_sort_key(version: str) -> tuple:
     """Converts a version string like '1.10.0-beta' into a comparable, type-safe tuple.
 
-    Numeric components compare numerically. The prerelease marker (0, <int>, 0, <id>)
+    Numeric components compare numerically. The prerelease marker (0, <int>, 0, <key>)
     sorts below the stable marker (0, <int>, 1), so stable versions sort ahead of
     prereleases with the same prefix. Every tuple element starts with an int, so a
     manifest mixing numeric, string, stable, and prerelease parts never raises TypeError.
@@ -96,9 +109,9 @@ def version_sort_key(version: str) -> tuple:
         if "-" in part:
             base, pre_id = part.split("-", 1)
             try:
-                key.append((0, int(base), 0, pre_id))
+                key.append((0, int(base), 0, _pre_key(pre_id)))
             except ValueError:
-                key.append((1, base, 0, pre_id))
+                key.append((1, base, 0, _pre_key(pre_id)))
         else:
             try:
                 key.append((0, int(part), 1))
