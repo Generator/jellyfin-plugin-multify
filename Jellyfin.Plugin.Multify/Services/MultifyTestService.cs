@@ -477,6 +477,10 @@ public class MultifyTestService : IMultifyTestService
             ["PluginId"] = "N/A",
             ["NewVersion"] = "N/A",
 
+            // Subtitle
+            ["SubtitleProvider"] = "N/A",
+            ["SubtitleDownloadError"] = "N/A",
+
             // Year
             ["Year"] = "N/A"
         };

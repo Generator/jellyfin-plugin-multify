@@ -12,6 +12,7 @@ function multifyController(view) {
         "PlaybackStart": "Playback Start",
         "PlaybackProgress": "Playback Progress",
         "PlaybackStop": "Playback Stop",
+        "SubtitleDownloadFailure": "Subtitle Download Failure",
         "AuthenticationFailure": "Authentication Failure",
         "AuthenticationSuccess": "Authentication Success",
         "SessionStart": "Session Start",

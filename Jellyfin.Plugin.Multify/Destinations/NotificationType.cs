@@ -25,7 +25,7 @@ public enum NotificationType
     /// <summary>Playback stopped.</summary>
     PlaybackStop = 5,
 
-    /// <summary>Subtitle download failure (reserved — no notifier implemented).</summary>
+    /// <summary>Subtitle download failure.</summary>
     SubtitleDownloadFailure = 6,
 
     /// <summary>Authentication failure.</summary>
