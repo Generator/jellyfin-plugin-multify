@@ -76,9 +76,12 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
                 return;
             }
 
-            data["Priority"] = option.Priority;
+            // Copy the data dictionary so the shared per-notification data is never mutated
+            // (Priority is written to the copy only; the caller's dictionary stays pristine).
+            var dataCopy = new Dictionary<string, object>(data);
+            dataCopy["Priority"] = option.Priority;
 
-            var body = option.GetMessageBody(data);
+            var body = option.GetMessageBody(dataCopy);
             if (!SendMessageBody(_logger, option, ref body))
             {
                 return;
@@ -96,7 +99,7 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
             // to the message body (this works reliably across all Gotify clients).
             if (!string.IsNullOrEmpty(option.PhotoUrlTemplate))
             {
-                var imageUrl = BaseOption.ReplacePlaceholders(option.PhotoUrlTemplate, data);
+                var imageUrl = BaseOption.ReplacePlaceholders(option.PhotoUrlTemplate, dataCopy);
                 if (!string.IsNullOrEmpty(imageUrl))
                 {
                     // Resize TMDB CDN URLs to w500 to keep image sizes reasonable
@@ -111,7 +114,7 @@ public class GotifyClient : BaseClient, IWebhookClient<GotifyOption>
 
             // Use custom title if provided (with placeholder replacement), otherwise default to WebhookName
             var title = !string.IsNullOrEmpty(option.Title)
-                ? BaseOption.ReplacePlaceholders(option.Title, data)
+                ? BaseOption.ReplacePlaceholders(option.Title, dataCopy)
                 : option.WebhookName;
 
             var payload = new Dictionary<string, object>

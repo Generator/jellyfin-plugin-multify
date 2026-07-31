@@ -35,6 +35,16 @@ jobs:
 
       - name: Build & Package
         run: |
+          # Merge with any existing manifest from the manifest branch so version
+          # history is preserved across releases (package.py appends to manifest.json).
+          # Only treat the branch as absent when ls-remote confirms it does not exist;
+          # transport/permission failures abort the step so history can never be
+          # silently overwritten.
+          if git ls-remote --heads origin manifest | grep -q "refs/heads/manifest"; then
+            git fetch origin manifest
+            git show origin/manifest:manifest.json > /tmp/existing-manifest.json
+            cp /tmp/existing-manifest.json manifest.json
+          fi
           python3 scripts/package.py \
             --version "${{ steps.tag.outputs.version }}" \
             --repo "${{ env.REPO }}" \

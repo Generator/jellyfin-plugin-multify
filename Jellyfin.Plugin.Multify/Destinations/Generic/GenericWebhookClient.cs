@@ -76,10 +76,20 @@ public class GenericWebhookClient : BaseClient, IWebhookClient<GenericWebhookOpt
                     continue;
                 }
 
-                // Content-Type must be set on the content, not the request headers
+                // Content-Type must be set on the content, not the request headers.
+                // A malformed value would throw FormatException from StringContent,
+                // so validate it up front and fall back to the default JSON type.
                 if (string.Equals("Content-Type", header.Key, StringComparison.OrdinalIgnoreCase))
                 {
-                    contentType = header.Value;
+                    try
+                    {
+                        _ = new System.Net.Http.Headers.MediaTypeHeaderValue(header.Value);
+                        contentType = header.Value;
+                    }
+                    catch (FormatException)
+                    {
+                        _logger.LogWarning("Invalid Content-Type '{ContentType}' for {WebhookName}, falling back to application/json", header.Value, option.WebhookName);
+                    }
                 }
                 else
                 {

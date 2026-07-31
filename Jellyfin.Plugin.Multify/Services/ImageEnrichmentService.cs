@@ -60,49 +60,53 @@ public class ImageEnrichmentService
                 IncludeDisabledProviders = false
             };
 
-            var remoteImages = await _providerManager
+            // Materialize the (possibly lazy) remote image sequence so it is only
+            // enumerated once.
+            var remoteImages = (await _providerManager
                 .GetAvailableRemoteImages(item, query, default)
-                .ConfigureAwait(false);
+                .ConfigureAwait(false))?.ToList();
 
-            if (remoteImages == null)
+            if (remoteImages is null || remoteImages.Count == 0)
             {
                 var id = logItemId ?? item.Id.ToString();
                 _logger.LogDebug("No TMDB remote images available for item {ItemId}", id);
                 return;
             }
 
-            // Map RemoteImageInfo results by Type into TMDB URL variables
-            foreach (var image in remoteImages)
+            // Map RemoteImageInfo results by Type into TMDB URL variables.
+            // Remote images are already ranked by the provider, so the FIRST match
+            // per type wins (a later duplicate never overwrites a better result).
+            var primaryImage = remoteImages.FirstOrDefault(i => i.Type == ImageType.Primary && !string.IsNullOrEmpty(i.Url));
+            if (primaryImage is not null)
             {
-                if (string.IsNullOrEmpty(image.Url))
-                {
-                    continue;
-                }
+                data["TmdbPosterUrl"] = primaryImage.Url;
+                data["TmdbProfileUrl"] = primaryImage.Url;
+                // Also update PrimaryImage so {{PrimaryImage}} resolves to a
+                // publicly accessible CDN URL (instead of a local Jellyfin URL that
+                // services like Telegram cannot fetch)
+                data["PrimaryImage"] = primaryImage.Url;
+            }
 
-                switch (image.Type)
-                {
-                    case ImageType.Primary:
-                        data["TmdbPosterUrl"] = image.Url;
-                        data["TmdbProfileUrl"] = image.Url;
-                        // Also update PrimaryImage so {{PrimaryImage}} resolves to a
-                        // publicly accessible CDN URL (instead of a local Jellyfin URL that
-                        // services like Telegram cannot fetch)
-                        data["PrimaryImage"] = image.Url;
-                        break;
-                    case ImageType.Backdrop:
-                        data["TmdbBackdropUrl"] = image.Url;
-                        // Also update BackdropImage for the same reason
-                        data["BackdropImage"] = image.Url;
-                        break;
-                    case ImageType.Logo:
-                        data["TmdbLogoUrl"] = image.Url;
-                        data["LogoImage"] = image.Url;
-                        break;
-                    case ImageType.Thumb:
-                        data["TmdbStillUrl"] = image.Url;
-                        data["ThumbImage"] = image.Url;
-                        break;
-                }
+            var backdropImage = remoteImages.FirstOrDefault(i => i.Type == ImageType.Backdrop && !string.IsNullOrEmpty(i.Url));
+            if (backdropImage is not null)
+            {
+                data["TmdbBackdropUrl"] = backdropImage.Url;
+                // Also update BackdropImage for the same reason
+                data["BackdropImage"] = backdropImage.Url;
+            }
+
+            var logoImage = remoteImages.FirstOrDefault(i => i.Type == ImageType.Logo && !string.IsNullOrEmpty(i.Url));
+            if (logoImage is not null)
+            {
+                data["TmdbLogoUrl"] = logoImage.Url;
+                data["LogoImage"] = logoImage.Url;
+            }
+
+            var thumbImage = remoteImages.FirstOrDefault(i => i.Type == ImageType.Thumb && !string.IsNullOrEmpty(i.Url));
+            if (thumbImage is not null)
+            {
+                data["TmdbStillUrl"] = thumbImage.Url;
+                data["ThumbImage"] = thumbImage.Url;
             }
 
             var urlCount = remoteImages.Count(i => !string.IsNullOrEmpty(i.Url));
@@ -197,26 +201,23 @@ public class ImageEnrichmentService
                 IncludeDisabledProviders = false
             };
 
-            var remoteImages = await _providerManager
+            var remoteImages = (await _providerManager
                 .GetAvailableRemoteImages(parentItem, query, default)
-                .ConfigureAwait(false);
+                .ConfigureAwait(false))?.ToList();
 
-            if (remoteImages != null)
+            if (remoteImages is null || remoteImages.Count == 0)
             {
-                foreach (var image in remoteImages)
-                {
-                    if (string.IsNullOrEmpty(image.Url))
-                    {
-                        continue;
-                    }
+                return;
+            }
 
-                    if (image.Type == ImageType.Primary)
-                    {
-                        data[$"Tmdb{prefix}PosterUrl"] = image.Url;
-                        // Overwrite Jellyfin URL with TMDB CDN URL for public access
-                        data[$"{prefix}Poster"] = image.Url;
-                    }
-                }
+            // First-wins: remote images are ranked by the provider, so only the
+            // first Primary result is used.
+            var primaryImage = remoteImages.FirstOrDefault(i => i.Type == ImageType.Primary && !string.IsNullOrEmpty(i.Url));
+            if (primaryImage is not null)
+            {
+                data[$"Tmdb{prefix}PosterUrl"] = primaryImage.Url;
+                // Overwrite Jellyfin URL with TMDB CDN URL for public access
+                data[$"{prefix}Poster"] = primaryImage.Url;
             }
         }
         catch (Exception ex)

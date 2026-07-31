@@ -70,6 +70,9 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // Register playback bitrate service (shared across playback notifiers)
         serviceCollection.AddScoped<PlaybackBitrateService>();
 
+        // Register per-user data service (shared across playback notifiers)
+        serviceCollection.AddScoped<UserDataService>();
+
         // Register image enrichment service (shared across MultifySender and MultifyTestService)
         serviceCollection.AddScoped<ImageEnrichmentService>();
 

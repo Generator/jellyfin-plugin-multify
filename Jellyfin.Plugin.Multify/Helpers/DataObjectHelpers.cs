@@ -30,7 +30,7 @@ public static class DataObjectHelpers
         {
             ["ServerName"] = serverName,
             ["NotificationType"] = notificationType.ToString(),
-            ["Timestamp"] = DateTime.UtcNow.ToString("O")
+            ["Timestamp"] = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture)
         };
     }
 
@@ -163,7 +163,7 @@ public static class DataObjectHelpers
         data["Container"] = item.Container ?? string.Empty;
 
         // Add date created
-        data["DateCreated"] = item.DateCreated.ToString("O");
+        data["DateCreated"] = item.DateCreated.ToString("O", CultureInfo.InvariantCulture);
 
         // Media type (Video, Audio, Book, Photo)
         data["MediaType"] = item.MediaType.ToString();
@@ -204,22 +204,14 @@ public static class DataObjectHelpers
             data["HasSubtitles"] = "False";
         }
 
-        // User data (PlayCount, IsFavorite, Played, UserRating) from UserData collection
-        var userData = item.UserData?.FirstOrDefault();
-        if (userData is not null)
-        {
-            data["PlayCount"] = userData.PlayCount.ToString(CultureInfo.InvariantCulture);
-            data["IsFavorite"] = userData.IsFavorite.ToString(CultureInfo.InvariantCulture);
-            data["Played"] = userData.Played.ToString(CultureInfo.InvariantCulture);
-            data["UserRating"] = userData.Rating?.ToString(CultureInfo.InvariantCulture) ?? "Unknown";
-        }
-        else
-        {
-            data["PlayCount"] = "0";
-            data["IsFavorite"] = "False";
-            data["Played"] = "False";
-            data["UserRating"] = "Unknown";
-        }
+        // Per-user data (PlayCount, IsFavorite, Played, UserRating) is populated per-user
+        // by UserDataService for playback events. Arbitrary UserData collection entries
+        // are NOT used here because they may belong to another user. Leave safe defaults
+        // so templates referencing these variables always render.
+        data["PlayCount"] = "0";
+        data["IsFavorite"] = "False";
+        data["Played"] = "False";
+        data["UserRating"] = "Unknown";
 
         // Add image URLs (will be enriched with server URL in MultifySender)
         data["PrimaryImage"] = string.Empty;
@@ -228,7 +220,9 @@ public static class DataObjectHelpers
         data["LogoImage"] = string.Empty;
         data["BannerImage"] = string.Empty;
 
-        // Add trailer data
+        // Add trailer data — always define both keys so templates never see a missing variable
+        data["TrailerUrl"] = string.Empty;
+        data["TrailerYtId"] = string.Empty;
         if (item.RemoteTrailers is not null && item.RemoteTrailers.Count > 0)
         {
             var firstTrailer = item.RemoteTrailers[0];
@@ -252,11 +246,6 @@ public static class DataObjectHelpers
                     // Invalid URL, skip
                 }
             }
-        }
-        else
-        {
-            data["TrailerUrl"] = string.Empty;
-            data["TrailerYtId"] = string.Empty;
         }
 
         // Add TMDb image URL variables (will be enriched with API calls if TMDb ID available)
@@ -361,7 +350,7 @@ public static class DataObjectHelpers
         // Add play state info if available
         if (session.PlayState is not null)
         {
-            data["PlayMethod"] = session.PlayState.PlayMethod.ToString() ?? "Unknown";
+            data["PlayMethod"] = session.PlayState.PlayMethod?.ToString() ?? "Unknown";
             data["IsPaused"] = session.PlayState.IsPaused.ToString(CultureInfo.InvariantCulture);
             data["VolumeLevel"] = session.PlayState.VolumeLevel?.ToString(CultureInfo.InvariantCulture) ?? "Unknown";
             data["IsMuted"] = session.PlayState.IsMuted.ToString(CultureInfo.InvariantCulture);

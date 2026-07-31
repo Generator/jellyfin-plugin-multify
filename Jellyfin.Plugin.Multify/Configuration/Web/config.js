@@ -32,8 +32,8 @@ function multifyController(view) {
     /*** Template helpers ***/
     function cloneTemplate(id) {
         const tpl = document.getElementById(id);
-        if (!tpl) return document.createElement("div");
-        return tpl.cloneNode(true).content;
+        if (!tpl || !tpl.content?.firstElementChild) return document.createElement("div");
+        return tpl.content.firstElementChild.cloneNode(true);
     }
 
     function createSection(title) {
@@ -134,6 +134,8 @@ function multifyController(view) {
     }
 
     let usersCache = [];
+
+    let librariesCache = [];
 
     async function loadUsers() {
         try {
@@ -299,9 +301,12 @@ function multifyController(view) {
     async function loadLibraries() {
         try {
             const libs = await window.ApiClient.getVirtualFolders();
-            return libs.map(l => ({ id: l.ItemId, name: l.Name }));
+            librariesCache = libs.map(l => ({ id: l.ItemId, name: l.Name }));
+            return librariesCache;
         } catch (e) {
             console.warn("Multify: Failed to load libraries", e);
+            // Reset so a later failure never shows stale library entries.
+            librariesCache = [];
             return [];
         }
     }
@@ -310,6 +315,7 @@ function multifyController(view) {
         const container = document.createElement("div");
         container.className = "multify-builder-block";
         container.dataset.field = "LibraryFilter";
+        container.dataset.mode = config.LibraryFilterMode || "OnlySelected";
 
         // Header
         const header = document.createElement("div");
@@ -355,19 +361,13 @@ function multifyController(view) {
 
         const checkList = document.createElement("div");
         checkList.className = "paperList checkboxList checkboxList-paperList multify-check-list";
-        checkList.textContent = "Loading libraries...";
 
-        // Load libraries asynchronously, then populate the list
-        loadLibraries().then(libraries => {
-            checkList.textContent = ""; // Clear loading placeholder
-
-            if (libraries.length === 0)
-            {
-                checkList.textContent = "No libraries found";
-                return;
-            }
-
-            for (const lib of libraries) {
+        // Libraries are cached during init(), so rows render synchronously and
+        // can't be missed by snapshotCurrentTab()/readDestinations().
+        if (librariesCache.length === 0) {
+            checkList.textContent = "No libraries found";
+        } else {
+            for (const lib of librariesCache) {
                 const item = document.createElement("label");
                 item.className = "multify-check-list-item";
                 
@@ -385,7 +385,7 @@ function multifyController(view) {
                 item.appendChild(span);
                 checkList.appendChild(item);
             }
-        });
+        }
         
         libraryList.appendChild(checkList);
         controls.appendChild(libraryList);
@@ -625,20 +625,18 @@ function multifyController(view) {
         testBtn.disabled = true;
 
         try {
-            const response = await fetch("/Multify/TestNotification", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `MediaBrowser Token="${window.ApiClient.accessToken()}"`
-                },
-                body: JSON.stringify({
+            const response = await window.ApiClient.ajax({
+                type: "POST",
+                url: window.ApiClient.getUrl("/Multify/TestNotification"),
+                data: JSON.stringify({
                     destinationType: type,
                     config: config
-                })
+                }),
+                contentType: "application/json",
+                dataType: "json"
             });
 
-            const text = await response.text();
-            const result = text ? JSON.parse(text) : { success: response.ok };
+            const result = response || { success: true };
 
             if (result.success) {
                 Dashboard.alert("Test notification sent successfully!");
@@ -647,7 +645,7 @@ function multifyController(view) {
             }
         } catch (e) {
             console.error("Multify: Test notification error", e);
-            Dashboard.alert("Test notification failed: " + e.message);
+            Dashboard.alert("Test notification failed: " + (e.message || "Unknown error"));
         } finally {
             testBtn.innerHTML = originalText;
             testBtn.disabled = false;
@@ -1448,6 +1446,10 @@ function multifyController(view) {
     /*** Init ***/
     async function init() {
         await loadUsers();
+
+        // Preload libraries into the cache so buildLibraryFilter() renders
+        // synchronously and snapshots never miss the library checkboxes.
+        await loadLibraries();
 
         // Detect mobile viewport
         const isMobile = window.matchMedia("(max-width: 768px)").matches;

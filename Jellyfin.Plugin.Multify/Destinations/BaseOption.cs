@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -115,7 +116,15 @@ public class BaseOption
         foreach (var kvp in data)
         {
             var placeholder = "{{" + kvp.Key + "}}";
-            result = result.Replace(placeholder, kvp.Value?.ToString() ?? string.Empty, StringComparison.Ordinal);
+            // Invariant formatting keeps numbers/dates/bools stable regardless of the
+            // server's culture (e.g. decimal point vs comma).
+            var valueText = kvp.Value switch
+            {
+                null => string.Empty,
+                IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
+                _ => kvp.Value.ToString() ?? string.Empty
+            };
+            result = result.Replace(placeholder, valueText, StringComparison.Ordinal);
         }
 
         // Safety net: strip markdown link/image syntax with empty/blank URLs

@@ -370,12 +370,22 @@ TOKEN=$(curl -s -X POST "${SERVER}/Users/AuthenticateByName" \
   -d "{\"Username\":\"${USERNAME}\",\"Pw\":\"${PASSWORD}\"}" \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['AccessToken'])")
 
-echo "Token: ${TOKEN}"
+# Do not print the token — it is a reusable credential that would end up in
+# terminal scrollback and captured logs. Validate that authentication succeeded.
+test -n "${TOKEN}" || { echo "Authentication failed" >&2; exit 1; }
 
-# Step 2: Test ntfy notification
+# Step 2: Test ntfy notification.
+# Write the Authorization header to a protected temp file (umask 077) and pass it
+# with curl's -H @file syntax. This keeps the token out of curl's command-line
+# arguments, where it would be visible to other users via `ps`.
+AUTH_FILE=$(mktemp)
+trap 'rm -f "${AUTH_FILE}"' EXIT
+umask 077
+printf 'Authorization: MediaBrowser Token="%s"\n' "${TOKEN}" > "${AUTH_FILE}"
+
 curl -s -X POST "${SERVER}/Multify/TestNotification" \
   -H "Content-Type: application/json" \
-  -H "Authorization: MediaBrowser Token=\"${TOKEN}\"" \
+  -H @"${AUTH_FILE}" \
   -d '{
     "destinationType": "ntfy",
     "config": {

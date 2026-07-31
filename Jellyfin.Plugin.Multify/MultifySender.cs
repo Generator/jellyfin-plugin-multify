@@ -100,12 +100,21 @@ public class MultifySender : IWebhookSender
         }
 
         // Single item lookup shared across enrichment methods to avoid redundant DB queries.
+        // Guarded: library lookups can throw for transient/DB errors and must not
+        // prevent notification delivery.
         BaseItem? item = null;
         string? itemIdStr = null;
         if (itemData.TryGetValue("ItemId", out var itemIdObj) && itemIdObj is string idStr && Guid.TryParse(idStr, out var itemIdGuid))
         {
             itemIdStr = idStr;
-            item = _libraryManager.GetItemById(itemIdGuid);
+            try
+            {
+                item = _libraryManager.GetItemById(itemIdGuid);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error looking up item {ItemId} for enrichment", idStr);
+            }
         }
 
         // Enrich data with TMDB image URLs via Jellyfin's provider system
@@ -127,7 +136,7 @@ public class MultifySender : IWebhookSender
         EnrichWithMediaStreams(itemData);
 
         // Enrich data with people info (Director, Writers, CastList, CastJson) — reuses item from above
-        await EnrichWithPeople(itemData, item).ConfigureAwait(false);
+        EnrichWithPeople(itemData, item);
 
         var tasks = new List<Task>();
 
@@ -424,7 +433,7 @@ public class MultifySender : IWebhookSender
 
         if (maxDim <= 720)
         {
-            return $"404{interlaced}";
+            return $"480{interlaced}";
         }
 
         if (maxDim <= 854)
@@ -468,8 +477,9 @@ public class MultifySender : IWebhookSender
     /// <summary>
     /// Enriches data with people info (Director, Writers, CastList, CastJson) by querying
     /// <see cref="ILibraryManager.GetPeople(MediaBrowser.Controller.Entities.BaseItem)"/>.
+    /// All work is synchronous, so this is intentionally not async.
     /// </summary>
-    private async Task EnrichWithPeople(Dictionary<string, object> data, BaseItem? item = null)
+    private void EnrichWithPeople(Dictionary<string, object> data, BaseItem? item = null)
     {
         if (item == null)
         {
@@ -561,37 +571,41 @@ public class MultifySender : IWebhookSender
             return true;
         }
 
-        if (baseOptions.EnableMovies && itemType == typeof(Movie))
+        // Specific type checks first — each also matches subclasses so e.g. a
+        // MusicVideo (a Video subclass) never double-matches a different flag.
+        if (baseOptions.EnableMovies && typeof(Movie).IsAssignableFrom(itemType))
         {
             return true;
         }
 
-        if (baseOptions.EnableEpisodes && itemType == typeof(Episode))
+        if (baseOptions.EnableEpisodes && typeof(Episode).IsAssignableFrom(itemType))
         {
             return true;
         }
 
-        if (baseOptions.EnableSeries && itemType == typeof(Series))
+        if (baseOptions.EnableSeries && typeof(Series).IsAssignableFrom(itemType))
         {
             return true;
         }
 
-        if (baseOptions.EnableSeasons && itemType == typeof(Season))
+        if (baseOptions.EnableSeasons && typeof(Season).IsAssignableFrom(itemType))
         {
             return true;
         }
 
-        if (baseOptions.EnableAlbums && itemType == typeof(MusicAlbum))
+        if (baseOptions.EnableAlbums && typeof(MusicAlbum).IsAssignableFrom(itemType))
         {
             return true;
         }
 
-        if (baseOptions.EnableSongs && itemType == typeof(Audio))
+        if (baseOptions.EnableSongs && typeof(Audio).IsAssignableFrom(itemType))
         {
             return true;
         }
 
-        if (baseOptions.EnableVideos && itemType == typeof(Video))
+        // Video is the base class of Movie/Episode, so it must be checked last to
+        // preserve the specific flag precedence above.
+        if (baseOptions.EnableVideos && typeof(Video).IsAssignableFrom(itemType))
         {
             return true;
         }
@@ -654,7 +668,10 @@ public class MultifySender : IWebhookSender
             }
             else if (kvp.Value is IDictionary<string, object> nestedDict)
             {
-                copy[kvp.Key] = DeepCopyDict(new Dictionary<string, object>(nestedDict));
+                var nestedComparer = nestedDict is Dictionary<string, object> concrete
+                    ? concrete.Comparer
+                    : StringComparer.Ordinal;
+                copy[kvp.Key] = DeepCopyDict(new Dictionary<string, object>(nestedDict, nestedComparer));
             }
             else if (kvp.Value is System.Collections.IList list)
             {

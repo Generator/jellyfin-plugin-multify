@@ -35,7 +35,7 @@ public class CleanupTelegramStoreTask : IScheduledTask
     public string Key => "MultifyCleanupTelegramStore";
 
     /// <inheritdoc />
-    public string Description => "Removes stale Telegram message entries older than 7 days.";
+    public string Description => "Clears all cached Telegram message IDs used for editing notifications.";
 
     /// <inheritdoc />
     public string Category => "Multify";

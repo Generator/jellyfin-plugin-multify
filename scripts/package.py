@@ -83,13 +83,36 @@ def build_jellyfin_zip(
     return zip_path
 
 
+def version_sort_key(version: str) -> tuple:
+    """Converts a version string like '1.10.0-beta' into a comparable, type-safe tuple.
+
+    Numeric components compare numerically. The prerelease marker (0, <int>, 0, <id>)
+    sorts below the stable marker (0, <int>, 1), so stable versions sort ahead of
+    prereleases with the same prefix. Every tuple element starts with an int, so a
+    manifest mixing numeric, string, stable, and prerelease parts never raises TypeError.
+    """
+    key: list[tuple] = []
+    for part in version.split("."):
+        if "-" in part:
+            base, pre_id = part.split("-", 1)
+            try:
+                key.append((0, int(base), 0, pre_id))
+            except ValueError:
+                key.append((1, base, 0, pre_id))
+        else:
+            try:
+                key.append((0, int(part), 1))
+            except ValueError:
+                key.append((1, part, 1))
+    return tuple(key)
+
+
 def update_manifest(entries: list[dict]) -> None:
     manifest_path = ROOT / "manifest.json"
     if manifest_path.exists():
-        try:
-            manifest = json.loads(manifest_path.read_text())
-        except json.JSONDecodeError:
-            manifest = []
+        # A corrupt manifest must fail the release rather than silently being
+        # converted to an empty list (which would lose plugin history).
+        manifest = json.loads(manifest_path.read_text())
     else:
         manifest = []
 
@@ -109,7 +132,7 @@ def update_manifest(entries: list[dict]) -> None:
     existing = {v.get("version"): v for v in plugin.get("versions", [])}
     for entry in entries:
         existing[entry["version"]] = entry
-    plugin["versions"] = sorted(existing.values(), key=lambda v: v.get("version", ""), reverse=True)
+    plugin["versions"] = sorted(existing.values(), key=lambda v: version_sort_key(str(v.get("version", ""))), reverse=True)
     manifest[0] = plugin
 
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
@@ -122,8 +145,8 @@ def main() -> int:
     p.add_argument("--changelog", default="", help="Release notes blurb")
     p.add_argument(
         "--jellyfin",
-        default="10.12",
-        help="Comma-separated Jellyfin targets to build (default: 10.12).",
+        default="12.0",
+        help="Comma-separated Jellyfin targets to build (default: 12.0).",
     )
     args = p.parse_args()
 

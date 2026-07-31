@@ -10,7 +10,7 @@ namespace Jellyfin.Plugin.Multify.Services;
 /// <summary>
 /// Cache for library ID to name mappings with periodic cleanup.
 /// </summary>
-public sealed class LibraryCache : IHostedService, IDisposable
+public sealed class LibraryCache : IHostedService, IDisposable, IAsyncDisposable
 {
     private readonly ILogger<LibraryCache> _logger;
     private readonly ConcurrentDictionary<Guid, CacheEntry> _cache = new();
@@ -143,7 +143,14 @@ public sealed class LibraryCache : IHostedService, IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        DisposeAsync().AsTask().Wait();
+        if (_disposed)
+        {
+            return;
+        }
+
+        _cleanupTimer?.Dispose();
+        _cleanupTimer = null;
+        _disposed = true;
         GC.SuppressFinalize(this);
     }
 
@@ -153,16 +160,19 @@ public sealed class LibraryCache : IHostedService, IDisposable
     /// <returns>A task representing the asynchronous dispose operation.</returns>
     public async ValueTask DisposeAsync()
     {
-        if (!_disposed)
+        if (_disposed)
         {
-            if (_cleanupTimer != null)
-            {
-                await _cleanupTimer.DisposeAsync().ConfigureAwait(false);
-                _cleanupTimer = null;
-            }
-
-            _disposed = true;
+            return;
         }
+
+        if (_cleanupTimer != null)
+        {
+            await _cleanupTimer.DisposeAsync().ConfigureAwait(false);
+            _cleanupTimer = null;
+        }
+
+        _disposed = true;
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>

@@ -206,20 +206,24 @@ public class MultifyTestService : IMultifyTestService
 
                 var folderIds = new List<Guid>();
                 var virtualChildren = rootFolder.VirtualChildren;
-                foreach (var filterName in option.LibraryFilter)
+                foreach (var filterValue in option.LibraryFilter)
                 {
                     if (virtualChildren is null)
                     {
                         continue;
                     }
 
-                    foreach (var child in virtualChildren)
+                    // The config UI stores library IDs in LibraryFilter. Match by ID
+                    // first, then fall back to name matching for older saved configs.
+                    var matchedFolder = virtualChildren
+                        .OfType<Folder>()
+                        .FirstOrDefault(child => string.Equals(child.Id.ToString("N", CultureInfo.InvariantCulture), filterValue, StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(child.Id.ToString(), filterValue, StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(child.Name, filterValue, StringComparison.OrdinalIgnoreCase));
+
+                    if (matchedFolder is not null)
                     {
-                        if (child is Folder folder && string.Equals(folder.Name, filterName, StringComparison.OrdinalIgnoreCase))
-                        {
-                            folderIds.Add(folder.Id);
-                            break;
-                        }
+                        folderIds.Add(matchedFolder.Id);
                     }
                 }
 

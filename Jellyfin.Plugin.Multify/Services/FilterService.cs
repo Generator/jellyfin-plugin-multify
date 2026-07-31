@@ -59,13 +59,13 @@ public class FilterService
     public FilterResult CheckUserFilter(BaseOption option, Dictionary<string, object> data)
     {
         // If no user filter is defined, allow all users regardless of filter mode
-        if (option.UserFilter.Length == 0)
+        if (option.UserFilter is null || option.UserFilter.Length == 0)
         {
             return FilterResult.Allow;
         }
 
         var userId = data.TryGetValue("UserId", out var userIdObj)
-            ? userIdObj.ToString() ?? string.Empty
+            ? userIdObj?.ToString() ?? string.Empty
             : string.Empty;
 
         bool isInFilter = Array.IndexOf(option.UserFilter, userId) != -1;
@@ -93,13 +93,13 @@ public class FilterService
     /// <returns>The filter result.</returns>
     public FilterResult CheckLibraryFilter(BaseOption option, Dictionary<string, object> data)
     {
-        if (option.LibraryFilter.Length == 0)
+        if (option.LibraryFilter is null || option.LibraryFilter.Length == 0)
         {
             return FilterResult.Allow;
         }
 
         var libraryId = data.TryGetValue("LibraryId", out var libraryIdObj)
-            ? libraryIdObj.ToString() ?? string.Empty
+            ? libraryIdObj?.ToString() ?? string.Empty
             : string.Empty;
 
         bool isInFilter = Array.IndexOf(option.LibraryFilter, libraryId) != -1;

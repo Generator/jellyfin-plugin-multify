@@ -20,7 +20,7 @@ Always present in every notification.
 
 ## Item Variables
 
-Available in **library events** (`ItemAdded`, `ItemDeleted`) and **playback events** (`PlaybackStart`, `PlaybackStop`, `PlaybackProgress`).
+Available in **library events** (`ItemAdded`, `ItemUpdated`, `ItemDeleted`) and **playback events** (`PlaybackStart`, `PlaybackStop`, `PlaybackProgress`).
 
 | Variable | Description | Example |
 |----------|-------------|---------|
@@ -219,7 +219,7 @@ URLs to item images served by the Jellyfin server.
 
 ### Per-destination behaviour
 
-- **Telegram**: With `MessageType = Photo`, the photo URL is taken from the data dictionary (`PhotoUrlTemplate` → `PrimaryImage` → `TmdbPosterUrl`), **not** from the template body. The template body becomes the caption only — do not include image URLs in the caption.
+- **Telegram**: With `MessageType = Photo`, the photo URL is resolved in this order: `PhotoUrlTemplate` → `PrimaryImage` → `TmdbPosterUrl` → `PhotoUrl`. It is **not** taken from the template body. The template body becomes the caption only — do not include image URLs in the caption.
 - **Gotify**: Image URL is prepended as an inline markdown image `![](url)` in the message body.
 - **ntfy**: Image URL is automatically attached via the `Attach` header.
 - **Generic Webhook**: Include image URLs in the JSON payload for custom processing.
@@ -369,7 +369,7 @@ Available for **plugin events** (`PluginInstalled`, `PluginUpdated`, `PluginUnin
 
 ## Quick Reference: What's Available in Each Event Type
 
-| Variables | ItemAdded / ItemDeleted | PlaybackStart / Stop / Progress | User events | TaskCompleted | Plugin events |
+| Variables | ItemAdded / ItemUpdated / ItemDeleted | PlaybackStart / Stop / Progress | User events | TaskCompleted | Plugin events |
 |-----------|------------------------|--------------------------------|-------------|---------------|---------------|
 | Base | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Item | ✓ | ✓ | — | — | — |
@@ -396,29 +396,31 @@ Templates differ depending on the destination's message type. Below are examples
 
 ### Telegram — SendText (MarkdownV2)
 
-Uses Telegram's MarkdownV2 parse mode. Characters `_ * [ ] ( ) ~ ` > # + - = | { } . !` must be escaped with `\` in the template body. Variable values are auto-escaped.
+Uses Telegram's MarkdownV2 parse mode. The following characters must be escaped with `\` when they appear as **literal text** in the template body: `_`, `*`, `[`, `]`, `(`, `)`, `~`, `` ` ``, `>`, `#`, `+`, `-`, `=`, `|`, `{`, `}`, `.`, `!`. When the same characters are used as formatting syntax (e.g. `*bold*`, `[link](url)`), they must **not** be escaped. Variable values are auto-escaped.
 
 ```
-**New Season Added**
+*New Season Added*
 
-**TV Series:** {{SeriesName}}
-**Season:** {{SeasonNumber00}}
-**Jellyfin:** [{{ItemShortId}}]({{ItemUrl}})
+*TV Series:* {{SeriesName}}
+*Season:* {{SeasonNumber00}}
+*Jellyfin:* [{{ItemShortId}}]({{ItemUrl}})
 ```
 
 ### Telegram — SendPhoto (MarkdownV2 caption)
 
-Sends a photo with a caption. The photo URL is taken from the data dictionary (`PrimaryImage` → `TmdbPosterUrl`), **not** from the template body. The template body becomes the caption text only — do not include image URLs in the caption.
+Sends a photo with a caption. The photo URL is resolved in this order (`PhotoUrlTemplate` → `PrimaryImage` → `TmdbPosterUrl` → `PhotoUrl`), **not** from the template body. The template body becomes the caption text only — do not include image URLs in the caption.
 
 ```
-**Movie:** {{ItemName}} \({{Year}}\)
+*Movie:* {{ItemName}} \({{Year}}\)
 {{Overview}}
 
-**Genres:** {{Genres}}
-**Library:** {{LibraryName}}
-**IMDb:** [{{ImdbId}}](https://www.imdb.com/title/{{ImdbId}}) {{ImdbRating}} ⭐
-**TMDB:** {{TmdbRating}} ⭐
+*Genres:* {{Genres}}
+*Library:* {{LibraryName}}
+*IMDb:* [{{ImdbId}}](https://www.imdb.com/title/{{ImdbId}}) {{ImdbRating}} ⭐
+*TMDB:* {{TmdbRating}} ⭐
 ```
+
+**Exception — link destinations:** Inside the `(...)` part of an inline link (e.g. `[text](https://…/a_b)`) only `)` and `\` must be escaped, with `\` — all other MarkdownV2 special characters must **not** be escaped there. This differs from the plain-text escaping rules above. For example, a URL containing an underscore should be written as `[X](https://example.com/a_b)` (no backslash before `_`), while a URL containing a closing parenthesis or backslash must escape those characters (e.g. `[X](https://example.com/path\)paren)`, `[X](https://example.com/a\\b)`).
 
 ### Telegram — SendRichMessage (Rich Markdown)
 

@@ -96,7 +96,12 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
 
             _logger.LogDebug("Ntfy sending {BodyLength} bytes to {WebhookName}: {Body}", body.Length, option.WebhookName, body);
 
-            var uri = new Uri(option.WebhookUri.TrimEnd() + $"/{option.Topic}");
+            // Join the base webhook URI and topic, tolerating trailing/leading slashes.
+            var uriString = $"{option.WebhookUri.Trim().TrimEnd('/')}/{option.Topic.TrimStart('/')}";
+            if (!Uri.TryCreate(uriString, UriKind.Absolute, out var uri))
+            {
+                throw new ArgumentException($"Invalid ntfy webhook URI: {option.WebhookUri}");
+            }
 
             using var request = new HttpRequestMessage(HttpMethod.Post, uri)
             {
@@ -107,24 +112,30 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
             var title = !string.IsNullOrEmpty(option.Title)
                 ? BaseOption.ReplacePlaceholders(option.Title, data)
                 : "Jellyfin Notification";
-            request.Headers.Add("Title", title);
-            request.Headers.Add("Priority", option.Priority.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+            // ntfy only accepts priorities 1-5; clamp out-of-range values.
+            var priority = Math.Clamp(option.Priority, 1, 5);
+
+            // Header values must be ISO-8859-1 and free of CR/LF — sanitize template
+            // output and use TryAddWithoutValidation so one bad value can't kill the request.
+            request.Headers.TryAddWithoutValidation("Title", EncodeHeaderValue(title));
+            request.Headers.TryAddWithoutValidation("Priority", priority.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
             // Add tags if provided (comma-separated, first tag used as emoji icon) - with placeholder replacement
             if (!string.IsNullOrEmpty(option.Tags))
             {
                 var tags = BaseOption.ReplacePlaceholders(option.Tags, data);
-                request.Headers.Add("Tags", tags);
+                request.Headers.TryAddWithoutValidation("Tags", EncodeHeaderValue(tags));
             }
 
             if (option.EnableMarkdown)
             {
-                request.Headers.Add("Markdown", "yes");
+                request.Headers.TryAddWithoutValidation("Markdown", "yes");
             }
 
             if (!string.IsNullOrEmpty(option.AccessToken))
             {
-                request.Headers.Add("Authorization", $"Bearer {option.AccessToken}");
+                request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {EncodeHeaderValue(option.AccessToken)}");
             }
 
             // Attach image if PhotoUrlTemplate is configured (resolved with template variables).
@@ -151,8 +162,21 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
                         attachUrl = attachUrl.Replace("/original/", "/w500/", StringComparison.OrdinalIgnoreCase);
                     }
 
-                    request.Headers.Add("Attach", attachUrl);
-                    request.Headers.Add("Filename", "poster.jpg");
+                    // The Attach header carries the raw URL and is not run through
+                    // EncodeHeaderValue, so only accept absolute HTTP(S) URIs here;
+                    // otherwise ntfy would reject the header (or misinterpret it).
+                    if (Uri.TryCreate(attachUrl, UriKind.Absolute, out var attachUri)
+                        && (attachUri.Scheme == Uri.UriSchemeHttp || attachUri.Scheme == Uri.UriSchemeHttps))
+                    {
+                        request.Headers.TryAddWithoutValidation("Attach", attachUri.AbsoluteUri);
+                        request.Headers.TryAddWithoutValidation("Filename", "poster.jpg");
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "ntfy: PhotoUrlTemplate resolved to a non-HTTP(S) value '{Url}', skipping attachment",
+                            attachUrl);
+                    }
                 }
             }
 
@@ -172,5 +196,42 @@ public class NtfyClient : BaseClient, IWebhookClient<NtfyOption>
             _logger.LogError(e, "Error sending ntfy notification");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Sanitizes a string for use as an HTTP header value: collapses CR/LF into a space,
+    /// strips remaining control characters, and RFC 2047-encodes non-ASCII text
+    /// (header values must be ISO-8859-1; ntfy expects encoded words for other encodings).
+    /// </summary>
+    private static string EncodeHeaderValue(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder(value.Length);
+        foreach (var c in value)
+        {
+            if (c is '\r' or '\n')
+            {
+                sb.Append(' ');
+            }
+            else if (!char.IsControl(c))
+            {
+                sb.Append(c);
+            }
+        }
+
+        var single = sb.ToString();
+        foreach (var c in single)
+        {
+            if (c > 127)
+            {
+                return "=?UTF-8?B?" + Convert.ToBase64String(Encoding.UTF8.GetBytes(single)) + "?=";
+            }
+        }
+
+        return single;
     }
 }

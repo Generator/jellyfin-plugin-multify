@@ -22,6 +22,7 @@ public class PlaybackStopNotifier : IEventConsumer<PlaybackStopEventArgs>
     private readonly IWebhookSender _webhookSender;
     private readonly DashboardAlertService _dashboardAlert;
     private readonly PlaybackBitrateService _playbackBitrateService;
+    private readonly UserDataService _userDataService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlaybackStopNotifier"/> class.
@@ -30,16 +31,19 @@ public class PlaybackStopNotifier : IEventConsumer<PlaybackStopEventArgs>
     /// <param name="webhookSender">Instance of the <see cref="IWebhookSender"/> interface.</param>
     /// <param name="dashboardAlert">Instance of the <see cref="DashboardAlertService"/>.</param>
     /// <param name="playbackBitrateService">Instance of the <see cref="PlaybackBitrateService"/> for querying source bitrate.</param>
+    /// <param name="userDataService">Instance of the <see cref="UserDataService"/> for per-user data.</param>
     public PlaybackStopNotifier(
         ILogger<PlaybackStopNotifier> logger,
         IWebhookSender webhookSender,
         DashboardAlertService dashboardAlert,
-        PlaybackBitrateService playbackBitrateService)
+        PlaybackBitrateService playbackBitrateService,
+        UserDataService userDataService)
     {
         _logger = logger;
         _webhookSender = webhookSender;
         _dashboardAlert = dashboardAlert;
         _playbackBitrateService = playbackBitrateService;
+        _userDataService = userDataService;
     }
 
     /// <inheritdoc />
@@ -84,6 +88,9 @@ public class PlaybackStopNotifier : IEventConsumer<PlaybackStopEventArgs>
                 ["NotificationUsername"] = user.Username ?? "Unknown",
                 ["UserId"] = user.Id.ToString()
             };
+
+            // Populate per-user data (PlayCount, IsFavorite, Played, UserRating)
+            _userDataService.AddUserData(userData, user, eventArgs.Item);
 
             await _webhookSender.SendNotification(
                 NotificationType.PlaybackStop,

@@ -38,8 +38,8 @@ _ * [ ] ( ) ~ ` > # + - = | { } . !
 |-------------------|-------|
 | `{{ItemName}} ({{Year}})` | `{{ItemName}} \({{Year}}\)` |
 | `{{Client}} ({{DeviceName}})` | `{{Client}} \({{DeviceName}}\)` |
-| `8.8/10 (Community)` | `8.8/10 \(Community\)` |
-| `Rating: 8.8/10 \| 74/100` | `Rating: 8.8/10 \| 74/100` |
+| `8.8/10 (Community)` | `8\.8/10 \(Community\)` |
+| `Rating: 8.8/10 \| 74/100` | `Rating: 8\.8/10 \| 74/100` |
 | `A > B > C` | `A \> B \> C` |
 | `Don't forget!` | `Don't forget\!` |
 | `42% complete (almost done)` | `42\% complete \(almost done\)` |

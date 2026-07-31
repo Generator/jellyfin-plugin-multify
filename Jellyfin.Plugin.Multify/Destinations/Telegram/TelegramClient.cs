@@ -73,14 +73,21 @@ public class TelegramOption : BaseOption
     public bool DisableNotification { get; set; }
 }
 
-/// <summary>
+    /// <summary>
     /// Client for the Telegram destination.
     /// </summary>
-    public class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
+    public partial class TelegramClient : BaseClient, IWebhookClient<TelegramOption>
     {
         // Telegram API uses Bot Token in the URL path (https://api.telegram.org/bot{token}/METHOD),
         // NOT the WebhookUri from BaseOption. The WebhookUri field is ignored for Telegram destinations.
         private const string ApiBaseUrl = "https://api.telegram.org/bot";
+
+        /// <summary>
+        /// Matches Markdown link/image syntax <c>[label](url)</c> and <c>![alt](url)</c>,
+        /// capturing the optional "!" prefix, the label, and the URL portion.
+        /// </summary>
+        [GeneratedRegex(@"(?<prefix>!?)\[(?<label>.*?)\]\((?<url>[^)]*)\)", RegexOptions.CultureInvariant)]
+        private static partial Regex MarkdownLinkPattern();
 
         private readonly ILogger<TelegramClient> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
@@ -240,17 +247,22 @@ public class TelegramOption : BaseOption
     /// <returns>The body with URL portions un-escaped.</returns>
     internal static string UnescapeMarkdownV2Urls(string body)
     {
-        // Match [text](url) and ![alt](url) patterns and un-escape the URL portion
-        var charsToUnescape = new[] { '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!' };
-        return Regex.Replace(body, @"!?\[.*?\]\(([^)]*)\)", match =>
+        // Match [text](url) and ![alt](url) patterns and un-escape the URL portion.
+        // Per the MarkdownV2 spec, inside the (...) part of inline links only ')' and
+        // '\' are escaped and MUST remain escaped — so they are excluded here while
+        // all other MarkdownV2 special characters are un-escaped back to plain text.
+        // The match is rebuilt from its captured groups so a URL substring that also
+        // appears in the label text is never replaced twice.
+        var charsToUnescape = new[] { '_', '*', '[', ']', '(', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!' };
+        return MarkdownLinkPattern().Replace(body, match =>
         {
-            var url = match.Groups[1].Value;
+            var url = match.Groups["url"].Value;
             foreach (var c in charsToUnescape)
             {
                 url = url.Replace($"\\{c}", c.ToString(), StringComparison.Ordinal);
             }
 
-            return match.Value.Replace(match.Groups[1].Value, url, StringComparison.Ordinal);
+            return $"{match.Groups["prefix"].Value}[{match.Groups["label"].Value}]({url})";
         });
     }
 
@@ -435,9 +447,12 @@ public class TelegramOption : BaseOption
 
     private async Task EditPhotoMessageAsync(TelegramOption option, Dictionary<string, object> data, string body, long messageId)
     {
-        if (!data.TryGetValue("PhotoUrl", out var photoUrlObj) || string.IsNullOrEmpty(photoUrlObj?.ToString()))
+        // Resolve via the same chain as SendPhotoAsync so an edited photo message uses
+        // the same image (e.g. PhotoUrlTemplate) as the original.
+        var photoUrl = ResolvePhotoUrl(option, data);
+        if (string.IsNullOrEmpty(photoUrl))
         {
-            _logger.LogWarning("Photo message type selected but no PhotoUrl in data, falling back to text");
+            _logger.LogWarning("Photo message type selected but no photo URL in data, falling back to text");
             await EditTextMessageAsync(option, body, messageId).ConfigureAwait(false);
             return;
         }
@@ -532,14 +547,18 @@ public class TelegramOption : BaseOption
         return null;
     }
 
-    private async Task<long?> SendPhotoAsync(TelegramOption option, Dictionary<string, object> data, string body)
+    /// <summary>
+    /// Resolves the photo URL to use for a photo message using the lookup chain:
+    /// <list type="number">
+    /// <item><description>PhotoUrlTemplate (resolved with template variables).</description></item>
+    /// <item><description>PrimaryImage (Jellyfin primary image).</description></item>
+    /// <item><description>TmdbPosterUrl (TMDB CDN poster).</description></item>
+    /// <item><description>PhotoUrl (legacy fallback).</description></item>
+    /// </list>
+    /// Shared by both send and edit paths so edited messages resolve the same image.
+    /// </summary>
+    private string? ResolvePhotoUrl(TelegramOption option, Dictionary<string, object> data)
     {
-        // Photo URL lookup chain:
-        //   1. PhotoUrlTemplate (resolved with template variables)
-        //   2. PrimaryImage (Jellyfin primary image)
-        //   3. TmdbPosterUrl (TMDB CDN poster)
-        //   4. PhotoUrl (legacy fallback)
-        //   5. Fallback to text
         string? photoUrl = null;
 
         if (!string.IsNullOrEmpty(option.PhotoUrlTemplate))
@@ -565,6 +584,13 @@ public class TelegramOption : BaseOption
         {
             photoUrl = photoUrlStr;
         }
+
+        return photoUrl;
+    }
+
+    private async Task<long?> SendPhotoAsync(TelegramOption option, Dictionary<string, object> data, string body)
+    {
+        var photoUrl = ResolvePhotoUrl(option, data);
 
         if (string.IsNullOrEmpty(photoUrl))
         {

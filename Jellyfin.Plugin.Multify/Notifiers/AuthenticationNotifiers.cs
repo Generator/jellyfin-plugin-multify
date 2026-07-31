@@ -48,7 +48,8 @@ public class AuthenticationSuccessNotifier : IEventConsumer<AuthenticationResult
 
         await _webhookSender.SendNotification(NotificationType.AuthenticationSuccess, data).ConfigureAwait(false);
 
-        _logger.LogInformation("Authentication success notification sent for {Username}", eventArgs.User.Name);
+        // No Info-level log here — the username is PII and the Debug log above already
+        // records the event. Keep server logs clean at default verbosity.
         await _dashboardAlert.LogAsync(
             $"Authentication success: {eventArgs.User.Name}",
             "MultifyAuthenticationSuccess").ConfigureAwait(false);
@@ -96,7 +97,8 @@ public class AuthenticationFailureNotifier : IEventConsumer<AuthenticationReques
 
         await _webhookSender.SendNotification(NotificationType.AuthenticationFailure, data).ConfigureAwait(false);
 
-        _logger.LogInformation("Authentication failure notification sent for {Username}", eventArgs.Username);
+        // No Info-level log here — username/IP are PII and the Debug log above already
+        // records the event. Keep server logs clean at default verbosity.
         await _dashboardAlert.LogAsync(
             $"Authentication failure: {eventArgs.Username} from {eventArgs.RemoteEndPoint}",
             "MultifyAuthenticationFailure").ConfigureAwait(false);

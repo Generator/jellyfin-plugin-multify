@@ -133,8 +133,8 @@ See [Template Variables](docs/template-variables.md) for the complete reference 
 
 ### Manual Install
 
-1. Download the latest `.dll` from [GitHub Releases](../../releases)
-2. Place it in your Jellyfin `plugins/Multify` directory
+1. Download the latest release **zip** (e.g. `Jellyfin.Plugin.Multify.zip`) from [GitHub Releases](../../releases)
+2. Extract the `Jellyfin.Plugin.Multify.dll` and place it in your Jellyfin `plugins/Multify` directory
 3. Restart Jellyfin
 4. Navigate to **Dashboard > Plugins > Multify** and configure
 
@@ -144,7 +144,7 @@ See [Template Variables](docs/template-variables.md) for the complete reference 
 dotnet build Jellyfin.Plugin.Multify.csproj -c Release
 ```
 
-The compiled DLL will be in `bin/Release/net9.0/`.
+The compiled DLL will be in `bin/Release/net10.0/`.
 
 > **Note:** This project uses GitHub Actions for CI/CD. Pushes to `master` trigger build and test workflows. See `.github/workflows/` for details.
 
