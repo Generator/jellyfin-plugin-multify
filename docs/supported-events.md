@@ -104,6 +104,13 @@ Multify supports the following notification events from Jellyfin. Each event can
 - **Event Type**: `TaskCompleted`
 - **Available Data**: Task name, status, start/end time, duration
 
+## Subtitle Events
+
+### Subtitle Download Failure
+- **Trigger**: When Jellyfin fails to download a remote subtitle. Raised by `SubtitleManager.DownloadSubtitles` for any download exception except rate limiting (e.g. OpenSubtitles throttling). Triggered by the Web UI subtitle download, or the "Download missing subtitles" scheduled task
+- **Event Type**: `SubtitleDownloadFailure`
+- **Available Data**: Item details, subtitle provider name (`SubtitleProvider`), error message (`SubtitleDownloadError`)
+
 ## Item Type Filters
 
 Each destination can be configured to notify only for specific item types:

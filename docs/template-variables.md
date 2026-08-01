@@ -319,6 +319,17 @@ Available for **plugin events** (`PluginInstalled`, `PluginUpdated`, `PluginUnin
 
 ---
 
+## Subtitle Download Failure
+
+Available for **subtitle download failure events** (`SubtitleDownloadFailure`). All item variables (name, type, series/episode details, provider IDs, images, ratings) are also available, describing the video whose subtitle download failed.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{SubtitleProvider}}` | Subtitle provider that failed | `OpenSubtitles` |
+| `{{SubtitleDownloadError}}` | Download error message | `No subtitles found for the selected language` |
+
+---
+
 ## Template Examples
 
 ### Movie Added
@@ -365,28 +376,39 @@ Available for **plugin events** (`PluginInstalled`, `PluginUpdated`, `PluginUnin
 📂 {{LibraryName}}
 ```
 
+### Subtitle Download Failed
+
+```
+⚠️ Subtitle download failed: {{ItemName}} ({{ItemType}})
+📂 {{LibraryName}}
+🔍 Provider: {{SubtitleProvider}}
+❌ Error: {{SubtitleDownloadError}}
+{{ItemUrl}}
+```
+
 ---
 
 ## Quick Reference: What's Available in Each Event Type
 
-| Variables | ItemAdded / ItemUpdated / ItemDeleted | PlaybackStart / Stop / Progress | User events | TaskCompleted | Plugin events |
-|-----------|------------------------|--------------------------------|-------------|---------------|---------------|
-| Base | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Item | ✓ | ✓ | — | — | — |
-| Episode vars | ✓ | ✓ | — | — | — |
-| Series vars | ✓ | ✓ | — | — | — |
-| Movie vars | ✓ | ✓ | — | — | — |
-| Provider IDs | ✓ | ✓ | — | — | — |
-| User | — | ✓ | ✓ | — | — |
-| Client | — | ✓ | — | — | — |
-| Playback State | — | ✓ | — | — | — |
-| Playback Position | — | ✓ | — | — | — |
-| Jellyfin Images | ✓ | ✓ | — | — | — |
-| TMDb Images | ✓ | ✓ | — | — | — |
-| Trailers | ✓ | ✓ | — | — | — |
-| Ratings | ✓ | ✓ | — | — | — |
-| Task | — | — | — | ✓ | — |
-| Plugin | — | — | — | — | ✓ |
+| Variables | ItemAdded / ItemUpdated / ItemDeleted | PlaybackStart / Stop / Progress | User events | TaskCompleted | Plugin events | SubtitleDownloadFailure |
+|-----------|------------------------|--------------------------------|-------------|---------------|---------------|--------------------------|
+| Base | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Item | ✓ | ✓ | — | — | — | ✓ |
+| Episode vars | ✓ | ✓ | — | — | — | ✓ |
+| Series vars | ✓ | ✓ | — | — | — | ✓ |
+| Movie vars | ✓ | ✓ | — | — | — | ✓ |
+| Provider IDs | ✓ | ✓ | — | — | — | ✓ |
+| User | — | ✓ | ✓ | — | — | — |
+| Client | — | ✓ | — | — | — | — |
+| Playback State | — | ✓ | — | — | — | — |
+| Playback Position | — | ✓ | — | — | — | — |
+| Jellyfin Images | ✓ | ✓ | — | — | — | ✓ |
+| TMDb Images | ✓ | ✓ | — | — | — | ✓ |
+| Trailers | ✓ | ✓ | — | — | — | ✓ |
+| Ratings | ✓ | ✓ | — | — | — | ✓ |
+| Task | — | — | — | ✓ | — | — |
+| Plugin | — | — | — | — | ✓ | — |
+| Subtitle Download | — | — | — | — | — | ✓ |
 
 ---
 
