@@ -1,0 +1,21 @@
+[
+  {
+    "guid": "8e7a42b2-6a49-40e5-a05d-780ba1942cd1",
+    "name": "Multify",
+    "overview": "Sends notifications to Telegram, Gotify, ntfy, and generic webhooks with configurable event filtering, user filtering, library filtering, and customizable templates.",
+    "description": "A unified notification plugin for Jellyfin that sends notifications to multiple systems.",
+    "owner": "Generator",
+    "category": "Notifications",
+    "imageUrl": "https://raw.githubusercontent.com/Generator/jellyfin-plugin-multify/main/assets/logo.png",
+    "versions": [
+      {
+        "version": "0.0.5",
+        "changelog": "Release 0.0.5",
+        "targetAbi": "10.12.0.0",
+        "sourceUrl": "https://github.com/Generator/jellyfin-plugin-multify/releases/download/v0.0.5/Jellyfin.Plugin.Multify.zip",
+        "checksum": "09479a6124390d5374d8d980cdb8f1f0",
+        "timestamp": "2026-07-24T17:03:16Z"
+      }
+    ]
+  }
+]
