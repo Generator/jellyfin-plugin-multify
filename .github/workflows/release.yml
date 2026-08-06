@@ -88,9 +88,28 @@ jobs:
           # Save manifest from build step
           cp manifest.json /tmp/manifest.json
 
-          # Switch to manifest branch
+          # Switch to manifest branch. The build step leaves an untracked
+          # manifest.json in the working tree, which would block `git checkout
+          # manifest` ("untracked working tree files would be overwritten").
+          # Remove it first, and only fall back to an orphan branch when the
+          # remote manifest branch genuinely does not exist. Never mask the
+          # checkout error with 2>/dev/null, or a failed switch silently
+          # produces a root commit that cannot be pushed (non-fast-forward).
+          #
+          # Use `git checkout -B manifest FETCH_HEAD` (not `git checkout
+          # manifest`) because `git fetch origin manifest` only updates
+          # FETCH_HEAD and does not create refs/remotes/origin/manifest, so
+          # the DWIM branch lookup would fail. The `|| true` on fetch is
+          # required for the first release, when the manifest branch does not
+          # exist yet and the fetch legitimately fails; the ls-remote guard
+          # below still prevents silent history loss.
           git fetch origin manifest || true
-          git checkout manifest 2>/dev/null || git checkout --orphan manifest
+          rm -f manifest.json
+          if git ls-remote --heads origin manifest | grep -q "refs/heads/manifest"; then
+            git checkout -B manifest FETCH_HEAD
+          else
+            git checkout --orphan manifest
+          fi
 
           # Clean working tree and place manifest
           git rm -rf . 2>/dev/null || true
