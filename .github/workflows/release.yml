@@ -16,6 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so the tag commit's parentage is available for the
+          # fast-forward push of manifest.json to main (git push HEAD:main).
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -53,16 +57,9 @@ jobs:
         env:
           RELEASE_CHANGELOG: ${{ steps.changelog.outputs.body }}
         run: |
-          # Merge with any existing manifest from the manifest branch so version
-          # history is preserved across releases (package.py appends to manifest.json).
-          # Only treat the branch as absent when ls-remote confirms it does not exist;
-          # transport/permission failures abort the step so history can never be
-          # silently overwritten.
-          if git ls-remote --heads origin manifest | grep -q "refs/heads/manifest"; then
-            git fetch origin manifest
-            git show origin/manifest:manifest.json > /tmp/existing-manifest.json
-            cp /tmp/existing-manifest.json manifest.json
-          fi
+          # manifest.json is tracked on main and the tag points at a main
+          # commit, so the previous manifest is already in the working tree;
+          # package.py merges into it (appends the new version).
           python3 scripts/package.py \
             --version "${{ steps.tag.outputs.version }}" \
             --repo "${{ env.REPO }}" \
@@ -80,42 +77,18 @@ jobs:
           files: artifacts/*.zip
           body: ${{ steps.changelog.outputs.body }}
 
-      - name: Push manifest to manifest branch
+      - name: Commit manifest.json
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Save manifest from build step
-          cp manifest.json /tmp/manifest.json
-
-          # Switch to manifest branch. The build step leaves an untracked
-          # manifest.json in the working tree, which would block `git checkout
-          # manifest` ("untracked working tree files would be overwritten").
-          # Remove it first, and only fall back to an orphan branch when the
-          # remote manifest branch genuinely does not exist. Never mask the
-          # checkout error with 2>/dev/null, or a failed switch silently
-          # produces a root commit that cannot be pushed (non-fast-forward).
-          #
-          # Use `git checkout -B manifest FETCH_HEAD` (not `git checkout
-          # manifest`) because `git fetch origin manifest` only updates
-          # FETCH_HEAD and does not create refs/remotes/origin/manifest, so
-          # the DWIM branch lookup would fail. The `|| true` on fetch is
-          # required for the first release, when the manifest branch does not
-          # exist yet and the fetch legitimately fails; the ls-remote guard
-          # below still prevents silent history loss.
-          git fetch origin manifest || true
-          rm -f manifest.json
-          if git ls-remote --heads origin manifest | grep -q "refs/heads/manifest"; then
-            git checkout -B manifest FETCH_HEAD
-          else
-            git checkout --orphan manifest
-          fi
-
-          # Clean working tree and place manifest
-          git rm -rf . 2>/dev/null || true
-          cp /tmp/manifest.json .
+          # Commit on the detached tag HEAD, then push HEAD:main. Because the
+          # tag sits on main (and checkout fetched full history), this is a
+          # fast-forward that keeps manifest.json version history on main.
           git add manifest.json
-
-          # Commit only if there are changes
-          git diff --cached --quiet || git commit -m "Update manifest for v${{ steps.tag.outputs.version }}"
-          git push origin manifest
+          if git diff --cached --quiet; then
+            echo "No manifest changes"
+          else
+            git commit -m "Update manifest for v${{ steps.tag.outputs.version }}"
+            git push origin HEAD:main
+          fi

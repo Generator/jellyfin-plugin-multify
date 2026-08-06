@@ -6,11 +6,15 @@ on:
       - main
       - master
       - dev
+    paths-ignore:
+      - 'manifest.json'
   pull_request:
     branches:
       - main
       - master
       - dev
+    paths-ignore:
+      - 'manifest.json'
   workflow_dispatch:
 
 jobs:
