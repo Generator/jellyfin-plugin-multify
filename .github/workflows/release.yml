@@ -33,7 +33,25 @@ jobs:
           echo "version=$TAG" >> "$GITHUB_OUTPUT"
           echo "Releasing version: $TAG"
 
+      - name: Extract changelog from tag
+        id: changelog
+        run: |
+          # The annotated tag message (see AGENTS.md "Git tags with changelog")
+          # is the canonical changelog for this release.
+          git fetch --tags --force origin
+          BODY="$(git tag -l --format='%(contents)' "v${{ steps.tag.outputs.version }}")"
+          if [ -z "$BODY" ]; then
+            BODY="Release ${{ steps.tag.outputs.version }}"
+          fi
+          {
+            echo "body<<_MULTIFY_CHANGELOG_EOF_"
+            printf '%s\n' "$BODY"
+            echo "_MULTIFY_CHANGELOG_EOF_"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build & Package
+        env:
+          RELEASE_CHANGELOG: ${{ steps.changelog.outputs.body }}
         run: |
           # Merge with any existing manifest from the manifest branch so version
           # history is preserved across releases (package.py appends to manifest.json).
@@ -48,7 +66,7 @@ jobs:
           python3 scripts/package.py \
             --version "${{ steps.tag.outputs.version }}" \
             --repo "${{ env.REPO }}" \
-            --changelog "Release ${{ steps.tag.outputs.version }}"
+            --changelog "$RELEASE_CHANGELOG"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -60,7 +78,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*.zip
-          generate_release_notes: true
+          body: ${{ steps.changelog.outputs.body }}
 
       - name: Push manifest to manifest branch
         run: |
