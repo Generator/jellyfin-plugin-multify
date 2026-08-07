@@ -1,0 +1,13 @@
+---
+name: "Multify"
+guid: "8e7a42b2-6a49-40e5-a05d-780ba1942cd1"
+version: "0.0.6.0"
+targetAbi: "12.0.0.0"
+framework: "net10.0"
+overview: "Sends notifications to Telegram, Gotify, ntfy, and generic webhooks with configurable event filtering, user filtering, library filtering, and customizable templates."
+description: "A unified notification plugin for Jellyfin that sends notifications to multiple systems."
+category: "Notifications"
+owner: "Generator"
+imageUrl: "https://raw.githubusercontent.com/Generator/jellyfin-plugin-multify/main/assets/logo.png"
+artifacts:
+  - "Jellyfin.Plugin.Multify.dll"

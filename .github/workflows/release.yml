@@ -16,10 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          # Full history so the tag commit's parentage is available for the
-          # fast-forward push of manifest.json to main (git push HEAD:main).
-          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -57,13 +53,16 @@ jobs:
         env:
           RELEASE_CHANGELOG: ${{ steps.changelog.outputs.body }}
         run: |
-          # manifest.json is tracked on main and the tag points at a main
-          # commit, so the previous manifest is already in the working tree;
-          # package.py merges into it (appends the new version).
+          # Build the plugin zip. The manifest.json written by package.py is
+          # not used here — the jellyfin-plugin-repo-action step regenerates
+          # manifest.json from the GitHub releases and build.yaml.
           python3 scripts/package.py \
             --version "${{ steps.tag.outputs.version }}" \
             --repo "${{ env.REPO }}" \
             --changelog "$RELEASE_CHANGELOG"
+
+      - name: Generate md5 checksum
+        run: md5sum artifacts/Jellyfin.Plugin.Multify.zip > artifacts/Jellyfin.Plugin.Multify.zip.md5
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -74,21 +73,13 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*.zip
+          files: artifacts/*
           body: ${{ steps.changelog.outputs.body }}
 
-      - name: Commit manifest.json
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Commit on the detached tag HEAD, then push HEAD:main. Because the
-          # tag sits on main (and checkout fetched full history), this is a
-          # fast-forward that keeps manifest.json version history on main.
-          git add manifest.json
-          if git diff --cached --quiet; then
-            echo "No manifest changes"
-          else
-            git commit -m "Update manifest for v${{ steps.tag.outputs.version }}"
-            git push origin HEAD:main
-          fi
+      - name: Jellyfin plugin repo
+        uses: Kevinjil/jellyfin-plugin-repo-action@v0.4.3
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          pagesBranch: main
+          pagesFile: manifest.json
