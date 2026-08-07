@@ -81,5 +81,5 @@ jobs:
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
-          pagesBranch: main
+          pagesBranch: gh-pages
           pagesFile: manifest.json
