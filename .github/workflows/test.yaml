@@ -3,15 +3,11 @@ name: '🧪 Test Plugin'
 on:
   push:
     branches:
-      - main
-      - master
       - dev
     paths-ignore:
       - 'manifest.json'
   pull_request:
     branches:
-      - main
-      - master
       - dev
     paths-ignore:
       - 'manifest.json'
