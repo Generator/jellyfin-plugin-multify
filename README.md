@@ -16,13 +16,32 @@ A unified notification plugin for [Jellyfin](https://jellyfin.org/) that sends n
 - **Event Filtering** — Choose which event types trigger notifications per destination
 - **Media Type Filtering** — Enable or disable notifications for Movies, Episodes, Series, Seasons, Albums, Songs, and Videos
 - **User Filtering** — Restrict notifications to specific Jellyfin users
-- **Customizable Messages** — Use base64-encoded templates with placeholder variables
+- **Customizable Messages** — Use templates with placeholder variables
 - **Markdown Support** — Render rich messages on Telegram (HTML), Gotify (Markdown), and ntfy (Markdown)
 - **Generic Webhook** — Send to any HTTP endpoint with custom headers and fields
 
-## Supported Notification Events
 
-See [Supported Notification Events](docs/supported-events.md) for the complete list of all notification events and when they trigger.
+## Installation
+
+### From Jellyfin Plugin Catalog (Recommended)
+
+1. Open Jellyfin Dashboard → **Plugins** → **Manage Repositories** → **New Repository**
+2. **Repository Name**: `Multify`
+3. **Repository URL**:
+   ```
+   https://Generator.github.io/jellyfin-plugin-multify/manifest.json
+   ```
+4. Go to **Catalog**, search "Multify", click **Install**
+5. Restart Jellyfin
+6. Configure at **Dashboard > Plugins > Multify**
+
+### Manual Install
+
+1. Download the latest release **zip** (e.g. `Jellyfin.Plugin.Multify.zip`) from [GitHub Releases](../../releases)
+2. Extract the `Jellyfin.Plugin.Multify.dll` and place it in your Jellyfin `plugins/Multify` directory
+3. Restart Jellyfin
+4. Navigate to **Dashboard > Plugins > Multify** and configure
+
 
 ## Destinations
 
@@ -73,6 +92,15 @@ See [Supported Notification Events](docs/supported-events.md) for the complete l
 
 Supports `Content-Type` override via headers. Use `SendAllProperties` to send raw JSON, or define a custom template.
 
+## Supported Notification Events
+
+See [Supported Notification Events](docs/supported-events.md) for the complete list of all notification events and when they trigger.
+
+
+### Available Template Variables
+
+See [Template Variables](docs/template-variables.md) for the complete reference of all available template variables with examples.
+
 ## Configuration
 
 ### Per-Destination Options
@@ -113,31 +141,6 @@ When multiple notifications of the **same service type** (e.g., multiple Telegra
 
 This prevents rate limiting from external services while maintaining fast delivery across different notification channels.
 
-### Available Template Variables
-
-See [Template Variables](docs/template-variables.md) for the complete reference of all available template variables with examples.
-
-## Installation
-
-### From Jellyfin Plugin Catalog (Recommended)
-
-1. Open Jellyfin Dashboard → **Plugins** → **Manage Repositories** → **New Repository**
-2. **Repository Name**: `Multify`
-3. **Repository URL**:
-   ```
-   https://Generator.github.io/jellyfin-plugin-multify/manifest.json
-   ```
-4. Go to **Catalog**, search "Multify", click **Install**
-5. Restart Jellyfin
-6. Configure at **Dashboard > Plugins > Multify**
-
-### Manual Install
-
-1. Download the latest release **zip** (e.g. `Jellyfin.Plugin.Multify.zip`) from [GitHub Releases](../../releases)
-2. Extract the `Jellyfin.Plugin.Multify.dll` and place it in your Jellyfin `plugins/Multify` directory
-3. Restart Jellyfin
-4. Navigate to **Dashboard > Plugins > Multify** and configure
-
 ### Build from Source
 
 ```bash
@@ -161,3 +164,4 @@ This project is licensed under the [GNU General Public License v3.0](LICENSE).
 ## Acknowledgments
 
 Built with patterns from [jellyfin-plugin-webhook](https://github.com/jellyfin/jellyfin-plugin-webhook) and the Jellyfin plugin ecosystem.
+UI inspired styling from [intro-skipper](https://github.com/intro-skipper/intro-skipper/)
