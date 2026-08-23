@@ -87,7 +87,13 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddScoped<IMultifyTestService, MultifyTestService>();
 
         // Register library event hosted service (subscribes to ILibraryManager events)
-        serviceCollection.AddHostedService<LibraryEventHostedService>();
+        // Register as singleton first so it can be injected into the scheduled task,
+        // then register as hosted service so Jellyfin starts it.
+        serviceCollection.AddSingleton<LibraryEventHostedService>();
+        serviceCollection.AddHostedService(sp => sp.GetRequiredService<LibraryEventHostedService>());
+
+        // Register scheduled task that processes the library event queue every 30 seconds
+        serviceCollection.AddSingleton<IScheduledTask, LibraryEventScheduledTask>();
 
         // Register event consumers
         serviceCollection.AddScoped<IEventConsumer<PlaybackStartEventArgs>, PlaybackStartNotifier>();

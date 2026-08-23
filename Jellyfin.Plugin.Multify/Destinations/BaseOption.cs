@@ -118,11 +118,15 @@ public class BaseOption
             var placeholder = "{{" + kvp.Key + "}}";
             // Invariant formatting keeps numbers/dates/bools stable regardless of the
             // server's culture (e.g. decimal point vs comma).
+            // Null or empty values resolve to "N/A" so missing data is visible rather
+            // than leaking a raw {{Placeholder}} into the message body (which would
+            // break Telegram MarkdownV2 parsing and produce invalid notifications).
             var valueText = kvp.Value switch
             {
-                null => string.Empty,
+                null => "N/A",
+                string s when string.IsNullOrEmpty(s) => "N/A",
                 IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
-                _ => kvp.Value.ToString() ?? string.Empty
+                _ => kvp.Value.ToString() ?? "N/A"
             };
             result = result.Replace(placeholder, valueText, StringComparison.Ordinal);
         }
@@ -130,6 +134,11 @@ public class BaseOption
         // Safety net: strip markdown link/image syntax with empty/blank URLs
         // (![alt]() or [text]()) to prevent MarkdownV2 parse errors
         result = Regex.Replace(result, @"!?\[.*?\]\(\s*\)", string.Empty);
+
+        // Safety net: replace any remaining unreplaced placeholders (keys not present
+        // in data) with "N/A" to avoid leaking raw {{Var}} into messages, which would
+        // break Telegram MarkdownV2 parsing and produce invalid notifications.
+        result = Regex.Replace(result, @"\{\{[^}]+\}\}", "N/A");
 
         return result;
     }
