@@ -87,6 +87,15 @@ public class MultifySender : IWebhookSender
     {
         _logger.LogDebug("SendNotification called for {NotificationType}, ItemType={ItemType}", notificationType, itemType?.Name ?? "null");
 
+        // Trailer items must not generate notifications. Skip them uniformly
+        // across all notification types.
+        if (itemType is not null &&
+            (itemType == typeof(Trailer) || itemType.Name.Equals("Trailer", StringComparison.OrdinalIgnoreCase)))
+        {
+            _logger.LogDebug("Skipping notification for Trailer item type ({NotificationType})", notificationType);
+            return;
+        }
+
         // Enrich data with MDBList ratings if configured
         if (_mdblistService != null && !string.IsNullOrEmpty(_configuration.MdblistApiKey))
         {
