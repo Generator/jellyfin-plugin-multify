@@ -407,9 +407,17 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
 
     private static bool HasRequiredMetadata(BaseItem item)
     {
-        // Send once any provider ID is present; Jellyfin may have parsed it from
-        // the folder/file name before remote metadata is fully downloaded.
-        return item.ProviderIds.Keys.Count > 0;
+        // A provider ID alone is not enough: Jellyfin parses it from the
+        // folder/file name immediately, before remote metadata (title, overview,
+        // genres) is downloaded. Require at least one real content field so the
+        // notification is not sent with "(Unknown)" / "N/A" placeholders.
+        // (MDBList ratings are stored in custom fields, not CommunityRating, so
+        // CommunityRating > 0 remains a reliable TMDB-content signal.)
+        return item.ProviderIds.Keys.Count > 0
+            && (!string.IsNullOrEmpty(item.Overview)
+                || (item.Genres is { Length: > 0 })
+                || !string.IsNullOrEmpty(item.OfficialRating)
+                || item.CommunityRating > 0);
     }
 
     private sealed record QueuedItem(Guid ItemId, NotificationType NotificationType, int RetryCount = 0);
