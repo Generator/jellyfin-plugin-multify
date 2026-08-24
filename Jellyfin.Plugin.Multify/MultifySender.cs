@@ -147,6 +147,13 @@ public class MultifySender : IWebhookSender
         // Enrich data with people info (Director, Writers, CastList, CastJson) — reuses item from above
         EnrichWithPeople(itemData, item);
 
+        _logger.LogWarning(
+            "DEBUG-ENRICH: ItemId={HasItemId} ItemUrl={HasItemUrl} ItemShortId={HasItemShortId} ServerUrl='{ServerUrl}'",
+            itemData.ContainsKey("ItemId"),
+            itemData.ContainsKey("ItemUrl"),
+            itemData.ContainsKey("ItemShortId"),
+            _configuration.ServerUrl);
+
         var tasks = new List<Task>();
 
         var telegramCount = _configuration.TelegramOptions.Count(o => o.NotificationTypes.Contains(notificationType));

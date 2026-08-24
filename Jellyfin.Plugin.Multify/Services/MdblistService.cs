@@ -233,7 +233,7 @@ public class MdblistService
                         {
                             "imdb" => "ImdbRating",
                             "tmdb" => "TmdbRating",
-                            "rt" or "rottentomatoes" => "RottenTomatoesRating",
+                            "rt" or "rottentomatoes" or "tomatoes" => "RottenTomatoesRating",
                             "mc" or "metacritic" => "MetacriticRating",
                             "lb" or "letterboxd" => "LetterboxdRating",
                             "popcorn" or "popcorntime" => "PopcornRating",

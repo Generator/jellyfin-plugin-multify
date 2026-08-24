@@ -6,6 +6,7 @@ using System.Web;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.Multify.Destinations;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.Entities;
@@ -316,6 +317,26 @@ public static class DataObjectHelpers
             // Try to get season name
             var seasonName = episode.FindSeasonName();
             data["SeasonName"] = seasonName ?? "Unknown";
+        }
+
+        // Add music-specific data
+        if (item is Audio audio)
+        {
+            var artist = audio.Artists?.Count > 0
+                ? audio.Artists[0]
+                : (audio.AlbumArtists?.Count > 0 ? audio.AlbumArtists[0] : null);
+            data["Artist"] = artist ?? "Unknown";
+            data["Album"] = audio.Album ?? "Unknown";
+            data["Song"] = audio.Name ?? "Unknown";
+        }
+        else if (item is MusicAlbum musicAlbum)
+        {
+            data["Artist"] = musicAlbum.Artists?.Count > 0 ? musicAlbum.Artists[0] : "Unknown";
+            data["Album"] = musicAlbum.Name ?? "Unknown";
+        }
+        else if (item is MusicArtist musicArtist)
+        {
+            data["Artist"] = musicArtist.Name ?? "Unknown";
         }
 
         return data;

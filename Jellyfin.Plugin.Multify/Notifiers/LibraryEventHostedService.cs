@@ -258,7 +258,14 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
 
             try
             {
-                await SendItemAddedNotificationAsync(item, cancellationToken).ConfigureAwait(false);
+                if (queued.NotificationType == NotificationType.ItemAdded)
+                {
+                    await SendItemAddedNotificationAsync(item, cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    await SendItemUpdatedNotificationAsync(item, cancellationToken).ConfigureAwait(false);
+                }
             }
             catch (Exception ex)
             {
@@ -308,21 +315,10 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.ItemUpdated);
-            data.AddItemData(item);
-
-            await _webhookSender.SendNotification(
-                NotificationType.ItemUpdated,
-                data,
-                item.GetType()).ConfigureAwait(false);
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            _logger.LogInformation("Item updated notification sent for {ItemName}", item.Name);
-
-            await _dashboardAlert.LogAsync(
-                $"Item updated: {item.Name}",
-                "MultifyItemUpdated").ConfigureAwait(false);
+            // Always queue — never send immediately. Metadata may still be populating
+            // (e.g. during a library scan/refresh). The queue processor defers the send
+            // until metadata is available, preventing "too early" notifications.
+            _queue.TryAdd(item.Id, new QueuedItem(item.Id, NotificationType.ItemUpdated));
         }
         catch (Exception ex)
         {
@@ -386,6 +382,27 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
         await _dashboardAlert.LogAsync(
             $"Item added: {item.Name}",
             "MultifyItemAdded").ConfigureAwait(false);
+    }
+
+    private async Task SendItemUpdatedNotificationAsync(BaseItem item, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.ItemUpdated);
+        data.AddItemData(item);
+
+        await _webhookSender.SendNotification(
+            NotificationType.ItemUpdated,
+            data,
+            item.GetType()).ConfigureAwait(false);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        _logger.LogInformation("Item updated notification sent for {ItemName}", item.Name);
+
+        await _dashboardAlert.LogAsync(
+            $"Item updated: {item.Name}",
+            "MultifyItemUpdated").ConfigureAwait(false);
     }
 
     private static bool HasRequiredMetadata(BaseItem item)

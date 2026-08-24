@@ -10,13 +10,45 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.Multify.Services;
 
 /// <summary>
+/// A single stored Telegram notification, carrying enough metadata to identify
+/// the originating item in the history file. Null fields are omitted on serialize.
+/// </summary>
+/// <param name="MessageId">The Telegram message ID, used to edit the message later.</param>
+/// <param name="ItemType">The Jellyfin item type (Movie, Episode, Audio, ...).</param>
+/// <param name="ItemName">The item display name.</param>
+/// <param name="TmdbId">The TMDB id when available, otherwise null.</param>
+/// <param name="Show">Series name for Series/Season/Episode items.</param>
+/// <param name="Season">Zero-padded season number for Season/Episode items.</param>
+/// <param name="Episode">Zero-padded episode number for Episode items.</param>
+/// <param name="Artist">Primary artist for music items.</param>
+/// <param name="Album">Album name for music items.</param>
+/// <param name="Song">Track name for Audio items.</param>
+/// <param name="Movie">Movie name for Movie items.</param>
+public sealed record TelegramMessageEntry(
+    long MessageId,
+    string ItemType,
+    string ItemName,
+    string? TmdbId,
+    string? Show,
+    string? Season,
+    string? Episode,
+    string? Artist,
+    string? Album,
+    string? Song,
+    string? Movie);
+
+/// <summary>
 /// Service for storing Telegram message IDs for editing existing notifications.
 /// </summary>
 public sealed class TelegramMessageStore : IDisposable
 {
     private readonly ILogger<TelegramMessageStore> _logger;
     private readonly string _storePath;
-    private readonly ConcurrentDictionary<string, long> _messageStore = new();
+    private readonly ConcurrentDictionary<string, TelegramMessageEntry> _messageStore = new();
+    private static readonly JsonSerializerOptions StoreJsonOptions = new()
+    {
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+    };
     private readonly SemaphoreSlim _fileLock = new(1, 1);
     private bool _disposed;
 
@@ -39,12 +71,19 @@ public sealed class TelegramMessageStore : IDisposable
             if (File.Exists(_storePath))
             {
                 var json = File.ReadAllText(_storePath);
-                var data = JsonSerializer.Deserialize<ConcurrentDictionary<string, long>>(json);
-                if (data != null)
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object)
                 {
-                    foreach (var kvp in data)
+                    foreach (var prop in doc.RootElement.EnumerateObject())
                     {
-                        _messageStore[kvp.Key] = kvp.Value;
+                        TelegramMessageEntry entry = prop.Value.ValueKind == JsonValueKind.Number
+                            ? new TelegramMessageEntry(prop.Value.GetInt64(), "Unknown", "Unknown", null, null, null, null, null, null, null, null)
+                            : prop.Value.Deserialize<TelegramMessageEntry>() ?? new TelegramMessageEntry(0, "Unknown", "Unknown", null, null, null, null, null, null, null, null);
+
+                        if (entry.MessageId != 0)
+                        {
+                            _messageStore[prop.Name] = entry;
+                        }
                     }
                 }
             }
@@ -56,30 +95,30 @@ public sealed class TelegramMessageStore : IDisposable
     }
 
     /// <summary>
-    /// Gets the message ID for a chat, thread, and TMDB item.
+    /// Gets the message ID for a chat, thread, and item key.
     /// </summary>
     /// <param name="chatId">The chat ID.</param>
     /// <param name="messageThreadId">The optional forum topic thread ID.</param>
-    /// <param name="tmdbId">The TMDB ID of the item.</param>
+    /// <param name="itemKey">The item key (TMDB id when available, otherwise the Jellyfin ItemId).</param>
     /// <returns>The message ID, or null if not found.</returns>
-    public long? GetMessageId(string chatId, int? messageThreadId, string tmdbId)
+    public long? GetMessageId(string chatId, int? messageThreadId, string itemKey)
     {
-        var key = GetKey(chatId, messageThreadId, tmdbId);
-        return _messageStore.TryGetValue(key, out var messageId) ? messageId : null;
+        var key = GetKey(chatId, messageThreadId, itemKey);
+        return _messageStore.TryGetValue(key, out var entry) ? entry.MessageId : null;
     }
 
     /// <summary>
-    /// Stores the message ID for a chat, thread, and TMDB item.
+    /// Stores the message entry for a chat, thread, and item key.
     /// </summary>
     /// <param name="chatId">The chat ID.</param>
     /// <param name="messageThreadId">The forum topic thread ID.</param>
-    /// <param name="tmdbId">The TMDB ID of the item.</param>
-    /// <param name="messageId">The message ID.</param>
+    /// <param name="itemKey">The item key (TMDB id when available, otherwise the Jellyfin ItemId).</param>
+    /// <param name="entry">The message entry carrying metadata for the history file.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    public async Task StoreMessageIdAsync(string chatId, int? messageThreadId, string tmdbId, long messageId)
+    public async Task StoreMessageIdAsync(string chatId, int? messageThreadId, string itemKey, TelegramMessageEntry entry)
     {
-        var key = GetKey(chatId, messageThreadId, tmdbId);
-        _messageStore[key] = messageId;
+        var key = GetKey(chatId, messageThreadId, itemKey);
+        _messageStore[key] = entry;
         await SaveStoreAsync().ConfigureAwait(false);
     }
 
@@ -102,10 +141,10 @@ public sealed class TelegramMessageStore : IDisposable
         _logger.LogInformation("Cleared {Count} entries from Telegram message store", count);
     }
 
-    private static string GetKey(string chatId, int? messageThreadId, string tmdbId)
+    private static string GetKey(string chatId, int? messageThreadId, string itemKey)
     {
         var threadId = messageThreadId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "0";
-        return $"{chatId}:{threadId}:{tmdbId}";
+        return $"{chatId}:{threadId}:{itemKey}";
     }
 
     private async Task SaveStoreAsync()
@@ -113,7 +152,7 @@ public sealed class TelegramMessageStore : IDisposable
         await _fileLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            var json = JsonSerializer.Serialize(_messageStore);
+            var json = JsonSerializer.Serialize(_messageStore, StoreJsonOptions);
             await File.WriteAllTextAsync(_storePath, json).ConfigureAwait(false);
         }
         catch (Exception ex)

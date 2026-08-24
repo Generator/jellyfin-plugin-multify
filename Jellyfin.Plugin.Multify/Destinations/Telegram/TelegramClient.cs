@@ -324,15 +324,20 @@ public class TelegramOption : BaseOption
 
             _logger.LogDebug("Telegram sending {BodyLength} bytes to {WebhookName}: {Body}", body.Length, option.WebhookName, body);
 
-            // Only attempt edit for ItemAdded/ItemUpdated events with a TmdbId
+            // Only attempt edit for ItemAdded/ItemUpdated events. Key by TmdbId when present,
+            // otherwise by the always-unique Jellyfin ItemId (prevents name collisions for
+            // episodes, seasons, music, and other types lacking a TMDB id).
             var notificationType = data.TryGetValue("NotificationType", out var typeObj) ? typeObj?.ToString() : null;
             var isEditEvent = notificationType is "ItemAdded" or "ItemUpdated";
             data.TryGetValue("TmdbId", out var tmdbIdObj);
             var tmdbId = tmdbIdObj as string;
+            data.TryGetValue("ItemId", out var itemIdObj);
+            var itemId = itemIdObj as string;
+            var itemKey = !string.IsNullOrEmpty(tmdbId) ? tmdbId : itemId;
 
-            if (isEditEvent && !string.IsNullOrEmpty(tmdbId) && _messageStore != null)
+            if (isEditEvent && !string.IsNullOrEmpty(itemKey) && _messageStore != null)
             {
-                var existingMessageId = _messageStore.GetMessageId(option.ChatId, option.MessageThreadId, tmdbId);
+                var existingMessageId = _messageStore.GetMessageId(option.ChatId, option.MessageThreadId, itemKey);
                 if (existingMessageId.HasValue)
                 {
                     await EditMessageAsync(option, data, body, existingMessageId.Value).ConfigureAwait(false);
@@ -355,10 +360,11 @@ public class TelegramOption : BaseOption
                     break;
             }
 
-            // Store the message ID for future edits (only for ItemAdded/ItemUpdated with TmdbId)
-            if (isEditEvent && !string.IsNullOrEmpty(tmdbId) && _messageStore != null && newMessageId.HasValue)
+            // Store the message ID (and rich metadata) for future edits
+            if (isEditEvent && !string.IsNullOrEmpty(itemKey) && _messageStore != null && newMessageId.HasValue)
             {
-                await _messageStore.StoreMessageIdAsync(option.ChatId, option.MessageThreadId, tmdbId, newMessageId.Value).ConfigureAwait(false);
+                var entry = BuildTelegramEntry(data, newMessageId.Value);
+                await _messageStore.StoreMessageIdAsync(option.ChatId, option.MessageThreadId, itemKey, entry).ConfigureAwait(false);
             }
         }
         catch (HttpRequestException e)
@@ -366,6 +372,55 @@ public class TelegramOption : BaseOption
             _logger.LogError(e, "Error sending Telegram notification");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Builds the metadata entry persisted to the Telegram message store, so the
+    /// history file carries type-specific identity (show/season/episode, artist/album/song, ...).
+    /// </summary>
+    private static TelegramMessageEntry BuildTelegramEntry(Dictionary<string, object> data, long messageId)
+    {
+        data.TryGetValue("ItemType", out var itemTypeObj);
+        var itemType = itemTypeObj as string ?? "Unknown";
+        data.TryGetValue("ItemName", out var itemNameObj);
+        var itemName = itemNameObj as string ?? "Unknown";
+        data.TryGetValue("TmdbId", out var tmdbIdObj);
+        var tmdbId = tmdbIdObj as string;
+
+        string? show = null, season = null, episode = null, artist = null, album = null, song = null, movie = null;
+
+        switch (itemType)
+        {
+            case "Episode":
+                data.TryGetValue("SeriesName", out var sName); show = sName as string;
+                data.TryGetValue("SeasonNumber00", out var sn); season = sn as string;
+                data.TryGetValue("EpisodeNumber00", out var en); episode = en as string;
+                break;
+            case "Season":
+                data.TryGetValue("SeriesName", out var seName); show = seName as string;
+                data.TryGetValue("SeasonNumber00", out var seN); season = seN as string;
+                break;
+            case "Series":
+                show = itemName;
+                break;
+            case "Movie":
+                movie = itemName;
+                break;
+            case "Audio":
+                data.TryGetValue("Artist", out var ar); artist = ar as string;
+                data.TryGetValue("Album", out var al); album = al as string;
+                data.TryGetValue("Song", out var so); song = so as string;
+                break;
+            case "MusicAlbum":
+                data.TryGetValue("Artist", out var ma); artist = ma as string;
+                data.TryGetValue("Album", out var mal); album = mal as string;
+                break;
+            case "MusicArtist":
+                data.TryGetValue("Artist", out var mra); artist = mra as string;
+                break;
+        }
+
+        return new TelegramMessageEntry(messageId, itemType, itemName, tmdbId, show, season, episode, artist, album, song, movie);
     }
 
     private async Task EditMessageAsync(TelegramOption option, Dictionary<string, object> data, string body, long messageId)
@@ -407,11 +462,19 @@ public class TelegramOption : BaseOption
                     break;
             }
 
-            // Store the new message ID so future edits use the correct message
-            if (_messageStore != null && newMessageId.HasValue
-                && data.TryGetValue("TmdbId", out var tmdbIdObj) && tmdbIdObj is string tmdbId && !string.IsNullOrEmpty(tmdbId))
+            // Store the new message ID (and rich metadata) so future edits use the correct message
+            if (_messageStore != null && newMessageId.HasValue)
             {
-                await _messageStore.StoreMessageIdAsync(option.ChatId, option.MessageThreadId, tmdbId, newMessageId.Value).ConfigureAwait(false);
+                data.TryGetValue("TmdbId", out var fbTmdbObj);
+                var fbTmdb = fbTmdbObj as string;
+                data.TryGetValue("ItemId", out var fbItemObj);
+                var fbItem = fbItemObj as string;
+                var fbKey = !string.IsNullOrEmpty(fbTmdb) ? fbTmdb : fbItem;
+                if (!string.IsNullOrEmpty(fbKey))
+                {
+                    var entry = BuildTelegramEntry(data, newMessageId.Value);
+                    await _messageStore.StoreMessageIdAsync(option.ChatId, option.MessageThreadId, fbKey, entry).ConfigureAwait(false);
+                }
             }
         }
     }
