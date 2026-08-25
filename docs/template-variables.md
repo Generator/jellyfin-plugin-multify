@@ -235,6 +235,8 @@ Available when the item has remote trailers.
 | `{{TrailerUrl}}` | First remote trailer URL | `https://www.youtube.com/watch?v=dQw4w9WgXcQ` |
 | `{{TrailerYtId}}` | Extracted YouTube video ID | `dQw4w9WgXcQ` |
 
+> **Note:** Trailer items are automatically **excluded from all notification types**. Although these variables exist, no notification is triggered when a trailer is added or updated in your library, so trailer templates are only useful when referencing a trailer attached to a movie/series that itself generates a notification.
+
 ### Template usage
 
 ```

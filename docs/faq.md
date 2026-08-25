@@ -126,3 +126,21 @@ Check the Jellyfin server log (`docker/jellyfin/library/log/log_*.log`). The Tel
 ### Can I test my template without sending a real notification?
 
 Yes. Use the **Test notification** button in the plugin configuration page. The test now uses a real library item from your server (or fallback data if the library is empty), so you can verify your template with realistic content.
+
+---
+
+## Notification Timing & Behavior
+
+### Why didn't I get a notification immediately when an item was added?
+
+Multify delivers library notifications in a **metadata-aware** way. When Jellyfin first adds an item it often has only a provider ID (e.g. TMDb) but no overview, genres, or ratings. To avoid sending messages full of "(Unknown)"/"N/A" placeholders, Multify **queues** the `ItemAdded`/`ItemUpdated` event and waits until the item's metadata is populated (at least one of: overview, genres, official rating, or community rating). The notification is then sent automatically once metadata is ready — typically a few seconds to a few minutes after the item appears, depending on how fast Jellyfin's metadata providers finish.
+
+If a notification never arrives, check the Jellyfin log for `Deferring notification for "<name>" — metadata not ready` messages, and confirm the item eventually received metadata from its providers.
+
+### Why is my Telegram message being edited instead of a new one being sent?
+
+For **Telegram** destinations, when the same item is notified again (matched by its TMDb ID), Multify **edits the previously sent Telegram message** rather than posting a duplicate. This keeps your chat clean when an item is re-added, refreshed, or updated after the original notification. The edit updates the existing message in place with the latest details.
+
+### Why don't I get notifications for trailers?
+
+Trailer items are automatically **excluded from all notification types**. Even though `{{TrailerUrl}}` / `{{TrailerYtId}}` template variables exist, no notification is triggered when a trailer is added or updated in your library.

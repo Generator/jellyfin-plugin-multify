@@ -75,6 +75,8 @@ Multify supports the following notification events from Jellyfin. Each event can
 - **Event Type**: `ItemUpdated`
 - **Available Data**: Item details
 
+> **Metadata-aware delivery:** `ItemAdded` and `ItemUpdated` notifications are deferred until the item's remote metadata is available. When an item is first scanned it may only have a provider ID (e.g. TMDb) but no overview, genres, or ratings yet. Multify queues the event and retries until at least one content field (overview, genres, official rating, or community rating) is populated — so your notification arrives with complete details instead of "(Unknown)"/"N/A" placeholders. As a result, library notifications can arrive a few seconds to a few minutes after the item appears, depending on how quickly Jellyfin's metadata providers populate the item.
+
 ## Plugin Events
 
 ### Plugin Installed
