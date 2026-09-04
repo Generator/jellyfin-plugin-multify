@@ -20,6 +20,11 @@ A unified notification plugin for [Jellyfin](https://jellyfin.org/) that sends n
 - **Markdown Support** — Render rich messages on Telegram (HTML), Gotify (Markdown), and ntfy (Markdown)
 - **Generic Webhook** — Send to any HTTP endpoint with custom headers and fields
 
+## Screenshots
+
+| ntfy Connection  | ntfy Content  | ntfy Filters  |
+| --- | --- | --- |
+| ![Multify ntfy connection](assets/ntfy-connection.png) | ![Multify ntfy content](assets/ntfy-content.png) | ![Multify ntfy filters](assets/ntfy-filters.png) |
 
 ## Installation
 
@@ -28,9 +33,11 @@ A unified notification plugin for [Jellyfin](https://jellyfin.org/) that sends n
 1. Open Jellyfin Dashboard → **Plugins** → **Manage Repositories** → **New Repository**
 2. **Repository Name**: `Multify`
 3. **Repository URL**:
+
    ```
    https://Generator.github.io/jellyfin-plugin-multify/manifest.json
    ```
+
 4. Go to **Catalog**, search "Multify", click **Install**
 5. Restart Jellyfin
 6. Configure at **Dashboard > Plugins > Multify**
@@ -41,7 +48,6 @@ A unified notification plugin for [Jellyfin](https://jellyfin.org/) that sends n
 2. Extract the `Jellyfin.Plugin.Multify.dll` and place it in your Jellyfin `plugins/Multify` directory
 3. Restart Jellyfin
 4. Navigate to **Dashboard > Plugins > Multify** and configure
-
 
 ## Destinations
 
@@ -95,7 +101,6 @@ Supports `Content-Type` override via headers. Use `SendAllProperties` to send ra
 ## Supported Notification Events
 
 See [Supported Notification Events](docs/supported-events.md) for the complete list of all notification events and when they trigger.
-
 
 ### Available Template Variables
 
