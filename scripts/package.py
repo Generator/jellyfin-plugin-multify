@@ -163,7 +163,14 @@ def main() -> int:
     )
     args = p.parse_args()
 
-    base_version = args.version.lstrip("v")
+    raw_version = args.version.lstrip("v")
+    # Normalize to 4-part version for Jellyfin manifest contract (0.0.7 -> 0.0.7.0)
+    # Keep raw_version for sourceUrl tag, use padded for manifest.version per REPORT.md
+    base_version = raw_version
+    if base_version.count(".") == 2 and "-" not in base_version:
+        base_version = base_version + ".0"
+    elif base_version.count(".") == 1 and "-" not in base_version:
+        base_version = base_version + ".0.0"
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     if ARTIFACTS.exists():
@@ -190,11 +197,25 @@ def main() -> int:
         print(f"  → {zip_path.name}  md5={checksum}  abi={target_abi}")
 
         if args.repo:
+            source_url = f"https://github.com/{args.repo}/releases/download/v{raw_version}/{zip_path.name}"
+            # CI check per REPORT.md: version must match sourceUrl tag (normalized)
+            # raw_version v0.0.8 -> manifest 0.0.8.0 should match when padded
+            url_tag = raw_version
+            # Normalize both to 4-part for comparison
+            def _norm(v: str) -> str:
+                v = v.split("-")[0]
+                parts = v.split(".")
+                while len(parts) < 4:
+                    parts.append("0")
+                return ".".join(parts[:4])
+            if _norm(manifest_version) != _norm(url_tag):
+                print(f"!! version/url mismatch {manifest_version} vs tag v{url_tag} -> abort", file=sys.stderr)
+                sys.exit(1)
             manifest_entries.append({
                 "version": manifest_version,
                 "changelog": args.changelog,
                 "targetAbi": target_abi,
-                "sourceUrl": f"https://github.com/{args.repo}/releases/download/v{base_version}/{zip_path.name}",
+                "sourceUrl": source_url,
                 "checksum": checksum,
                 "timestamp": timestamp,
             })
