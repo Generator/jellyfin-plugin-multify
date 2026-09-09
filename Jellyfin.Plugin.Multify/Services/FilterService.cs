@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Jellyfin.Plugin.Multify.Destinations;
+using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Services;
@@ -11,14 +13,27 @@ namespace Jellyfin.Plugin.Multify.Services;
 public class FilterService
 {
     private readonly ILogger<FilterService> _logger;
+    private readonly ILibraryManager? _libraryManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FilterService"/> class.
     /// </summary>
     /// <param name="logger">Instance of the <see cref="ILogger{FilterService}"/> interface.</param>
-    public FilterService(ILogger<FilterService> logger)
+    /// <param name="libraryManager">Instance of the <see cref="ILibraryManager"/> interface.</param>
+    public FilterService(ILogger<FilterService> logger, ILibraryManager? libraryManager = null)
     {
         _logger = logger;
+        _libraryManager = libraryManager;
+    }
+
+    private static string NormalizeGuid(string value)
+    {
+        if (Guid.TryParse(value, out var guid))
+        {
+            return guid.ToString("N", CultureInfo.InvariantCulture).ToLowerInvariant();
+        }
+
+        return value.Trim().ToLowerInvariant();
     }
 
     /// <summary>
@@ -68,7 +83,17 @@ public class FilterService
             ? userIdObj?.ToString() ?? string.Empty
             : string.Empty;
 
-        bool isInFilter = Array.IndexOf(option.UserFilter, userId) != -1;
+        var normalizedUserId = NormalizeGuid(userId);
+        bool isInFilter = false;
+        foreach (var filter in option.UserFilter)
+        {
+            if (NormalizeGuid(filter) == normalizedUserId)
+            {
+                isInFilter = true;
+                break;
+            }
+        }
+
         bool shouldSend = option.UserFilterMode == FilterMode.AllExcept ? !isInFilter : isInFilter;
 
         if (!shouldSend)
@@ -102,7 +127,81 @@ public class FilterService
             ? libraryIdObj?.ToString() ?? string.Empty
             : string.Empty;
 
-        bool isInFilter = Array.IndexOf(option.LibraryFilter, libraryId) != -1;
+        var libraryName = data.TryGetValue("LibraryName", out var libraryNameObj)
+            ? libraryNameObj?.ToString() ?? string.Empty
+            : string.Empty;
+
+        var path = data.TryGetValue("Path", out var pathObj)
+            ? pathObj?.ToString() ?? string.Empty
+            : string.Empty;
+
+        var normalizedLibraryId = NormalizeGuid(libraryId);
+
+        bool isInFilter = false;
+        foreach (var filter in option.LibraryFilter)
+        {
+            var normalizedFilter = NormalizeGuid(filter);
+
+            // Direct GUID match (N vs D, case-insensitive)
+            if (normalizedLibraryId == normalizedFilter && !string.IsNullOrEmpty(normalizedLibraryId))
+            {
+                isInFilter = true;
+                break;
+            }
+
+            // Name match for older configs that stored library Name
+            if (!string.IsNullOrEmpty(libraryName) && string.Equals(libraryName, filter, StringComparison.OrdinalIgnoreCase))
+            {
+                isInFilter = true;
+                break;
+            }
+
+            // Also treat filter stored as Name matching LibraryId's folder name? handled above
+
+            // Resolve via VirtualFolders: filter is a CollectionFolder ItemId (e.g. af92...),
+            // but data LibraryId may be the physical Folder id (e.g. f7e7...) or Path.
+            // If filter matches a VirtualFolder, check if item's Path is inside its Locations.
+            if (_libraryManager != null && !string.IsNullOrEmpty(path))
+            {
+                try
+                {
+                    var virtualFolders = _libraryManager.GetVirtualFolders();
+                    foreach (var vf in virtualFolders)
+                    {
+                        if (NormalizeGuid(vf.ItemId) == normalizedFilter
+                            || string.Equals(vf.Name, filter, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (vf.Locations != null)
+                            {
+                                foreach (var loc in vf.Locations)
+                                {
+                                    if (!string.IsNullOrEmpty(loc) && path.StartsWith(loc, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        isInFilter = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (isInFilter)
+                            {
+                                break;
+                            }
+                        }
+                    }
+
+                    if (isInFilter)
+                    {
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Error resolving VirtualFolders for library filter {Filter}", filter);
+                }
+            }
+        }
+
         bool shouldSend = option.LibraryFilterMode == FilterMode.AllExcept ? !isInFilter : isInFilter;
 
         if (!shouldSend)

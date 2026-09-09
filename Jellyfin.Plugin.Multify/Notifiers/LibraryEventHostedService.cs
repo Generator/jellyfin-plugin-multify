@@ -330,9 +330,17 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
     {
         try
         {
-            // Re-fetch from library to get the latest state; e.Item may be stale.
-            var item = _libraryManager.GetItemById(e.Item.Id);
+            // Use e.Item directly — after ItemRemoved, GetItemById returns null because
+            // Jellyfin has already removed the item from LibraryManager. Upstream webhook
+            // plugin (ItemDeletedNotifierEntryPoint.ItemDeletedHandler) also queues e.Item
+            // directly without re-fetch. Skip virtual items as upstream does.
+            var item = e.Item;
             if (item is null)
+            {
+                return;
+            }
+
+            if (item.IsVirtualItem)
             {
                 return;
             }

@@ -82,6 +82,161 @@ public class MultifySender : IWebhookSender
         _mdblistService = mdblistService;
     }
 
+    private static readonly string[] MdblistTemplateKeys =
+    [
+        "MdblistScore",
+        "ImdbRating",
+        "TmdbRating",
+        "RottenTomatoesRating",
+        "MetacriticRating",
+        "LetterboxdRating",
+        "PopcornRating",
+        "AnilistRating",
+        "TraktRating",
+        "MyAnimeListRating",
+        "RogerEbertRating"
+    ];
+
+    private static bool TemplateContainsMdblistKey(string? base64Template)
+    {
+        if (string.IsNullOrEmpty(base64Template))
+        {
+            return false;
+        }
+
+        string template;
+        try
+        {
+            var bytes = Convert.FromBase64String(base64Template);
+            template = System.Text.Encoding.UTF8.GetString(bytes);
+        }
+        catch (FormatException)
+        {
+            template = base64Template;
+        }
+
+        return RawTemplateContainsMdblistKey(template);
+    }
+
+    private static bool RawTemplateContainsMdblistKey(string? template)
+    {
+        if (string.IsNullOrEmpty(template))
+        {
+            return false;
+        }
+
+        foreach (var key in MdblistTemplateKeys)
+        {
+            if (template.Contains("{{" + key + "}}", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool OptionReferencesMdblist(BaseOption option)
+    {
+        if (option.SendAllProperties)
+        {
+            return true;
+        }
+
+        if (TemplateContainsMdblistKey(option.Template))
+        {
+            return true;
+        }
+
+        // Check option-type-specific templated fields (Title/PhotoUrlTemplate/Tags are raw strings, not base64)
+        if (option is GotifyOption gotify)
+        {
+            if (RawTemplateContainsMdblistKey(gotify.Title) || RawTemplateContainsMdblistKey(gotify.PhotoUrlTemplate))
+            {
+                return true;
+            }
+        }
+        else if (option is NtfyOption ntfy)
+        {
+            if (RawTemplateContainsMdblistKey(ntfy.Title) || RawTemplateContainsMdblistKey(ntfy.Tags) || RawTemplateContainsMdblistKey(ntfy.PhotoUrlTemplate))
+            {
+                return true;
+            }
+        }
+        else if (option is TelegramOption telegram)
+        {
+            if (RawTemplateContainsMdblistKey(telegram.PhotoUrlTemplate))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool NeedsMdblistEnrichment(NotificationType notificationType)
+    {
+        if (_mdblistService == null || string.IsNullOrEmpty(_configuration.MdblistApiKey))
+        {
+            return false;
+        }
+
+        var telegramOptions = _configuration.TelegramOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var gotifyOptions = _configuration.GotifyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var ntfyOptions = _configuration.NtfyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var genericOptions = _configuration.GenericWebhookOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+
+        return NeedsMdblistEnrichmentForOptions(telegramOptions, gotifyOptions, ntfyOptions, genericOptions);
+    }
+
+#pragma warning disable CA1859 // Performance - keep BaseOption abstraction for shared logic
+    private static bool NeedsMdblistEnrichmentForOptions(
+        IReadOnlyList<BaseOption> telegramOptions,
+        IReadOnlyList<BaseOption> gotifyOptions,
+        IReadOnlyList<BaseOption> ntfyOptions,
+        IReadOnlyList<BaseOption> genericOptions)
+#pragma warning restore CA1859
+    {
+        if (telegramOptions.Count == 0 && gotifyOptions.Count == 0 && ntfyOptions.Count == 0 && genericOptions.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (var opt in telegramOptions)
+        {
+            if (OptionReferencesMdblist(opt))
+            {
+                return true;
+            }
+        }
+
+        foreach (var opt in gotifyOptions)
+        {
+            if (OptionReferencesMdblist(opt))
+            {
+                return true;
+            }
+        }
+
+        foreach (var opt in ntfyOptions)
+        {
+            if (OptionReferencesMdblist(opt))
+            {
+                return true;
+            }
+        }
+
+        foreach (var opt in genericOptions)
+        {
+            if (OptionReferencesMdblist(opt))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <inheritdoc />
     public async Task SendNotification(NotificationType notificationType, Dictionary<string, object> itemData, Type? itemType = null)
     {
@@ -96,8 +251,20 @@ public class MultifySender : IWebhookSender
             return;
         }
 
-        // Enrich data with MDBList ratings if configured
-        if (_mdblistService != null && !string.IsNullOrEmpty(_configuration.MdblistApiKey))
+        // Pre-resolve matched destinations for this notification type — reused for
+        // both the MDBList guard and the send phase to avoid double LINQ enumeration.
+        var telegramOptions = _configuration.TelegramOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var gotifyOptions = _configuration.GotifyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var ntfyOptions = _configuration.NtfyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var genericOptions = _configuration.GenericWebhookOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+
+        // Enrich data with MDBList ratings only when at least one matched destination
+        // actually references an MDBList variable in its template (or sends all properties).
+        // This prevents the 1 Hz PlaybackProgress hot-loop from burning the daily quota
+        // when no one is listening or no template uses {{MdblistScore}}/{{ImdbRating}}/etc.
+        if (_mdblistService != null
+            && !string.IsNullOrEmpty(_configuration.MdblistApiKey)
+            && NeedsMdblistEnrichmentForOptions(telegramOptions, gotifyOptions, ntfyOptions, genericOptions))
         {
             await EnrichWithMdblistRatings(itemData).ConfigureAwait(false);
         }
@@ -156,10 +323,10 @@ public class MultifySender : IWebhookSender
 
         var tasks = new List<Task>();
 
-        var telegramCount = _configuration.TelegramOptions.Count(o => o.NotificationTypes.Contains(notificationType));
-        var gotifyCount = _configuration.GotifyOptions.Count(o => o.NotificationTypes.Contains(notificationType));
-        var ntfyCount = _configuration.NtfyOptions.Count(o => o.NotificationTypes.Contains(notificationType));
-        var genericCount = _configuration.GenericWebhookOptions.Count(o => o.NotificationTypes.Contains(notificationType));
+        var telegramCount = telegramOptions.Count;
+        var gotifyCount = gotifyOptions.Count;
+        var ntfyCount = ntfyOptions.Count;
+        var genericCount = genericOptions.Count;
 
         _logger.LogDebug(
             "Matching destinations: Telegram={Telegram}, Gotify={Gotify}, ntfy={Ntfy}, Generic={Generic}",
@@ -170,14 +337,6 @@ public class MultifySender : IWebhookSender
 
         // Get delay from advanced settings (convert seconds to milliseconds)
         var delayMs = Math.Max(0, (_configuration.AdvancedSettings?.DelaySeconds ?? DefaultDelaySeconds) * 1000);
-
-        // Send notifications sequentially within each service type, with delay between them
-        // Different service types still run in parallel
-
-        var telegramOptions = _configuration.TelegramOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
-        var gotifyOptions = _configuration.GotifyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
-        var ntfyOptions = _configuration.NtfyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
-        var genericOptions = _configuration.GenericWebhookOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
 
         // Fire all service types in parallel
         tasks.Add(SendNotificationsSequentially(_telegramClient, telegramOptions, itemData, itemType, delayMs, "Telegram"));

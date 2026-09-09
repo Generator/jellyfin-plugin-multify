@@ -120,10 +120,89 @@ public class MultifyTestService : IMultifyTestService
 
             // Try to fetch a real item from the library first
             var data = await TryFetchRealItemAsync(option).ConfigureAwait(false);
+            var isFallback = false;
             if (data == null)
             {
                 _logger.LogDebug("No real item found, falling back to hardcoded test data");
                 data = CreateTestData();
+                isFallback = true;
+            }
+
+            // If we fell back to hardcoded data but a LibraryFilter is configured, make the
+            // test payload pass the filter — otherwise "Library N/A filtered out" blocks the test
+            // even though the API returns success (confusing "never sent" report).
+            if (isFallback && option.LibraryFilter is { Length: > 0 })
+            {
+                try
+                {
+                    var virtualFolders = _libraryManager.GetVirtualFolders();
+                    string? matchedId = null;
+                    string? matchedName = null;
+                    string? matchedPath = null;
+
+                    foreach (var filter in option.LibraryFilter)
+                    {
+                        var normalizedFilter = NormalizeGuid(filter);
+                        foreach (var vf in virtualFolders)
+                        {
+                            if (NormalizeGuid(vf.ItemId) == normalizedFilter
+                                || string.Equals(vf.Name, filter, StringComparison.OrdinalIgnoreCase))
+                            {
+                                matchedId = vf.ItemId;
+                                matchedName = vf.Name;
+                                matchedPath = vf.Locations is { Length: > 0 } ? vf.Locations[0] : null;
+                                break;
+                            }
+                        }
+
+                        if (matchedId != null)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (matchedId != null)
+                    {
+                        // For OnlySelected we must be IN filter to pass; for AllExcept we must be OUT.
+                        if (option.LibraryFilterMode == FilterMode.AllExcept)
+                        {
+                            data["LibraryId"] = Guid.NewGuid().ToString("N");
+                            data["LibraryName"] = "TestLibrary";
+                            data["Path"] = "/data/media/test/test.mkv";
+                        }
+                        else
+                        {
+                            data["LibraryId"] = matchedId;
+                            if (!string.IsNullOrEmpty(matchedName))
+                            {
+                                data["LibraryName"] = matchedName;
+                            }
+
+                            if (!string.IsNullOrEmpty(matchedPath))
+                            {
+                                data["Path"] = matchedPath;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // No VirtualFolder matched — just use first filter value directly so
+                        // normalized comparison in FilterService will pass for OnlySelected.
+                        if (option.LibraryFilterMode == FilterMode.AllExcept)
+                        {
+                            data["LibraryId"] = Guid.NewGuid().ToString("N");
+                        }
+                        else
+                        {
+                            data["LibraryId"] = option.LibraryFilter[0];
+                            data["LibraryName"] = option.LibraryFilter[0];
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Error adjusting fallback test data for LibraryFilter");
+                }
             }
 
             // Ensure webhook is enabled for test and use template (not raw JSON)
@@ -622,6 +701,16 @@ public class MultifyTestService : IMultifyTestService
             // Year (used in examples but not in table)
             ["Year"] = "2010"
         };
+    }
+
+    private static string NormalizeGuid(string value)
+    {
+        if (Guid.TryParse(value, out var guid))
+        {
+            return guid.ToString("N", CultureInfo.InvariantCulture).ToLowerInvariant();
+        }
+
+        return value.Trim().ToLowerInvariant();
     }
 
     /// <summary>
