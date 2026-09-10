@@ -9,6 +9,7 @@ using Jellyfin.Plugin.Multify.Helpers;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -31,8 +32,7 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
 
     private readonly ILogger<LibraryEventHostedService> _logger;
     private readonly ILibraryManager _libraryManager;
-    private readonly IWebhookSender _webhookSender;
-    private readonly DashboardAlertService _dashboardAlert;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ConcurrentDictionary<Guid, QueuedItem> _queue = new();
     private readonly ConcurrentDictionary<Guid, byte> _notifiedItems = new();
     private CancellationTokenSource? _cancellationTokenSource;
@@ -42,18 +42,15 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
     /// </summary>
     /// <param name="logger">Instance of the <see cref="ILogger{LibraryEventHostedService}"/> interface.</param>
     /// <param name="libraryManager">Instance of the <see cref="ILibraryManager"/> interface.</param>
-    /// <param name="webhookSender">Instance of the <see cref="IWebhookSender"/> interface.</param>
-    /// <param name="dashboardAlert">Instance of the <see cref="DashboardAlertService"/>.</param>
+    /// <param name="serviceProvider">Instance of the <see cref="IServiceProvider"/> interface.</param>
     public LibraryEventHostedService(
         ILogger<LibraryEventHostedService> logger,
         ILibraryManager libraryManager,
-        IWebhookSender webhookSender,
-        DashboardAlertService dashboardAlert)
+        IServiceProvider serviceProvider)
     {
         _logger = logger;
         _libraryManager = libraryManager;
-        _webhookSender = webhookSender;
-        _dashboardAlert = dashboardAlert;
+        _serviceProvider = serviceProvider;
     }
 
     /// <inheritdoc />
@@ -352,7 +349,13 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
             var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.ItemDeleted);
             data.AddItemData(item);
 
-            await _webhookSender.SendNotification(
+            // Resolve sender/alert per operation via scope so config changes (OnlySelected etc.) apply without restart.
+            // Singleton holding a scoped IWebhookSender would cache the old PluginConfiguration instance.
+            using var scope = _serviceProvider.CreateScope();
+            var webhookSender = scope.ServiceProvider.GetRequiredService<IWebhookSender>();
+            var dashboardAlert = scope.ServiceProvider.GetRequiredService<DashboardAlertService>();
+
+            await webhookSender.SendNotification(
                 NotificationType.ItemDeleted,
                 data,
                 item.GetType()).ConfigureAwait(false);
@@ -361,7 +364,7 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
 
             _logger.LogInformation("Item deleted notification sent for {ItemName}", item.Name);
 
-            await _dashboardAlert.LogAsync(
+            await dashboardAlert.LogAsync(
                 $"Item deleted: {item.Name}",
                 "MultifyItemDeleted").ConfigureAwait(false);
         }
@@ -378,7 +381,11 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.ItemAdded);
         data.AddItemData(item);
 
-        await _webhookSender.SendNotification(
+        using var scope = _serviceProvider.CreateScope();
+        var webhookSender = scope.ServiceProvider.GetRequiredService<IWebhookSender>();
+        var dashboardAlert = scope.ServiceProvider.GetRequiredService<DashboardAlertService>();
+
+        await webhookSender.SendNotification(
             NotificationType.ItemAdded,
             data,
             item.GetType()).ConfigureAwait(false);
@@ -387,7 +394,7 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
 
         _logger.LogInformation("Item added notification sent for {ItemName}", item.Name);
 
-        await _dashboardAlert.LogAsync(
+        await dashboardAlert.LogAsync(
             $"Item added: {item.Name}",
             "MultifyItemAdded").ConfigureAwait(false);
     }
@@ -399,7 +406,11 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
         var data = DataObjectHelpers.GetBaseDataObject("Jellyfin", NotificationType.ItemUpdated);
         data.AddItemData(item);
 
-        await _webhookSender.SendNotification(
+        using var scope = _serviceProvider.CreateScope();
+        var webhookSender = scope.ServiceProvider.GetRequiredService<IWebhookSender>();
+        var dashboardAlert = scope.ServiceProvider.GetRequiredService<DashboardAlertService>();
+
+        await webhookSender.SendNotification(
             NotificationType.ItemUpdated,
             data,
             item.GetType()).ConfigureAwait(false);
@@ -408,7 +419,7 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
 
         _logger.LogInformation("Item updated notification sent for {ItemName}", item.Name);
 
-        await _dashboardAlert.LogAsync(
+        await dashboardAlert.LogAsync(
             $"Item updated: {item.Name}",
             "MultifyItemUpdated").ConfigureAwait(false);
     }

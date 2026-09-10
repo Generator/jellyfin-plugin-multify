@@ -45,6 +45,7 @@ public sealed class TelegramMessageStore : IDisposable
     private readonly ILogger<TelegramMessageStore> _logger;
     private readonly string _storePath;
     private readonly ConcurrentDictionary<string, TelegramMessageEntry> _messageStore = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _keyLocks = new();
     private static readonly JsonSerializerOptions StoreJsonOptions = new()
     {
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
@@ -108,6 +109,20 @@ public sealed class TelegramMessageStore : IDisposable
     }
 
     /// <summary>
+    /// Gets a per-key semaphore for serializing Get→Edit/Send→Store sequences.
+    /// Caller must await WaitAsync and Release.
+    /// </summary>
+    /// <param name="chatId">The chat ID.</param>
+    /// <param name="messageThreadId">The optional forum topic thread ID.</param>
+    /// <param name="itemKey">The item key (TMDB id when available, otherwise the Jellyfin ItemId).</param>
+    /// <returns>The per-key semaphore.</returns>
+    public SemaphoreSlim GetKeyLock(string chatId, int? messageThreadId, string itemKey)
+    {
+        var key = GetKey(chatId, messageThreadId, itemKey);
+        return _keyLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+    }
+
+    /// <summary>
     /// Stores the message entry for a chat, thread, and item key.
     /// </summary>
     /// <param name="chatId">The chat ID.</param>
@@ -129,16 +144,36 @@ public sealed class TelegramMessageStore : IDisposable
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task CleanupStaleEntriesAsync()
     {
-        var count = _messageStore.Count;
-        if (count == 0)
+        await _fileLock.WaitAsync().ConfigureAwait(false);
+        try
         {
-            _logger.LogDebug("Telegram message store is empty, nothing to clean up");
-            return;
-        }
+            var count = _messageStore.Count;
+            if (count == 0)
+            {
+                _logger.LogDebug("Telegram message store is empty, nothing to clean up");
+                return;
+            }
 
-        _messageStore.Clear();
-        await SaveStoreAsync().ConfigureAwait(false);
-        _logger.LogInformation("Cleared {Count} entries from Telegram message store", count);
+            _messageStore.Clear();
+            // Also clear per-key locks to avoid leak
+            foreach (var kvp in _keyLocks)
+            {
+                kvp.Value.Dispose();
+            }
+
+            _keyLocks.Clear();
+            var json = JsonSerializer.Serialize(_messageStore, StoreJsonOptions);
+            await File.WriteAllTextAsync(_storePath, json).ConfigureAwait(false);
+            _logger.LogInformation("Cleared {Count} entries from Telegram message store", count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to clear Telegram message store");
+        }
+        finally
+        {
+            _fileLock.Release();
+        }
     }
 
     private static string GetKey(string chatId, int? messageThreadId, string itemKey)
@@ -183,6 +218,12 @@ public sealed class TelegramMessageStore : IDisposable
             if (disposing)
             {
                 _fileLock?.Dispose();
+                foreach (var kvp in _keyLocks)
+                {
+                    kvp.Value.Dispose();
+                }
+
+                _keyLocks.Clear();
             }
 
             _disposed = true;

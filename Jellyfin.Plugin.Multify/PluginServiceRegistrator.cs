@@ -53,8 +53,9 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // Register dashboard alert service
         serviceCollection.AddScoped<DashboardAlertService>();
 
-        // Register filter service
-        serviceCollection.AddSingleton<FilterService>();
+        // Register filter service as scoped so LibraryFilter/UserFilter changes apply without restart
+        // (reads option per-call, but VirtualFolders via ILibraryManager must be fresh)
+        serviceCollection.AddScoped<FilterService>();
 
         // Register LibraryCache as hosted service (with periodic cleanup)
         serviceCollection.AddHostedService<LibraryCache>();

@@ -35,7 +35,6 @@ public class MultifySender : IWebhookSender
     private const int DefaultDelaySeconds = 2;
 
     private readonly ILogger<MultifySender> _logger;
-    private readonly PluginConfiguration _configuration;
     private readonly IWebhookClient<TelegramOption> _telegramClient;
     private readonly IWebhookClient<GotifyOption> _gotifyClient;
     private readonly IWebhookClient<NtfyOption> _ntfyClient;
@@ -45,11 +44,15 @@ public class MultifySender : IWebhookSender
     private readonly IMediaSourceManager _mediaSourceManager;
     private readonly ImageEnrichmentService _imageEnrichmentService;
 
+    // Live configuration — read per call from plugin instance so UI Save (UpdateConfiguration)
+    // is reflected without restart (like WebhookSender in jellyfin-plugin-webhook).
+    // Injected PluginConfiguration would be stale when held by a singleton (LibraryEventHostedService).
+    private static PluginConfiguration Configuration => MultifyPlugin.Instance?.Configuration ?? new PluginConfiguration();
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MultifySender"/> class.
     /// </summary>
     /// <param name="logger">Instance of the <see cref="ILogger{MultifySender}"/> interface.</param>
-    /// <param name="configuration">Instance of the <see cref="PluginConfiguration"/>.</param>
     /// <param name="telegramClient">Instance of the <see cref="IWebhookClient{TelegramOption}"/>.</param>
     /// <param name="gotifyClient">Instance of the <see cref="IWebhookClient{GotifyOption}"/>.</param>
     /// <param name="ntfyClient">Instance of the <see cref="IWebhookClient{NtfyOption}"/>.</param>
@@ -60,7 +63,6 @@ public class MultifySender : IWebhookSender
     /// <param name="mdblistService">Instance of the <see cref="MdblistService"/>.</param>
     public MultifySender(
         ILogger<MultifySender> logger,
-        PluginConfiguration configuration,
         IWebhookClient<TelegramOption> telegramClient,
         IWebhookClient<GotifyOption> gotifyClient,
         IWebhookClient<NtfyOption> ntfyClient,
@@ -71,7 +73,6 @@ public class MultifySender : IWebhookSender
         MdblistService? mdblistService = null)
     {
         _logger = logger;
-        _configuration = configuration;
         _telegramClient = telegramClient;
         _gotifyClient = gotifyClient;
         _ntfyClient = ntfyClient;
@@ -176,15 +177,15 @@ public class MultifySender : IWebhookSender
 
     private bool NeedsMdblistEnrichment(NotificationType notificationType)
     {
-        if (_mdblistService == null || string.IsNullOrEmpty(_configuration.MdblistApiKey))
+        if (_mdblistService == null || string.IsNullOrEmpty(Configuration.MdblistApiKey))
         {
             return false;
         }
 
-        var telegramOptions = _configuration.TelegramOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
-        var gotifyOptions = _configuration.GotifyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
-        var ntfyOptions = _configuration.NtfyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
-        var genericOptions = _configuration.GenericWebhookOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var telegramOptions = Configuration.TelegramOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var gotifyOptions = Configuration.GotifyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var ntfyOptions = Configuration.NtfyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var genericOptions = Configuration.GenericWebhookOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
 
         return NeedsMdblistEnrichmentForOptions(telegramOptions, gotifyOptions, ntfyOptions, genericOptions);
     }
@@ -253,24 +254,24 @@ public class MultifySender : IWebhookSender
 
         // Pre-resolve matched destinations for this notification type — reused for
         // both the MDBList guard and the send phase to avoid double LINQ enumeration.
-        var telegramOptions = _configuration.TelegramOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
-        var gotifyOptions = _configuration.GotifyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
-        var ntfyOptions = _configuration.NtfyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
-        var genericOptions = _configuration.GenericWebhookOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var telegramOptions = Configuration.TelegramOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var gotifyOptions = Configuration.GotifyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var ntfyOptions = Configuration.NtfyOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
+        var genericOptions = Configuration.GenericWebhookOptions.Where(o => o.NotificationTypes.Contains(notificationType)).ToList();
 
         // Enrich data with MDBList ratings only when at least one matched destination
         // actually references an MDBList variable in its template (or sends all properties).
         // This prevents the 1 Hz PlaybackProgress hot-loop from burning the daily quota
         // when no one is listening or no template uses {{MdblistScore}}/{{ImdbRating}}/etc.
         if (_mdblistService != null
-            && !string.IsNullOrEmpty(_configuration.MdblistApiKey)
+            && !string.IsNullOrEmpty(Configuration.MdblistApiKey)
             && NeedsMdblistEnrichmentForOptions(telegramOptions, gotifyOptions, ntfyOptions, genericOptions))
         {
             await EnrichWithMdblistRatings(itemData).ConfigureAwait(false);
         }
 
         // Enrich data with item URL if ServerUrl is configured
-        if (!string.IsNullOrEmpty(_configuration.ServerUrl))
+        if (!string.IsNullOrEmpty(Configuration.ServerUrl))
         {
             EnrichWithItemUrl(itemData);
         }
@@ -293,6 +294,12 @@ public class MultifySender : IWebhookSender
             }
         }
 
+        // Correct LibraryName/LibraryId to CollectionFolder (not physical Folder) via VirtualFolders path prefix.
+        // DataObjectHelpers.GetTopParent() returns physical Folder (e.g. a186… "movies") while config stores
+        // CollectionFolder (e.g. 04f… "Private - Filmes"). Without correction, {{LibraryName}} shows "movies"
+        // instead of "Private - Filmes" and FilterService must handle alias via path.
+        CorrectLibraryInfo(itemData, item);
+
         // Enrich data with TMDB image URLs via Jellyfin's provider system
         if (item != null)
         {
@@ -301,7 +308,7 @@ public class MultifySender : IWebhookSender
             // Enrich parent-level poster URLs (Season/Series) for hierarchical items.
             // This allows users to reference {{TmdbSeasonPosterUrl}} or {{SeriesPoster}}
             // regardless of the current item type.
-            await _imageEnrichmentService.EnrichParentPosterUrls(itemData, item, _configuration.ServerUrl).ConfigureAwait(false);
+            await _imageEnrichmentService.EnrichParentPosterUrls(itemData, item, Configuration.ServerUrl).ConfigureAwait(false);
         }
         else
         {
@@ -314,12 +321,12 @@ public class MultifySender : IWebhookSender
         // Enrich data with people info (Director, Writers, CastList, CastJson) — reuses item from above
         EnrichWithPeople(itemData, item);
 
-        _logger.LogWarning(
+        _logger.LogDebug(
             "DEBUG-ENRICH: ItemId={HasItemId} ItemUrl={HasItemUrl} ItemShortId={HasItemShortId} ServerUrl='{ServerUrl}'",
             itemData.ContainsKey("ItemId"),
             itemData.ContainsKey("ItemUrl"),
             itemData.ContainsKey("ItemShortId"),
-            _configuration.ServerUrl);
+            Configuration.ServerUrl);
 
         var tasks = new List<Task>();
 
@@ -336,7 +343,7 @@ public class MultifySender : IWebhookSender
             genericCount);
 
         // Get delay from advanced settings (convert seconds to milliseconds)
-        var delayMs = Math.Max(0, (_configuration.AdvancedSettings?.DelaySeconds ?? DefaultDelaySeconds) * 1000);
+        var delayMs = Math.Max(0, (Configuration.AdvancedSettings?.DelaySeconds ?? DefaultDelaySeconds) * 1000);
 
         // Fire all service types in parallel
         tasks.Add(SendNotificationsSequentially(_telegramClient, telegramOptions, itemData, itemType, delayMs, "Telegram"));
@@ -360,7 +367,7 @@ public class MultifySender : IWebhookSender
             if (data.TryGetValue("ImdbId", out var imdbIdObj) && imdbIdObj is string imdbId && !string.IsNullOrEmpty(imdbId))
             {
                 var mediaType = GetMediaType(data);
-                var ratings = await _mdblistService!.GetRatingsAsync(_configuration.MdblistApiKey, imdbId, mediaType).ConfigureAwait(false);
+                var ratings = await _mdblistService!.GetRatingsAsync(Configuration.MdblistApiKey, imdbId, mediaType).ConfigureAwait(false);
                 if (ratings != null)
                 {
                     foreach (var rating in ratings)
@@ -373,7 +380,7 @@ public class MultifySender : IWebhookSender
             else if (data.TryGetValue("TmdbId", out var tmdbIdObj) && tmdbIdObj is string tmdbIdStr && int.TryParse(tmdbIdStr, out var tmdbId))
             {
                 var mediaType = GetMediaType(data);
-                var ratings = await _mdblistService!.GetRatingsByTmdbAsync(_configuration.MdblistApiKey, tmdbId, mediaType).ConfigureAwait(false);
+                var ratings = await _mdblistService!.GetRatingsByTmdbAsync(Configuration.MdblistApiKey, tmdbId, mediaType).ConfigureAwait(false);
                 if (ratings != null)
                 {
                     foreach (var rating in ratings)
@@ -396,7 +403,7 @@ public class MultifySender : IWebhookSender
             return;
         }
 
-        var serverUrl = _configuration.ServerUrl.TrimEnd('/');
+        var serverUrl = Configuration.ServerUrl.TrimEnd('/');
         data["ServerUrl"] = serverUrl;
         var itemUrl = $"{serverUrl}/web/#/details?id={itemId}";
         data["ItemUrl"] = itemUrl;
@@ -732,10 +739,74 @@ public class MultifySender : IWebhookSender
     {
         if (data.TryGetValue("ItemType", out var itemTypeObj) && itemTypeObj is string itemType)
         {
-            return itemType.Contains("Movie", StringComparison.OrdinalIgnoreCase) ? "movie" : "show";
+            // Normalize to lower for exact matching; keep Contains fallback for custom/subclass names
+            var lower = itemType.ToLowerInvariant();
+            return lower switch
+            {
+                "movie" => "movie",
+                "episode" => "show",
+                "series" => "show",
+                "season" => "show",
+                _ when itemType.Contains("Movie", StringComparison.OrdinalIgnoreCase) => "movie",
+                _ when itemType.Contains("Episode", StringComparison.OrdinalIgnoreCase)
+                    || itemType.Contains("Series", StringComparison.OrdinalIgnoreCase)
+                    || itemType.Contains("Season", StringComparison.OrdinalIgnoreCase) => "show",
+                _ => "movie"
+            };
         }
 
         return "movie";
+    }
+
+    private void CorrectLibraryInfo(Dictionary<string, object> data, BaseItem? item)
+    {
+        try
+        {
+            var path = string.Empty;
+            if (data.TryGetValue("Path", out var pathObj) && pathObj is string p && !string.IsNullOrEmpty(p))
+            {
+                path = p;
+            }
+            else if (item?.Path != null)
+            {
+                path = item.Path;
+            }
+
+            if (string.IsNullOrEmpty(path))
+            {
+                return;
+            }
+
+            var virtualFolders = _libraryManager.GetVirtualFolders();
+            if (virtualFolders == null || virtualFolders.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var vf in virtualFolders)
+            {
+                if (vf.Locations == null)
+                {
+                    continue;
+                }
+
+                foreach (var loc in vf.Locations)
+                {
+                    if (!string.IsNullOrEmpty(loc) && path.StartsWith(loc, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Found matching collection — override LibraryName/LibraryId to collection (not physical Folder)
+                        data["LibraryName"] = vf.Name;
+                        // Use ItemId as stored in VirtualFolder (N format) — FilterService normalizes
+                        data["LibraryId"] = vf.ItemId;
+                        return;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Error correcting library info for {Path}", data.TryGetValue("Path", out var po) ? po : "unknown");
+        }
     }
 
     private static bool NotifyOnItem<T>(T baseOptions, Type? itemType)
@@ -836,7 +907,7 @@ public class MultifySender : IWebhookSender
         var copy = new Dictionary<string, object>(source.Count, source.Comparer);
         foreach (var kvp in source)
         {
-            // Strings and value types are immutable — safe to share
+            // Strings and value types are immutable — safe to share. Enum check works for boxed enums.
             if (kvp.Value is string or int or long or float or double or bool or Guid or DateTime or Enum)
             {
                 copy[kvp.Key] = kvp.Value;
@@ -850,20 +921,40 @@ public class MultifySender : IWebhookSender
             }
             else if (kvp.Value is System.Collections.IList list)
             {
-                // Shallow copy: the list is new, but elements are shared by reference.
-                // This is safe for current usage (all list values are strings/value types).
-                // If nested dictionaries are added to lists in the future, this will need
-                // recursive deep copying.
+                // Deep copy list elements that are dictionaries/lists; otherwise share immutable values.
                 var listCopy = new List<object>(list.Count);
                 foreach (var item in list)
                 {
-                    listCopy.Add(item);
+                    if (item is IDictionary<string, object> dictItem)
+                    {
+                        var dictComparer = dictItem is Dictionary<string, object> concreteDict
+                            ? concreteDict.Comparer
+                            : StringComparer.Ordinal;
+                        listCopy.Add(DeepCopyDict(new Dictionary<string, object>(dictItem, dictComparer)));
+                    }
+                    else if (item is System.Collections.IList innerList)
+                    {
+                        // Recursively copy nested lists (e.g. list of lists)
+                        var innerCopy = new List<object>(innerList.Count);
+                        foreach (var innerItem in innerList)
+                        {
+                            innerCopy.Add(innerItem);
+                        }
+
+                        listCopy.Add(innerCopy);
+                    }
+                    else
+                    {
+                        listCopy.Add(item);
+                    }
                 }
+
                 copy[kvp.Key] = listCopy;
             }
             else
             {
-                // Unknown reference type — share reference (best effort)
+                // Unknown reference type — share reference (best effort). Documented limitation:
+                // callers must not mutate such values after DeepCopyDict.
                 copy[kvp.Key] = kvp.Value;
             }
         }

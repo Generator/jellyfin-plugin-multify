@@ -337,15 +337,47 @@ public class TelegramOption : BaseOption
 
             if (isEditEvent && !string.IsNullOrEmpty(itemKey) && _messageStore != null)
             {
-                var existingMessageId = _messageStore.GetMessageId(option.ChatId, option.MessageThreadId, itemKey);
-                if (existingMessageId.HasValue)
+                var keyLock = _messageStore.GetKeyLock(option.ChatId, option.MessageThreadId, itemKey);
+                await keyLock.WaitAsync().ConfigureAwait(false);
+                try
                 {
-                    await EditMessageAsync(option, data, body, existingMessageId.Value).ConfigureAwait(false);
+                    var existingMessageId = _messageStore.GetMessageId(option.ChatId, option.MessageThreadId, itemKey);
+                    if (existingMessageId.HasValue)
+                    {
+                        await EditMessageAsync(option, data, body, existingMessageId.Value).ConfigureAwait(false);
+                        return;
+                    }
+
+                    // No existing message — send new while holding per-key lock to prevent duplicate sends
+                    long? lockedNewMessageId = null;
+                    switch (option.MessageType)
+                    {
+                        case TelegramMessageType.SendPhoto:
+                            lockedNewMessageId = await SendPhotoAsync(option, data, body).ConfigureAwait(false);
+                            break;
+                        case TelegramMessageType.SendRichMessage:
+                            lockedNewMessageId = await SendRichMessageAsync(option, data, body).ConfigureAwait(false);
+                            break;
+                        default:
+                            lockedNewMessageId = await SendTextAsync(option, body).ConfigureAwait(false);
+                            break;
+                    }
+
+                    if (lockedNewMessageId.HasValue)
+                    {
+                        var entry = BuildTelegramEntry(data, lockedNewMessageId.Value);
+                        await _messageStore.StoreMessageIdAsync(option.ChatId, option.MessageThreadId, itemKey, entry).ConfigureAwait(false);
+                    }
+
                     return;
+                }
+                finally
+                {
+                    keyLock.Release();
                 }
             }
 
-            // Send new message
+            // Non-edit events or no itemKey / no store — send without per-key lock
             long? newMessageId = null;
             switch (option.MessageType)
             {
@@ -360,7 +392,7 @@ public class TelegramOption : BaseOption
                     break;
             }
 
-            // Store the message ID (and rich metadata) for future edits
+            // Store the message ID (and rich metadata) for future edits — already handled with lock for edit events
             if (isEditEvent && !string.IsNullOrEmpty(itemKey) && _messageStore != null && newMessageId.HasValue)
             {
                 var entry = BuildTelegramEntry(data, newMessageId.Value);

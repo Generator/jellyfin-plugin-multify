@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Multify.Configuration;
 using MediaBrowser.Common.Net;
@@ -24,6 +25,12 @@ public class MdblistService
 
     // In-memory cache for ratings (key: "imdb:{mediaType}:{imdbId}" or "tmdb:{mediaType}:{tmdbId}")
     private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
+
+    // Negative cache for 404 NotFound (short TTL) to avoid burning quota on invalid ids
+    private readonly ConcurrentDictionary<string, CacheEntry> _negativeCache = new();
+
+    // Per-key locks for single-flight fetches (prevents thundering herd on same id)
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _fetchLocks = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MdblistService"/> class.
@@ -76,7 +83,7 @@ public class MdblistService
 
     private async Task<Dictionary<string, object>?> GetRatingsInternalAsync(string apiKey, string cacheKey, Func<Uri> uriFactory)
     {
-        // Check cache first
+        // Check positive cache first
         if (_advancedOptions.MdblistCacheTtlHours > 0 && _cache.TryGetValue(cacheKey, out var cachedEntry))
         {
             if (DateTime.UtcNow < cachedEntry.Expiry)
@@ -91,18 +98,80 @@ public class MdblistService
             }
         }
 
-        // Fetch with retry logic
-        var ratings = await FetchWithRetryAsync(apiKey, uriFactory, cacheKey).ConfigureAwait(false);
-
-        // Cache the result if successful
-        if (ratings != null && _advancedOptions.MdblistCacheTtlHours > 0)
+        // Check negative cache (404) — short TTL to avoid re-querying invalid ids every second
+        if (_negativeCache.TryGetValue(cacheKey, out var negativeEntry))
         {
-            var expiry = DateTime.UtcNow.AddHours(_advancedOptions.MdblistCacheTtlHours);
-            _cache[cacheKey] = new CacheEntry { Ratings = ratings, Expiry = expiry };
-            _logger.LogDebug("Cached MDBList ratings for {CacheKey} (TTL: {TtlHours}h)", cacheKey, _advancedOptions.MdblistCacheTtlHours);
+            if (DateTime.UtcNow < negativeEntry.Expiry)
+            {
+                _logger.LogDebug("MDBList negative cache hit for {CacheKey}", cacheKey);
+                return null;
+            }
+            else
+            {
+                _negativeCache.TryRemove(cacheKey, out _);
+            }
         }
 
-        return ratings;
+        // Single-flight: ensure only one fetch per cacheKey at a time (prevents thundering herd on 1Hz PlaybackProgress)
+        var keyLock = _fetchLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
+        await keyLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            // Double-check after acquiring lock (another thread may have populated while we waited)
+            if (_advancedOptions.MdblistCacheTtlHours > 0 && _cache.TryGetValue(cacheKey, out var cachedAfterLock))
+            {
+                if (DateTime.UtcNow < cachedAfterLock.Expiry)
+                {
+                    return cachedAfterLock.Ratings;
+                }
+
+                _cache.TryRemove(cacheKey, out _);
+            }
+
+            if (_negativeCache.TryGetValue(cacheKey, out var negativeAfterLock))
+            {
+                if (DateTime.UtcNow < negativeAfterLock.Expiry)
+                {
+                    return null;
+                }
+
+                _negativeCache.TryRemove(cacheKey, out _);
+            }
+
+            // Fetch with retry logic
+            var ratings = await FetchWithRetryAsync(apiKey, uriFactory, cacheKey).ConfigureAwait(false);
+
+            // Cache the result if successful
+            if (ratings != null && _advancedOptions.MdblistCacheTtlHours > 0)
+            {
+                var expiry = DateTime.UtcNow.AddHours(_advancedOptions.MdblistCacheTtlHours);
+                _cache[cacheKey] = new CacheEntry { Ratings = ratings, Expiry = expiry };
+                _logger.LogDebug("Cached MDBList ratings for {CacheKey} (TTL: {TtlHours}h)", cacheKey, _advancedOptions.MdblistCacheTtlHours);
+            }
+            else if (ratings == null)
+            {
+                // Cache 404 as negative for 1 hour (or TTL/24, min 1h) to avoid burning quota on invalid ids like tt39462372
+                var negativeTtl = TimeSpan.FromHours(1);
+                if (_advancedOptions.MdblistCacheTtlHours > 0)
+                {
+                    // Use shorter of configured TTL and 1h for negative, at least 1h
+                    negativeTtl = TimeSpan.FromHours(Math.Min(_advancedOptions.MdblistCacheTtlHours, 1));
+                    if (negativeTtl < TimeSpan.FromHours(1))
+                    {
+                        negativeTtl = TimeSpan.FromHours(1);
+                    }
+                }
+
+                _negativeCache[cacheKey] = new CacheEntry { Ratings = new Dictionary<string, object>(), Expiry = DateTime.UtcNow.Add(negativeTtl) };
+                _logger.LogDebug("Cached MDBList negative for {CacheKey} (TTL: {Ttl}h)", cacheKey, negativeTtl.TotalHours);
+            }
+
+            return ratings;
+        }
+        finally
+        {
+            keyLock.Release();
+        }
     }
 
     private async Task<Dictionary<string, object>?> FetchWithRetryAsync(string apiKey, Func<Uri> uriFactory, string cacheKey)
