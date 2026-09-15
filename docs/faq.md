@@ -144,3 +144,14 @@ For **Telegram** destinations, when the same item is notified again (matched by 
 ### Why don't I get notifications for trailers?
 
 Trailer items are automatically **excluded from all notification types**. Even though `{{TrailerUrl}}` / `{{TrailerYtId}}` template variables exist, no notification is triggered when a trailer is added or updated in your library.
+
+---
+
+## Secrets & Credentials
+
+### How should I handle my Telegram bot token and MDBList API key?
+
+Treat both as **secrets**:
+
+- **Telegram bot token** — the Telegram Bot API requires the token in the URL path (`https://api.telegram.org/bot<token>/METHOD`); it cannot be moved to a header. Multify never logs request URIs (only status codes and response bodies), but avoid pasting full request URLs into proxies, shared logs, or screenshots.
+- **MDBList API key** — sent as the `apikey` query parameter, which is MDBList's documented standard for API-key auth (header auth is OAuth-only). Don't share it publicly; anyone with the key can consume your daily quota.

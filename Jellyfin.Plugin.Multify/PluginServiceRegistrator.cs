@@ -58,7 +58,10 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddScoped<FilterService>();
 
         // Register LibraryCache as hosted service (with periodic cleanup)
-        serviceCollection.AddHostedService<LibraryCache>();
+        // Register as singleton first so it can be injected for cached virtual
+        // folder lookups, then register as hosted service so Jellyfin starts it.
+        serviceCollection.AddSingleton<LibraryCache>();
+        serviceCollection.AddHostedService(sp => sp.GetRequiredService<LibraryCache>());
 
         // Register destination clients
         serviceCollection.AddScoped<IWebhookClient<TelegramOption>, TelegramClient>();

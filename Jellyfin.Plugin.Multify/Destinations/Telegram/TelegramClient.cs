@@ -80,7 +80,35 @@ public class TelegramOption : BaseOption
     {
         // Telegram API uses Bot Token in the URL path (https://api.telegram.org/bot{token}/METHOD),
         // NOT the WebhookUri from BaseOption. The WebhookUri field is ignored for Telegram destinations.
+        // The token is a secret: never log request URIs, only status codes and response bodies.
         private const string ApiBaseUrl = "https://api.telegram.org/bot";
+
+        /// <summary>
+        /// Data keys whose string values are URLs and must NOT be Markdown-escaped.
+        /// MarkdownV2 forbids backslash-escaped characters inside link targets, while
+        /// plain-text values must be escaped even if they happen to start with "http".
+        /// </summary>
+        private static readonly HashSet<string> UrlKeys = new(StringComparer.Ordinal)
+        {
+            "PrimaryImage",
+            "BackdropImage",
+            "ThumbImage",
+            "LogoImage",
+            "BannerImage",
+            "TmdbPosterUrl",
+            "TmdbBackdropUrl",
+            "TmdbProfileUrl",
+            "TmdbStillUrl",
+            "TmdbLogoUrl",
+            "TmdbSeasonPosterUrl",
+            "TmdbSeriesPosterUrl",
+            "SeasonPoster",
+            "SeriesPoster",
+            "ItemUrl",
+            "ServerUrl",
+            "TrailerUrl",
+            "PhotoUrl"
+        };
 
         /// <summary>
         /// Matches Markdown link/image syntax <c>[label](url)</c> and <c>![alt](url)</c>,
@@ -192,7 +220,7 @@ public class TelegramOption : BaseOption
     /// <summary>
     /// Creates a copy of the data dictionary with string values escaped for the given parse mode.
     /// Text values are escaped so special characters appear as raw text in the message body.
-    /// URL values (starting with http:// or https://) are NOT escaped because MarkdownV2 does
+    /// Only known URL values (see <see cref="UrlKeys"/>) stay unescaped because MarkdownV2 does
     /// not allow backslash-escaped characters inside the URL portion of <c>[text](url)</c>
     /// or <c>![alt](url)</c> syntax.
     /// </summary>
@@ -217,10 +245,11 @@ public class TelegramOption : BaseOption
         {
             if (kvp.Value is string strValue)
             {
-                // Don't escape URL values — MarkdownV2 doesn't allow backslash-escaped
-                // characters inside URL portions of [text](url), ![alt](url), or <img src="url"/>
-                if (strValue.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-                    strValue.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                // Only known URL keys stay unescaped — MarkdownV2 doesn't allow
+                // backslash-escaped characters inside URL portions of [text](url),
+                // ![alt](url), or <img src="url"/>. Plain-text values are escaped
+                // even when they happen to start with "http".
+                if (UrlKeys.Contains(kvp.Key))
                 {
                     escaped[kvp.Key] = strValue;
                 }

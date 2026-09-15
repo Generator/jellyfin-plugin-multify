@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using Jellyfin.Plugin.Multify.Destinations;
+using Jellyfin.Plugin.Multify.Helpers;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Entities;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Services;
@@ -14,26 +15,19 @@ public class FilterService
 {
     private readonly ILogger<FilterService> _logger;
     private readonly ILibraryManager? _libraryManager;
+    private readonly LibraryCache? _libraryCache;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FilterService"/> class.
     /// </summary>
     /// <param name="logger">Instance of the <see cref="ILogger{FilterService}"/> interface.</param>
     /// <param name="libraryManager">Instance of the <see cref="ILibraryManager"/> interface.</param>
-    public FilterService(ILogger<FilterService> logger, ILibraryManager? libraryManager = null)
+    /// <param name="libraryCache">Instance of the <see cref="LibraryCache"/> for cached virtual folder lookups. Optional.</param>
+    public FilterService(ILogger<FilterService> logger, ILibraryManager? libraryManager = null, LibraryCache? libraryCache = null)
     {
         _logger = logger;
         _libraryManager = libraryManager;
-    }
-
-    private static string NormalizeGuid(string value)
-    {
-        if (Guid.TryParse(value, out var guid))
-        {
-            return guid.ToString("N", CultureInfo.InvariantCulture).ToLowerInvariant();
-        }
-
-        return value.Trim().ToLowerInvariant();
+        _libraryCache = libraryCache;
     }
 
     /// <summary>
@@ -83,11 +77,11 @@ public class FilterService
             ? userIdObj?.ToString() ?? string.Empty
             : string.Empty;
 
-        var normalizedUserId = NormalizeGuid(userId);
+        var normalizedUserId = DataObjectHelpers.NormalizeGuid(userId);
         bool isInFilter = false;
         foreach (var filter in option.UserFilter)
         {
-            if (NormalizeGuid(filter) == normalizedUserId)
+            if (DataObjectHelpers.NormalizeGuid(filter) == normalizedUserId)
             {
                 isInFilter = true;
                 break;
@@ -135,12 +129,30 @@ public class FilterService
             ? pathObj?.ToString() ?? string.Empty
             : string.Empty;
 
-        var normalizedLibraryId = NormalizeGuid(libraryId);
+        var normalizedLibraryId = DataObjectHelpers.NormalizeGuid(libraryId);
+
+        // Fetch virtual folders once per call (not per filter value) via the shared
+        // short-TTL cache; skipped entirely when no path is available for matching.
+        var libraryManager = _libraryManager;
+        IReadOnlyList<VirtualFolderInfo>? virtualFolders = null;
+        if (libraryManager != null && !string.IsNullOrEmpty(path))
+        {
+            try
+            {
+                virtualFolders = _libraryCache != null
+                    ? _libraryCache.GetOrAddVirtualFolders(() => libraryManager.GetVirtualFolders())
+                    : libraryManager.GetVirtualFolders();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Error resolving VirtualFolders for library filter");
+            }
+        }
 
         bool isInFilter = false;
         foreach (var filter in option.LibraryFilter)
         {
-            var normalizedFilter = NormalizeGuid(filter);
+            var normalizedFilter = DataObjectHelpers.NormalizeGuid(filter);
 
             // Direct GUID match (N vs D, case-insensitive)
             if (normalizedLibraryId == normalizedFilter && !string.IsNullOrEmpty(normalizedLibraryId))
@@ -161,43 +173,36 @@ public class FilterService
             // Resolve via VirtualFolders: filter is a CollectionFolder ItemId (e.g. af92...),
             // but data LibraryId may be the physical Folder id (e.g. f7e7...) or Path.
             // If filter matches a VirtualFolder, check if item's Path is inside its Locations.
-            if (_libraryManager != null && !string.IsNullOrEmpty(path))
+            // Uses the virtual folders fetched once above (shared short-TTL cache).
+            if (virtualFolders != null)
             {
-                try
+                foreach (var vf in virtualFolders)
                 {
-                    var virtualFolders = _libraryManager.GetVirtualFolders();
-                    foreach (var vf in virtualFolders)
+                    if (DataObjectHelpers.NormalizeGuid(vf.ItemId) == normalizedFilter
+                        || string.Equals(vf.Name, filter, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (NormalizeGuid(vf.ItemId) == normalizedFilter
-                            || string.Equals(vf.Name, filter, StringComparison.OrdinalIgnoreCase))
+                        if (vf.Locations != null)
                         {
-                            if (vf.Locations != null)
+                            foreach (var loc in vf.Locations)
                             {
-                                foreach (var loc in vf.Locations)
+                                if (!string.IsNullOrEmpty(loc) && path.StartsWith(loc, StringComparison.OrdinalIgnoreCase))
                                 {
-                                    if (!string.IsNullOrEmpty(loc) && path.StartsWith(loc, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        isInFilter = true;
-                                        break;
-                                    }
+                                    isInFilter = true;
+                                    break;
                                 }
                             }
+                        }
 
-                            if (isInFilter)
-                            {
-                                break;
-                            }
+                        if (isInFilter)
+                        {
+                            break;
                         }
                     }
-
-                    if (isInFilter)
-                    {
-                        break;
-                    }
                 }
-                catch (Exception ex)
+
+                if (isInFilter)
                 {
-                    _logger.LogDebug(ex, "Error resolving VirtualFolders for library filter {Filter}", filter);
+                    break;
                 }
             }
         }

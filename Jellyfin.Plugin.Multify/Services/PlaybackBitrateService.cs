@@ -47,7 +47,7 @@ public class PlaybackBitrateService
         try
         {
             var sources = await _mediaSourceManager
-                .GetPlaybackMediaSources(item, user, false, false, CancellationToken.None)
+                .GetPlaybackMediaSources(item, user, allowMediaProbe: false, enablePathSubstitution: false, CancellationToken.None)
                 .ConfigureAwait(false);
 
             var source = sources?.FirstOrDefault(s => s.Bitrate.HasValue && s.Bitrate.Value > 0);

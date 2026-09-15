@@ -51,6 +51,10 @@ public sealed class TelegramMessageStore : IDisposable
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
     };
     private readonly SemaphoreSlim _fileLock = new(1, 1);
+    private readonly TimeSpan _saveDebounceDelay = TimeSpan.FromSeconds(2);
+    private long _storeVersion;
+    private long _savedVersion;
+    private int _saveRunning;
     private bool _disposed;
 
     /// <summary>
@@ -134,7 +138,52 @@ public sealed class TelegramMessageStore : IDisposable
     {
         var key = GetKey(chatId, messageThreadId, itemKey);
         _messageStore[key] = entry;
-        await SaveStoreAsync().ConfigureAwait(false);
+        Interlocked.Increment(ref _storeVersion);
+        await DebouncedSaveAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Persists the store with debounce: bursts of <see cref="StoreMessageIdAsync"/>
+    /// calls (e.g. a library scan adding many episodes) collapse into a single delayed
+    /// write instead of one full serialization per entry. Version tracking guarantees
+    /// a trailing save so no entry is lost even if it arrives while a save is already
+    /// scheduled or running.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    private async Task DebouncedSaveAsync()
+    {
+        if (Interlocked.CompareExchange(ref _saveRunning, 1, 0) == 1)
+        {
+            // A save loop is already scheduled or running; our entry is in the
+            // dictionary and the loop's version check will pick it up.
+            return;
+        }
+
+        try
+        {
+            while (true)
+            {
+                await Task.Delay(_saveDebounceDelay).ConfigureAwait(false);
+                await SaveStoreAsync().ConfigureAwait(false);
+                Interlocked.Exchange(ref _savedVersion, Volatile.Read(ref _storeVersion));
+                if (Volatile.Read(ref _savedVersion) >= Volatile.Read(ref _storeVersion))
+                {
+                    return;
+                }
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _saveRunning, 0);
+
+            // An entry may have arrived after the final version check above but
+            // before the flag was cleared; reschedule once if so (bounded: the
+            // rescheduled call either saves or exits immediately).
+            if (Volatile.Read(ref _savedVersion) < Volatile.Read(ref _storeVersion))
+            {
+                await DebouncedSaveAsync().ConfigureAwait(false);
+            }
+        }
     }
 
     /// <summary>
@@ -144,7 +193,16 @@ public sealed class TelegramMessageStore : IDisposable
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task CleanupStaleEntriesAsync()
     {
-        await _fileLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await _fileLock.WaitAsync().ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Shutdown in progress — the store is being disposed.
+            return;
+        }
+
         try
         {
             var count = _messageStore.Count;
@@ -155,12 +213,11 @@ public sealed class TelegramMessageStore : IDisposable
             }
 
             _messageStore.Clear();
-            // Also clear per-key locks to avoid leak
-            foreach (var kvp in _keyLocks)
-            {
-                kvp.Value.Dispose();
-            }
-
+            // Drop per-key locks to avoid unbounded growth, but do NOT dispose
+            // them: a lock held by an active send/edit sequence stays valid via
+            // the holder's reference, and disposing it here would race the
+            // holder's Release() with ObjectDisposedException. Abandoned locks
+            // are reclaimed by the garbage collector once released.
             _keyLocks.Clear();
             var json = JsonSerializer.Serialize(_messageStore, StoreJsonOptions);
             await File.WriteAllTextAsync(_storePath, json).ConfigureAwait(false);
@@ -172,7 +229,14 @@ public sealed class TelegramMessageStore : IDisposable
         }
         finally
         {
-            _fileLock.Release();
+            try
+            {
+                _fileLock.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Shutdown in progress — the store is being disposed.
+            }
         }
     }
 
@@ -184,7 +248,16 @@ public sealed class TelegramMessageStore : IDisposable
 
     private async Task SaveStoreAsync()
     {
-        await _fileLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await _fileLock.WaitAsync().ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Shutdown in progress — the store is being disposed.
+            return;
+        }
+
         try
         {
             var json = JsonSerializer.Serialize(_messageStore, StoreJsonOptions);
@@ -196,7 +269,14 @@ public sealed class TelegramMessageStore : IDisposable
         }
         finally
         {
-            _fileLock.Release();
+            try
+            {
+                _fileLock.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Shutdown in progress — the store is being disposed.
+            }
         }
     }
 
@@ -218,11 +298,10 @@ public sealed class TelegramMessageStore : IDisposable
             if (disposing)
             {
                 _fileLock?.Dispose();
-                foreach (var kvp in _keyLocks)
-                {
-                    kvp.Value.Dispose();
-                }
 
+                // Drop per-key locks without disposing them: a lock held by an
+                // active send/edit sequence stays usable via the holder's own
+                // reference instead of hitting ObjectDisposedException on Release().
                 _keyLocks.Clear();
             }
 

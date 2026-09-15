@@ -27,6 +27,11 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
 {
     private const int MaxRetries = 10;
 
+    // Dedupe entries older than this are evicted so the set doesn't grow without
+    // bound over the server lifetime. Matches the Telegram 48h edit window:
+    // re-notification after expiry is accepted.
+    private static readonly TimeSpan NotifiedRetention = TimeSpan.FromHours(48);
+
     // Item types treated as real episodes (excludes virtual/missing-episode placeholders).
     private static readonly BaseItemKind[] EpisodeItemTypes = { BaseItemKind.Episode };
 
@@ -34,7 +39,7 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
     private readonly ILibraryManager _libraryManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly ConcurrentDictionary<Guid, QueuedItem> _queue = new();
-    private readonly ConcurrentDictionary<Guid, byte> _notifiedItems = new();
+    private readonly ConcurrentDictionary<Guid, DateTime> _notifiedItems = new();
     private CancellationTokenSource? _cancellationTokenSource;
 
     /// <summary>
@@ -164,6 +169,8 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task ProcessQueueAsync(CancellationToken cancellationToken)
     {
+        EvictExpiredNotifiedItems();
+
         if (_queue.IsEmpty)
         {
             return;
@@ -243,7 +250,7 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
             }
 
             // Metadata is ready or retries exhausted — atomically mark as notified before sending.
-            if (!_notifiedItems.TryAdd(item.Id, 0))
+            if (!_notifiedItems.TryAdd(item.Id, DateTime.UtcNow))
             {
                 _logger.LogDebug("Skipping {ItemName} — already notified", item.Name);
                 _queue.TryRemove(itemId, out _);
@@ -269,6 +276,22 @@ public sealed class LibraryEventHostedService : IHostedService, IDisposable
                 _logger.LogError(ex, "Error sending notification for {ItemName}", item.Name);
                 // Remove from notified set so we can retry later.
                 _notifiedItems.TryRemove(item.Id, out _);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Removes dedupe entries older than the retention window so the set doesn't grow
+    /// without bound over the server lifetime.
+    /// </summary>
+    private void EvictExpiredNotifiedItems()
+    {
+        var cutoff = DateTime.UtcNow - NotifiedRetention;
+        foreach (var kvp in _notifiedItems)
+        {
+            if (kvp.Value < cutoff)
+            {
+                _notifiedItems.TryRemove(kvp.Key, out _);
             }
         }
     }

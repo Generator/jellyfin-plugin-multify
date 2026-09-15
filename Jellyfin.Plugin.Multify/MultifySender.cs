@@ -43,6 +43,7 @@ public class MultifySender : IWebhookSender
     private readonly ILibraryManager _libraryManager;
     private readonly IMediaSourceManager _mediaSourceManager;
     private readonly ImageEnrichmentService _imageEnrichmentService;
+    private readonly LibraryCache? _libraryCache;
 
     // Live configuration — read per call from plugin instance so UI Save (UpdateConfiguration)
     // is reflected without restart (like WebhookSender in jellyfin-plugin-webhook).
@@ -61,6 +62,7 @@ public class MultifySender : IWebhookSender
     /// <param name="mediaSourceManager">Instance of the <see cref="IMediaSourceManager"/> for querying media streams.</param>
     /// <param name="imageEnrichmentService">Instance of the <see cref="ImageEnrichmentService"/> for image enrichment.</param>
     /// <param name="mdblistService">Instance of the <see cref="MdblistService"/>.</param>
+    /// <param name="libraryCache">Instance of the <see cref="LibraryCache"/> for cached virtual folder lookups. Optional.</param>
     public MultifySender(
         ILogger<MultifySender> logger,
         IWebhookClient<TelegramOption> telegramClient,
@@ -70,7 +72,8 @@ public class MultifySender : IWebhookSender
         ILibraryManager libraryManager,
         IMediaSourceManager mediaSourceManager,
         ImageEnrichmentService imageEnrichmentService,
-        MdblistService? mdblistService = null)
+        MdblistService? mdblistService = null,
+        LibraryCache? libraryCache = null)
     {
         _logger = logger;
         _telegramClient = telegramClient;
@@ -81,6 +84,7 @@ public class MultifySender : IWebhookSender
         _mediaSourceManager = mediaSourceManager;
         _imageEnrichmentService = imageEnrichmentService;
         _mdblistService = mdblistService;
+        _libraryCache = libraryCache;
     }
 
     private static readonly string[] MdblistTemplateKeys =
@@ -298,7 +302,15 @@ public class MultifySender : IWebhookSender
         // DataObjectHelpers.GetTopParent() returns physical Folder (e.g. a186… "movies") while config stores
         // CollectionFolder (e.g. 04f… "Private - Filmes"). Without correction, {{LibraryName}} shows "movies"
         // instead of "Private - Filmes" and FilterService must handle alias via path.
-        CorrectLibraryInfo(itemData, item);
+        // Virtual folders come from the shared short-TTL LibraryCache so high-frequency
+        // events (e.g. PlaybackProgress) don't hammer ILibraryManager with file-system I/O.
+        DataObjectHelpers.CorrectLibraryInfo(
+            itemData,
+            item,
+            () => _libraryCache != null
+                ? _libraryCache.GetOrAddVirtualFolders(() => _libraryManager.GetVirtualFolders())
+                : _libraryManager.GetVirtualFolders(),
+            _logger);
 
         // Enrich data with TMDB image URLs via Jellyfin's provider system
         if (item != null)
@@ -367,6 +379,12 @@ public class MultifySender : IWebhookSender
             if (data.TryGetValue("ImdbId", out var imdbIdObj) && imdbIdObj is string imdbId && !string.IsNullOrEmpty(imdbId))
             {
                 var mediaType = GetMediaType(data);
+                if (mediaType is null)
+                {
+                    // Unsupported item type (e.g. audio, books) — MDBList only serves movies/shows.
+                    return;
+                }
+
                 var ratings = await _mdblistService!.GetRatingsAsync(Configuration.MdblistApiKey, imdbId, mediaType).ConfigureAwait(false);
                 if (ratings != null)
                 {
@@ -380,6 +398,12 @@ public class MultifySender : IWebhookSender
             else if (data.TryGetValue("TmdbId", out var tmdbIdObj) && tmdbIdObj is string tmdbIdStr && int.TryParse(tmdbIdStr, out var tmdbId))
             {
                 var mediaType = GetMediaType(data);
+                if (mediaType is null)
+                {
+                    // Unsupported item type (e.g. audio, books) — MDBList only serves movies/shows.
+                    return;
+                }
+
                 var ratings = await _mdblistService!.GetRatingsByTmdbAsync(Configuration.MdblistApiKey, tmdbId, mediaType).ConfigureAwait(false);
                 if (ratings != null)
                 {
@@ -735,11 +759,12 @@ public class MultifySender : IWebhookSender
         }
     }
 
-    private static string GetMediaType(Dictionary<string, object> data)
+    private static string? GetMediaType(Dictionary<string, object> data)
     {
         if (data.TryGetValue("ItemType", out var itemTypeObj) && itemTypeObj is string itemType)
         {
-            // Normalize to lower for exact matching; keep Contains fallback for custom/subclass names
+            // Normalize to lower for exact matching; keep Contains fallback for custom/subclass names.
+            // Returns null for types MDBList doesn't serve (audio, books, ...).
             var lower = itemType.ToLowerInvariant();
             return lower switch
             {
@@ -751,62 +776,11 @@ public class MultifySender : IWebhookSender
                 _ when itemType.Contains("Episode", StringComparison.OrdinalIgnoreCase)
                     || itemType.Contains("Series", StringComparison.OrdinalIgnoreCase)
                     || itemType.Contains("Season", StringComparison.OrdinalIgnoreCase) => "show",
-                _ => "movie"
+                _ => null
             };
         }
 
-        return "movie";
-    }
-
-    private void CorrectLibraryInfo(Dictionary<string, object> data, BaseItem? item)
-    {
-        try
-        {
-            var path = string.Empty;
-            if (data.TryGetValue("Path", out var pathObj) && pathObj is string p && !string.IsNullOrEmpty(p))
-            {
-                path = p;
-            }
-            else if (item?.Path != null)
-            {
-                path = item.Path;
-            }
-
-            if (string.IsNullOrEmpty(path))
-            {
-                return;
-            }
-
-            var virtualFolders = _libraryManager.GetVirtualFolders();
-            if (virtualFolders == null || virtualFolders.Count == 0)
-            {
-                return;
-            }
-
-            foreach (var vf in virtualFolders)
-            {
-                if (vf.Locations == null)
-                {
-                    continue;
-                }
-
-                foreach (var loc in vf.Locations)
-                {
-                    if (!string.IsNullOrEmpty(loc) && path.StartsWith(loc, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Found matching collection — override LibraryName/LibraryId to collection (not physical Folder)
-                        data["LibraryName"] = vf.Name;
-                        // Use ItemId as stored in VirtualFolder (N format) — FilterService normalizes
-                        data["LibraryId"] = vf.ItemId;
-                        return;
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Error correcting library info for {Path}", data.TryGetValue("Path", out var po) ? po : "unknown");
-        }
+        return null;
     }
 
     private static bool NotifyOnItem<T>(T baseOptions, Type? itemType)
@@ -934,11 +908,22 @@ public class MultifySender : IWebhookSender
                     }
                     else if (item is System.Collections.IList innerList)
                     {
-                        // Recursively copy nested lists (e.g. list of lists)
+                        // Recursively copy nested lists (e.g. list of lists), deep-copying
+                        // dictionaries inside them so no reference is shared with the source.
                         var innerCopy = new List<object>(innerList.Count);
                         foreach (var innerItem in innerList)
                         {
-                            innerCopy.Add(innerItem);
+                            if (innerItem is IDictionary<string, object> innerDict)
+                            {
+                                var innerComparer = innerDict is Dictionary<string, object> concreteInner
+                                    ? concreteInner.Comparer
+                                    : StringComparer.Ordinal;
+                                innerCopy.Add(DeepCopyDict(new Dictionary<string, object>(innerDict, innerComparer)));
+                            }
+                            else
+                            {
+                                innerCopy.Add(innerItem);
+                            }
                         }
 
                         listCopy.Add(innerCopy);

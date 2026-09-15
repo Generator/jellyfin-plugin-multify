@@ -317,7 +317,9 @@ Available for **plugin events** (`PluginInstalled`, `PluginUpdated`, `PluginUnin
 |----------|-------------|---------|
 | `{{PluginName}}` | Plugin display name | `Intro Skipper` |
 | `{{PluginId}}` | Plugin identifier | `plugin123` |
-| `{{NewVersion}}` | Version string | `1.2.3` |
+| `{{PluginVersion}}` | Plugin version string | `1.2.3` |
+| `{{SourceUrl}}` | Plugin package URL (`PluginInstalled` only) | `https://repo.jellyfin.org/…` |
+| `{{NewVersion}}` | Deprecated alias of `{{PluginVersion}}` (test payloads only) | `1.2.3` |
 
 ---
 

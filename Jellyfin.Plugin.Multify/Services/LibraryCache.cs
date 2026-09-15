@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using MediaBrowser.Model.Entities;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -16,6 +18,10 @@ public sealed class LibraryCache : IHostedService, IDisposable, IAsyncDisposable
     private readonly ConcurrentDictionary<Guid, CacheEntry> _cache = new();
     private readonly TimeSpan _defaultTtl = TimeSpan.FromMinutes(5);
     private readonly TimeSpan _cleanupInterval = TimeSpan.FromMinutes(10);
+    private readonly object _virtualFoldersLock = new();
+    private readonly TimeSpan _virtualFoldersTtl = TimeSpan.FromSeconds(30);
+    private IReadOnlyList<VirtualFolderInfo>? _virtualFolders;
+    private DateTime _virtualFoldersExpiry;
     private Timer? _cleanupTimer;
     private bool _disposed;
 
@@ -97,11 +103,46 @@ public sealed class LibraryCache : IHostedService, IDisposable, IAsyncDisposable
     }
 
     /// <summary>
+    /// Gets the cached virtual folders, refreshing them via <paramref name="factory"/> when expired.
+    /// Shared across notifications so high-frequency events don't hammer <c>ILibraryManager</c>
+    /// with file-system I/O on every call. Virtual folders change only via rare admin
+    /// operations, so a short TTL keeps results fresh enough for filtering.
+    /// </summary>
+    /// <param name="factory">Factory that fetches fresh virtual folders (e.g. <c>ILibraryManager.GetVirtualFolders</c>).</param>
+    /// <returns>The cached or freshly fetched virtual folders.</returns>
+    public IReadOnlyList<VirtualFolderInfo> GetOrAddVirtualFolders(Func<IReadOnlyList<VirtualFolderInfo>> factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+
+        var cached = _virtualFolders;
+        if (cached is not null && DateTime.UtcNow < _virtualFoldersExpiry)
+        {
+            return cached;
+        }
+
+        lock (_virtualFoldersLock)
+        {
+            cached = _virtualFolders;
+            if (cached is not null && DateTime.UtcNow < _virtualFoldersExpiry)
+            {
+                return cached;
+            }
+
+            var fresh = factory();
+            _virtualFolders = fresh;
+            _virtualFoldersExpiry = DateTime.UtcNow.Add(_virtualFoldersTtl);
+            _logger.LogDebug("Refreshed virtual folder cache ({Count} folders)", fresh.Count);
+            return fresh;
+        }
+    }
+
+    /// <summary>
     /// Invalidates all cache entries.
     /// </summary>
     public void InvalidateAll()
     {
         _cache.Clear();
+        _virtualFolders = null;
         _logger.LogDebug("Library cache invalidated");
     }
 

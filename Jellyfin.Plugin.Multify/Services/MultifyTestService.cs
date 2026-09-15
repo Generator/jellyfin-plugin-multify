@@ -73,6 +73,7 @@ public class MultifyTestService : IMultifyTestService
     private readonly IWebhookClient<NtfyOption> _ntfyClient;
     private readonly IWebhookClient<GenericWebhookOption> _genericClient;
     private readonly ImageEnrichmentService _imageEnrichmentService;
+    private readonly LibraryCache _libraryCache;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MultifyTestService"/> class.
@@ -84,6 +85,7 @@ public class MultifyTestService : IMultifyTestService
     /// <param name="ntfyClient">Instance of the <see cref="IWebhookClient{NtfyOption}"/>.</param>
     /// <param name="genericClient">Instance of the <see cref="IWebhookClient{GenericWebhookOption}"/>.</param>
     /// <param name="imageEnrichmentService">Instance of the <see cref="ImageEnrichmentService"/> for image enrichment.</param>
+    /// <param name="libraryCache">Instance of the <see cref="LibraryCache"/> for cached virtual folder lookups.</param>
     public MultifyTestService(
         ILogger<MultifyTestService> logger,
         ILibraryManager libraryManager,
@@ -91,7 +93,8 @@ public class MultifyTestService : IMultifyTestService
         IWebhookClient<GotifyOption> gotifyClient,
         IWebhookClient<NtfyOption> ntfyClient,
         IWebhookClient<GenericWebhookOption> genericClient,
-        ImageEnrichmentService imageEnrichmentService)
+        ImageEnrichmentService imageEnrichmentService,
+        LibraryCache libraryCache)
     {
         _logger = logger;
         _libraryManager = libraryManager;
@@ -100,6 +103,7 @@ public class MultifyTestService : IMultifyTestService
         _ntfyClient = ntfyClient;
         _genericClient = genericClient;
         _imageEnrichmentService = imageEnrichmentService;
+        _libraryCache = libraryCache;
     }
 
     /// <inheritdoc />
@@ -142,10 +146,10 @@ public class MultifyTestService : IMultifyTestService
 
                     foreach (var filter in option.LibraryFilter)
                     {
-                        var normalizedFilter = NormalizeGuid(filter);
+                        var normalizedFilter = DataObjectHelpers.NormalizeGuid(filter);
                         foreach (var vf in virtualFolders)
                         {
-                            if (NormalizeGuid(vf.ItemId) == normalizedFilter
+                            if (DataObjectHelpers.NormalizeGuid(vf.ItemId) == normalizedFilter
                                 || string.Equals(vf.Name, filter, StringComparison.OrdinalIgnoreCase))
                             {
                                 matchedId = vf.ItemId;
@@ -342,6 +346,14 @@ public class MultifyTestService : IMultifyTestService
             {
                 data[kvp.Key] = kvp.Value;
             }
+
+            // Correct LibraryName/LibraryId to CollectionFolder (not physical Folder),
+            // like MultifySender does for live notifications.
+            DataObjectHelpers.CorrectLibraryInfo(
+                data,
+                item,
+                () => _libraryCache.GetOrAddVirtualFolders(() => _libraryManager.GetVirtualFolders()),
+                _logger);
 
             // Add item-type-specific fields not covered by AddItemData
             if (item is Movie movie)
@@ -551,10 +563,12 @@ public class MultifyTestService : IMultifyTestService
             ["EndTime"] = "N/A",
             ["Duration"] = "N/A",
 
-            // Plugin
+            // Plugin (names match live notifiers; NewVersion kept as deprecated alias)
             ["PluginName"] = "N/A",
             ["PluginId"] = "N/A",
+            ["PluginVersion"] = "N/A",
             ["NewVersion"] = "N/A",
+            ["SourceUrl"] = "N/A",
 
             // Subtitle
             ["SubtitleProvider"] = "N/A",
@@ -693,24 +707,16 @@ public class MultifyTestService : IMultifyTestService
             ["EndTime"] = "N/A",
             ["Duration"] = "N/A",
 
-            // Plugin Variables
+            // Plugin Variables (names match live notifiers; NewVersion kept as deprecated alias)
             ["PluginName"] = "Intro Skipper",
             ["PluginId"] = "plugin123",
+            ["PluginVersion"] = "1.2.3",
             ["NewVersion"] = "1.2.3",
+            ["SourceUrl"] = "https://example.com/plugin-1.2.3.zip",
 
             // Year (used in examples but not in table)
             ["Year"] = "2010"
         };
-    }
-
-    private static string NormalizeGuid(string value)
-    {
-        if (Guid.TryParse(value, out var guid))
-        {
-            return guid.ToString("N", CultureInfo.InvariantCulture).ToLowerInvariant();
-        }
-
-        return value.Trim().ToLowerInvariant();
     }
 
     /// <summary>

@@ -11,6 +11,7 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Session;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Multify.Helpers;
 
@@ -340,6 +341,88 @@ public static class DataObjectHelpers
         }
 
         return data;
+    }
+
+    /// <summary>
+    /// Normalizes a GUID string to lowercase N format (or lowercased trimmed text for
+    /// non-GUIDs) so IDs compare equal across N vs D formats and casing.
+    /// Shared by FilterService and MultifyTestService.
+    /// </summary>
+    /// <param name="value">The value to normalize.</param>
+    /// <returns>The normalized value.</returns>
+    public static string NormalizeGuid(string value)
+    {
+        if (Guid.TryParse(value, out var guid))
+        {
+            return guid.ToString("N", CultureInfo.InvariantCulture).ToLowerInvariant();
+        }
+
+        return value.Trim().ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Corrects LibraryName/LibraryId to the CollectionFolder (not physical Folder) via VirtualFolders path prefix.
+    /// GetTopParent() returns the physical Folder (e.g. "movies") while configuration stores
+    /// the CollectionFolder (e.g. "Filmes"). Without correction, {{LibraryName}} shows the
+    /// folder name instead of the collection name. Shared by MultifySender and MultifyTestService.
+    /// </summary>
+    /// <param name="data">The data dictionary to update.</param>
+    /// <param name="item">The media item (optional, used for path fallback).</param>
+    /// <param name="virtualFoldersFactory">Factory returning virtual folders (ideally short-TTL cached).</param>
+    /// <param name="logger">The logger.</param>
+    public static void CorrectLibraryInfo(
+        Dictionary<string, object> data,
+        BaseItem? item,
+        Func<IReadOnlyList<VirtualFolderInfo>> virtualFoldersFactory,
+        ILogger logger)
+    {
+        try
+        {
+            var path = string.Empty;
+            if (data.TryGetValue("Path", out var pathObj) && pathObj is string p && !string.IsNullOrEmpty(p))
+            {
+                path = p;
+            }
+            else if (item?.Path != null)
+            {
+                path = item.Path;
+            }
+
+            if (string.IsNullOrEmpty(path))
+            {
+                return;
+            }
+
+            var virtualFolders = virtualFoldersFactory();
+            if (virtualFolders == null || virtualFolders.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var vf in virtualFolders)
+            {
+                if (vf.Locations == null)
+                {
+                    continue;
+                }
+
+                foreach (var loc in vf.Locations)
+                {
+                    if (!string.IsNullOrEmpty(loc) && path.StartsWith(loc, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Found matching collection — override LibraryName/LibraryId to collection (not physical Folder)
+                        data["LibraryName"] = vf.Name;
+                        // Use ItemId as stored in VirtualFolder (N format) — FilterService normalizes
+                        data["LibraryId"] = vf.ItemId;
+                        return;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Error correcting library info for {Path}", data.TryGetValue("Path", out var po) ? po : "unknown");
+        }
     }
 
     /// <summary>
